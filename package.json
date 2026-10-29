@@ -7,6 +7,7 @@
     "dev": "next dev --hostname 127.0.0.1 --port 4174",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1 --port 4174",
+    "start:op": "op run --env-file=.env.op -- next start --hostname 127.0.0.1 --port 4174",
     "db:setup": "psql -d lighthouse -f src/store/schema.sql",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
