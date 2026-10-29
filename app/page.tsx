@@ -1,6 +1,6 @@
 import { draftReply, view } from '@/src/inbox';
 import { customerCount } from '@/src/store/books';
-import { load } from '@/src/store/db';
+import { load, loadThemes } from '@/src/store/db';
 import { Inbox, type InboxData } from './inbox';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +20,7 @@ export default async function Page() {
     counts: { ...v.counts, arrived: held, missed: held - shown },
     askOwner: ownerNames.length === 0 && chatAuthors.length > 0 ? chatAuthors : [],
     empty: messages.length === 0,
+    themes: await loadThemes(),
   };
   return <Inbox data={data} />;
 }

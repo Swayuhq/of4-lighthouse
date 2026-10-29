@@ -5,10 +5,11 @@ import { join } from 'node:path';
 import { revalidatePath } from 'next/cache';
 import { parseCsv, parseWhatsAppExport, type ParseResult } from '@/src/parse';
 import { checkMessages } from '@/src/message';
-import { load, record, saveFacts, setOwnerNames, startOver, store, storedIds, unread } from '@/src/store/db';
+import { load, record, saveFacts, saveThemes, setOwnerNames, startOver, store, storedIds, unread } from '@/src/store/db';
 import { agentsOn } from '@/src/agents/model';
 import { readAll } from '@/src/agents/reader';
 import { writeReply } from '@/src/agents/reply';
+import { findThemes } from '@/src/agents/insights';
 
 const SAMPLE_FILES = ['whatsapp-tom.txt', 'whatsapp-aisha.txt', 'reviews.csv'];
 const sample = (name: string) => readFile(join(process.cwd(), 'samples', name), 'utf8');
@@ -79,7 +80,13 @@ export async function draftFor(id: string): Promise<string | null> {
 /** Runs the reader on every message it has not labelled. With no key set, the keyword rules do the job alone. */
 async function readNew() {
   if (!agentsOn()) return;
-  await saveFacts(await readAll(await unread()), 'gpt-5-nano');
+  const fresh = await unread();
+  if (!fresh.length) return;
+  await saveFacts(await readAll(fresh), 'gpt-5-nano');
+  // New messages can change what customers keep saying, so the themes are found again.
+  const { ownerNames, state } = await load();
+  const owners = new Set(ownerNames);
+  await saveThemes(await findThemes(state.messages.filter(m => !owners.has(m.author))));
 }
 
 export async function clearAll() {

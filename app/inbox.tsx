@@ -5,6 +5,8 @@ import type { Counts, Item, Status } from '@/src/inbox';
 import { addFile, chooseOwner, clearAll, draftFor, markAs, sendReply, loadSampleBakery, watchOnce, type AddResult } from './actions';
 
 export type InboxItem = Item & { draft: string };
+import type { Theme } from '@/src/agents/insights';
+
 export type InboxData = {
   items: InboxItem[];
   todayIds: string[];
@@ -12,6 +14,7 @@ export type InboxData = {
   counts: Counts;
   askOwner: string[];
   empty: boolean;
+  themes: Theme[];
 };
 
 type Toast = { text: string; undo?: { id: string; status: Status } };
@@ -150,6 +153,17 @@ export function Inbox({ data }: { data: InboxData }) {
               </ol>
             )}
           </section>
+
+          {data.themes.length > 0 && (
+            <section className="mt-12" aria-labelledby="saying">
+              <h2 id="saying" className="text-2xl font-bold">What customers keep saying</h2>
+              <ul className="mt-3 space-y-1.5">
+                {data.themes.map(t => (
+                  <li key={t.title} className="flex gap-3"><span className="w-8 text-right font-bold">{t.count}</span><span>{t.title}</span></li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="mt-12" aria-labelledby="all">
             <h2 id="all" className="text-2xl font-bold">Everything else</h2>

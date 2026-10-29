@@ -5,7 +5,8 @@ import postgres from 'postgres';
 import type { InboxMessage } from '../parse';
 import type { Status } from '../inbox';
 import type { Facts } from '../facts';
-import { business, event, message, messageFacts } from './schema';
+import type { Theme } from '../agents/insights';
+import { business, event, insight, message, messageFacts } from './schema';
 import { toState } from './books';
 
 const client = postgres({
@@ -105,4 +106,13 @@ export async function saveFacts(found: Record<string, Facts>, model: string) {
     // Start over pressed while the reader was busy: its messages are gone, so their facts have nowhere to go.
     if ((e as { cause?: { code?: string } }).cause?.code !== '23503') throw e;
   }
+}
+
+export async function saveThemes(themes: Theme[]) {
+  await db.insert(insight).values({ tenantId: TENANT, themes }).onConflictDoUpdate({ target: insight.tenantId, set: { themes } });
+}
+
+export async function loadThemes(): Promise<Theme[]> {
+  const [row] = await db.select().from(insight).where(eq(insight.tenantId, TENANT));
+  return row?.themes ?? [];
 }

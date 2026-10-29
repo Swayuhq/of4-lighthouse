@@ -173,9 +173,9 @@ Plain code keeps the arithmetic: counting, the duplicate check, the urgency poin
 | 1 | Parser, inbox logic, counts, Postgres books, one screen, simulated watcher | Done, 29 Oct |
 | 2 | One model client with the cap, timeout and shape check | Done, 29 Oct |
 | 3 | Reader agent: each message becomes facts (kind, problem, what they ask, deadline). Closed lists, never mood. Catches "I want my money", Hinglish and polite spam | Built, 29 Oct; live run needs a key |
-| 4 | Reply agent: a draft from the owner's past replies and the customer's actual question, run only when the owner presses Reply | Next |
-| 5 | Checker agent: refuses a draft that states a price, date or promise the owner never gave | Next |
-| 6 | Insights agent: weekly themes, each linked to its messages | Next |
+| 4 | Reply agent: a draft from the owner's past replies and the customer's actual question, run only when the owner presses Reply | Built, 29 Oct; live run needs a key |
+| 5 | Checker, plain code: refuses a draft that states a number, day or promise nobody gave | Built, 29 Oct |
+| 6 | Insights agent: up to 5 themes shared by two or more messages, counted in code, shown as "What customers keep saying" | Built, 29 Oct; live run needs a key |
 | 7 | Demo recording and README | Last |
 
 Repository: `Swayuhq/of4-lighthouse`, private, the same pattern as `Swayuhq/of3-prototype`.

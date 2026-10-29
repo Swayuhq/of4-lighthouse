@@ -2,6 +2,7 @@
 // and every change to it is a new event row, so the counts line is a sum the owner can check.
 import { bigserial, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import type { Facts } from '../facts';
+import type { Theme } from '../agents/insights';
 
 export const business = pgTable('business', {
   tenantId: uuid('tenant_id').primaryKey(),
@@ -48,3 +49,9 @@ export const messageFacts = pgTable(
   },
   t => [primaryKey({ columns: [t.tenantId, t.contentId] })],
 );
+
+/** The newest themes the insights agent found, each tied to the messages that show it. */
+export const insight = pgTable('insight', {
+  tenantId: uuid('tenant_id').primaryKey(),
+  themes: jsonb('themes').$type<Theme[]>().notNull(),
+});
