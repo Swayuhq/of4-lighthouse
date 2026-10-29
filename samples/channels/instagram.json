@@ -1,0 +1,6 @@
+[
+  { "id": "17890001", "text": "Do you deliver to Park Street?", "timestamp": "2026-10-29T09:40:00+0000", "from": { "username": "sofia.bakes" } },
+  { "id": "17890002", "text": "Best croissants in town!", "timestamp": "2026-10-29T10:05:00+0000", "from": { "username": "diego_eats" } },
+  { "id": "17890003", "text": "Free followers! click here www.grow.example", "timestamp": "2026-10-29T10:20:00+0000", "from": { "username": "grow_fast_99" } },
+  { "id": "17890004", "timestamp": "2026-10-29T10:30:00+0000" }
+]

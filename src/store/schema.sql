@@ -56,3 +56,16 @@ create table if not exists insight (
   themes jsonb not null,
   at timestamptz not null default now()
 );
+
+-- One row per channel the owner connected. A broken channel makes the counts unknown, never zero.
+-- No platform token is stored yet: sample channels need none, and a live token waits for its own design.
+create table if not exists connection (
+  tenant_id uuid not null,
+  channel text not null check (channel in ('whatsapp', 'instagram', 'facebook', 'google_reviews')),
+  status text not null check (status in ('connected', 'broken')),
+  cursor integer not null default 0,
+  problem text,
+  connected_at timestamptz not null default now(),
+  last_pull_at timestamptz,
+  primary key (tenant_id, channel)
+);

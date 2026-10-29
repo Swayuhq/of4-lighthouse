@@ -7,6 +7,7 @@ import { parseCsv, parseWhatsAppExport, type ParseResult } from '@/src/parse';
 import { checkMessages } from '@/src/message';
 import { load, record, saveFacts, saveThemes, setOwnerNames, startOver, store, storedIds, unread } from '@/src/store/db';
 import { agentsOn } from '@/src/agents/model';
+import { readNew } from '@/src/pipeline';
 import { readAll } from '@/src/agents/reader';
 import { writeReply } from '@/src/agents/reply';
 import { findThemes } from '@/src/agents/insights';
@@ -75,18 +76,6 @@ export async function draftFor(id: string): Promise<string | null> {
   const owners = new Set(ownerNames);
   const ownerLines = state.messages.filter(x => owners.has(x.author)).map(x => x.text);
   return writeReply(m, ownerLines, state.facts[id]);
-}
-
-/** Runs the reader on every message it has not labelled. With no key set, the keyword rules do the job alone. */
-async function readNew() {
-  if (!agentsOn()) return;
-  const fresh = await unread();
-  if (!fresh.length) return;
-  await saveFacts(await readAll(fresh), 'gemini-3.1-flash-lite');
-  // New messages can change what customers keep saying, so the themes are found again.
-  const { ownerNames, state } = await load();
-  const owners = new Set(ownerNames);
-  await saveThemes(await findThemes(state.messages.filter(m => !owners.has(m.author))));
 }
 
 export async function clearAll() {

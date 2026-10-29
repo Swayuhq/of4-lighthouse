@@ -49,3 +49,10 @@ describe('model client on Gemini', () => {
     expect((await lastCall()).outcome).toBe('wrong shape');
   });
 });
+
+it('a second copy of the client still has the key, as the page and the API routes each load their own', async () => {
+  vi.resetModules();
+  expect(process.env.SWAYU_GEMINI_API_KEY).toBeUndefined();
+  const second = await import('../src/agents/model');
+  expect(second.agentsOn()).toBe(true);
+});

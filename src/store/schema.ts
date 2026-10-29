@@ -3,6 +3,7 @@
 import { bigserial, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import type { Facts } from '../facts';
 import type { Theme } from '../agents/insights';
+import type { Channel, ConnectionStatus } from '../connectors';
 
 export const business = pgTable('business', {
   tenantId: uuid('tenant_id').primaryKey(),
@@ -55,3 +56,20 @@ export const insight = pgTable('insight', {
   tenantId: uuid('tenant_id').primaryKey(),
   themes: jsonb('themes').$type<Theme[]>().notNull(),
 });
+
+/** One row per channel the owner connected. No platform token is stored yet. */
+export const connection = pgTable(
+  'connection',
+  {
+    tenantId: uuid('tenant_id').notNull(),
+    channel: text('channel').$type<Channel>().notNull(),
+    status: text('status').$type<ConnectionStatus>().notNull(),
+    /** How far the sample feed has been read. A live channel will keep the platform's own cursor here. */
+    cursor: integer('cursor').notNull().default(0),
+    /** Why the channel is broken, in words the owner understands. */
+    problem: text('problem'),
+    connectedAt: timestamp('connected_at', { withTimezone: true }).notNull().defaultNow(),
+    lastPullAt: timestamp('last_pull_at', { withTimezone: true }),
+  },
+  t => [primaryKey({ columns: [t.tenantId, t.channel] })],
+);

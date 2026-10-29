@@ -16,8 +16,14 @@ const PRICES = {
 const EFFORT: Record<Model, string> = { 'gemini-3.1-flash-lite': 'minimal', 'gemini-3.8-flash': 'minimal' };
 export type Model = keyof typeof PRICES;
 
-const KEY = process.env.SWAYU_GEMINI_API_KEY?.trim() || '';
+// The build gives the page and the API routes separate copies of this module. The first copy takes the key
+// out of the environment and leaves it in one process wide slot, so every copy finds it. Without the slot,
+// whichever copy loads second has no key and the agents switch off without a word.
+const SLOT = Symbol.for('lighthouse.gemini-key');
+const shared = globalThis as { [SLOT]?: string };
+shared[SLOT] ??= process.env.SWAYU_GEMINI_API_KEY?.trim() || '';
 delete process.env.SWAYU_GEMINI_API_KEY;
+const KEY = shared[SLOT];
 const DAILY_CAP_USD = Number(process.env.SWAYU_LIGHTHOUSE_DAILY_CAP_USD ?? '1');
 
 export const agentsOn = () => KEY.length > 0 && DAILY_CAP_USD > 0;
