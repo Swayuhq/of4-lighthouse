@@ -1,0 +1,5 @@
+[
+  { "reviewId": "g-301", "reviewer": { "displayName": "Luca" }, "starRating": "TWO", "comment": "Waited 40 minutes, then got the wrong item.", "createTime": "2026-10-29T09:45:00Z" },
+  { "reviewId": "g-302", "reviewer": { "displayName": "Mei" }, "starRating": "FIVE", "comment": "Lovely staff and fresh bread.", "createTime": "2026-10-29T10:15:00Z" },
+  { "reviewId": "g-303", "reviewer": { "displayName": "Priya" }, "starRating": "ONE", "comment": "The cake arrived damaged. I want my money back.", "createTime": "2026-10-29T11:30:00Z" }
+]

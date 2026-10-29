@@ -1,12 +1,13 @@
 // The only module that talks to Postgres. One business for now; every row still carries its tenant id.
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import type { InboxMessage } from '../parse';
 import type { Status } from '../inbox';
 import type { Facts } from '../facts';
 import type { Theme } from '../agents/insights';
-import { business, event, insight, message, messageFacts } from './schema';
+import { business, connection, event, insight, message, messageFacts } from './schema';
+import { ADAPTERS, type Channel } from '../connectors';
 import { toState } from './books';
 
 const client = postgres({
@@ -22,29 +23,71 @@ async function ensureBusiness() {
   await db.insert(business).values({ tenantId: TENANT, name: 'Your business' }).onConflictDoNothing();
 }
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Writes new messages and their arrived events. A message already stored is skipped. */
+async function insertMessages(tx: Tx, messages: InboxMessage[], thread: string): Promise<number> {
+  if (!messages.length) return 0;
+  const added = await tx
+    .insert(message)
+    .values(messages.map(m => ({
+      tenantId: TENANT,
+      contentId: m.id,
+      thread,
+      platform: m.platform,
+      author: m.author,
+      receivedAt: m.receivedAt,
+      body: m.text,
+      stars: m.stars ?? null,
+    })))
+    .onConflictDoNothing()
+    .returning({ contentId: message.contentId });
+  if (added.length) {
+    await tx.insert(event).values(added.map(a => ({ tenantId: TENANT, contentId: a.contentId, kind: 'arrived' })));
+  }
+  return added.length;
+}
+
 /** Stores new messages and their arrived events together. A message already stored is skipped. */
 export async function store(messages: InboxMessage[], thread: string): Promise<number> {
   if (!messages.length) return 0;
   await ensureBusiness();
+  return db.transaction(tx => insertMessages(tx, messages, thread));
+}
+
+/** Connects a channel, or reconnects a broken one. The cursor is kept, so old comments are not read twice. */
+export async function connect(channel: Channel) {
+  await ensureBusiness();
+  await db
+    .insert(connection)
+    .values({ tenantId: TENANT, channel, status: 'connected' })
+    .onConflictDoUpdate({ target: [connection.tenantId, connection.channel], set: { status: 'connected', problem: null } });
+}
+
+export async function markBroken(channel: Channel, problem: string) {
+  await db
+    .update(connection)
+    .set({ status: 'broken', problem })
+    .where(and(eq(connection.tenantId, TENANT), eq(connection.channel, channel)));
+}
+
+export async function connections() {
+  return db.select().from(connection).where(eq(connection.tenantId, TENANT)).orderBy(asc(connection.connectedAt));
+}
+
+/**
+ * Stores what a channel brought and moves its cursor in one transaction.
+ * The cursor update carries the connected condition itself, so a channel broken a moment ago stores nothing.
+ */
+export async function storeFromChannel(channel: Channel, messages: InboxMessage[], cursor: number): Promise<number> {
   return db.transaction(async tx => {
-    const added = await tx
-      .insert(message)
-      .values(messages.map(m => ({
-        tenantId: TENANT,
-        contentId: m.id,
-        thread,
-        platform: m.platform,
-        author: m.author,
-        receivedAt: m.receivedAt,
-        body: m.text,
-        stars: m.stars ?? null,
-      })))
-      .onConflictDoNothing()
-      .returning({ contentId: message.contentId });
-    if (added.length) {
-      await tx.insert(event).values(added.map(a => ({ tenantId: TENANT, contentId: a.contentId, kind: 'arrived' })));
-    }
-    return added.length;
+    const moved = await tx
+      .update(connection)
+      .set({ cursor, lastPullAt: new Date() })
+      .where(and(eq(connection.tenantId, TENANT), eq(connection.channel, channel), eq(connection.status, 'connected')))
+      .returning({ channel: connection.channel });
+    if (!moved.length) throw new Error(`${ADAPTERS[channel].label} is not connected`);
+    return insertMessages(tx, messages, ADAPTERS[channel].label);
   });
 }
 
@@ -64,24 +107,30 @@ export async function load() {
   const factRows = await db.select().from(messageFacts).where(eq(messageFacts.tenantId, TENANT));
   const facts = Object.fromEntries(factRows.map(f => [f.contentId, f.facts]));
   const ownerNames = b?.ownerNames ?? [];
-  return { ownerNames, messages, state: toState(ownerNames, messages, events, facts) };
+  return { businessName: b?.name ?? null, ownerNames, messages, state: toState(ownerNames, messages, events, facts) };
 }
 
-/** Which of these ids are already stored, so the watcher only brings genuinely new comments. */
-export async function storedIds(ids: string[]): Promise<Set<string>> {
-  if (!ids.length) return new Set();
-  const rows = await db
-    .select({ contentId: message.contentId })
-    .from(message)
-    .where(and(eq(message.tenantId, TENANT), inArray(message.contentId, ids)));
-  return new Set(rows.map(r => r.contentId));
+/** The business the owner named at sign up, or null before sign up. */
+export async function businessName(): Promise<string | null> {
+  const [b] = await db.select({ name: business.name }).from(business).where(eq(business.tenantId, TENANT));
+  return b?.name ?? null;
+}
+
+export async function nameBusiness(name: string) {
+  await db
+    .insert(business)
+    .values({ tenantId: TENANT, name })
+    .onConflictDoUpdate({ target: business.tenantId, set: { name } });
 }
 
 /** Clears this business so a demo can start again. */
 export async function startOver() {
   await db.transaction(async tx => {
     await tx.delete(insight).where(eq(insight.tenantId, TENANT));
+    await tx.delete(event).where(eq(event.tenantId, TENANT));
+    await tx.delete(messageFacts).where(eq(messageFacts.tenantId, TENANT));
     await tx.delete(message).where(eq(message.tenantId, TENANT));
+    await tx.delete(connection).where(eq(connection.tenantId, TENANT));
     await tx.delete(business).where(eq(business.tenantId, TENANT));
   });
 }

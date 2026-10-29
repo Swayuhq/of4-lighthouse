@@ -1,18 +1,14 @@
 'use server';
 // Every owner button lands here. Each one writes to the books, then the page reads them again.
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { parseCsv, parseWhatsAppExport, type ParseResult } from '@/src/parse';
 import { checkMessages } from '@/src/message';
-import { load, record, saveFacts, saveThemes, setOwnerNames, startOver, store, storedIds, unread } from '@/src/store/db';
+import { connect, connections, load, markBroken, nameBusiness, record, setOwnerNames, startOver, store } from '@/src/store/db';
 import { agentsOn } from '@/src/agents/model';
-import { readAll } from '@/src/agents/reader';
+import { pull, readNew } from '@/src/pipeline';
+import { ADAPTERS, isChannel } from '@/src/connectors';
 import { writeReply } from '@/src/agents/reply';
-import { findThemes } from '@/src/agents/insights';
-
-const SAMPLE_FILES = ['whatsapp-tom.txt', 'whatsapp-aisha.txt', 'reviews.csv'];
-const sample = (name: string) => readFile(join(process.cwd(), 'samples', name), 'utf8');
 
 function read(name: string, text: string): ParseResult {
   if (/\.txt$/i.test(name)) return parseWhatsAppExport(text);
@@ -31,39 +27,55 @@ export async function addFile(name: string, text: string): Promise<AddResult> {
   if (!checked.messages.length) return { file: name, added: 0, problem: 'No messages were found in this file.' };
   const added = await store(checked.messages, name);
   await readNew();
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
   return { file: name, added };
 }
 
-export async function loadSampleBakery() {
-  for (const name of SAMPLE_FILES) await addFile(name, await sample(name));
+/** Sign up: the business gets its name, then the owner picks channels. */
+export async function startBusiness(form: FormData) {
+  const name = String(form.get('business') ?? '').trim().slice(0, 80);
+  if (!name) return;
+  await nameBusiness(name);
+  redirect('/connect');
+}
+
+/** Connects one channel and brings everything it already holds. */
+export async function connectChannel(channel: string): Promise<{ added: number; refused: number; problem?: string }> {
+  if (!isChannel(channel)) return { added: 0, refused: 0, problem: 'Swayu cannot connect that channel yet.' };
+  await connect(channel);
+  const { added, refused } = await pull(channel, 1000);
+  revalidatePath('/', 'layout');
+  return { added, refused };
+}
+
+/** One check of every connected channel. A channel that fails is marked broken, so its count reads unknown. */
+export async function checkChannels(): Promise<{ added: number }> {
+  let added = 0;
+  for (const c of await connections()) {
+    if (c.status !== 'connected') continue;
+    try {
+      added += (await pull(c.channel, 50)).added;
+    } catch {
+      await markBroken(c.channel, `Swayu could not reach ${ADAPTERS[c.channel].label}. Connect it again.`);
+    }
+  }
+  revalidatePath('/', 'layout');
+  return { added };
 }
 
 export async function chooseOwner(names: string[]) {
   await setOwnerNames(names);
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function markAs(id: string, status: 'waiting' | 'answered' | 'spam') {
   await record(id, status);
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function sendReply(id: string, text: string) {
   await record(id, 'sent', text.trim());
-  revalidatePath('/');
-}
-
-/** The simulated watcher: brings in the next comment from the watched profiles, if one is left. */
-export async function watchOnce(): Promise<{ arrived: string | null }> {
-  const queue = checkMessages(parseCsv(await sample('watch.csv')).messages).messages;
-  const known = await storedIds(queue.map(m => m.id));
-  const next = queue.find(m => !known.has(m.id));
-  if (!next) return { arrived: null };
-  await store([next], `watch-${next.platform}`);
-  await readNew();
-  revalidatePath('/');
-  return { arrived: `${next.author === 'Unknown' ? 'Someone' : next.author} on ${next.platform}` };
+  revalidatePath('/', 'layout');
 }
 
 /** A draft in the owner's voice for one message, or null so the screen keeps the fixed draft. */
@@ -77,19 +89,7 @@ export async function draftFor(id: string): Promise<string | null> {
   return writeReply(m, ownerLines, state.facts[id]);
 }
 
-/** Runs the reader on every message it has not labelled. With no key set, the keyword rules do the job alone. */
-async function readNew() {
-  if (!agentsOn()) return;
-  const fresh = await unread();
-  if (!fresh.length) return;
-  await saveFacts(await readAll(fresh), 'gemini-3.1-flash-lite');
-  // New messages can change what customers keep saying, so the themes are found again.
-  const { ownerNames, state } = await load();
-  const owners = new Set(ownerNames);
-  await saveThemes(await findThemes(state.messages.filter(m => !owners.has(m.author))));
-}
-
 export async function clearAll() {
   await startOver();
-  revalidatePath('/');
+  redirect('/');
 }
