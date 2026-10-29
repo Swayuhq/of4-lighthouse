@@ -50,15 +50,31 @@ html {
   animation: beam 1.4s ease-out 2 forwards;
 }
 
-@keyframes pulse {
-  50% { opacity: 0.35; }
+@media (prefers-reduced-motion: reduce) {
+  .arrived { animation: none; background-image: none; outline: 2px solid var(--color-lamp); }
+  .notch { transition: none; }
 }
-.watching-dot {
-  animation: pulse 1.2s ease-in-out infinite;
+
+/* The landing page at night: the sea under the lamp. */
+.night {
+  background: radial-gradient(120% 90% at 70% 10%, #1f3d66 0%, var(--color-navy) 60%);
+}
+
+/* The one motion on the landing page: the lamp's beam sweeping from the channels to the list. */
+@keyframes sweep {
+  0%, 100% { transform: rotate(-28deg); opacity: 0.55; }
+  50% { transform: rotate(28deg); opacity: 0.9; }
+}
+.sweep {
+  position: absolute;
+  top: 2px;
+  width: 260px;
+  height: 46px;
+  background: radial-gradient(closest-side, rgb(242 183 5 / 0.55), transparent);
+  transform-origin: center;
+  animation: sweep 5s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .arrived { animation: none; background-image: none; outline: 2px solid var(--color-lamp); }
-  .watching-dot { animation: none; }
-  .notch { transition: none; }
+  .sweep { animation: none; transform: none; }
 }

@@ -1,11 +1,15 @@
 'use client';
 // The owner's one screen: the tally, Today's 3, then everything else.
+import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import type { Counts, Item, Status } from '@/src/inbox';
-import { addFile, chooseOwner, clearAll, draftFor, markAs, sendReply, loadSampleBakery, watchOnce, type AddResult } from './actions';
+import type { Theme } from '@/src/agents/insights';
+import { checkChannels, chooseOwner, clearAll, draftFor, markAs, sendReply } from '../actions';
+import { Ago } from '../ago';
+import { ChannelBadge, Wordmark } from '../brand';
+import type { ChannelView } from '../channels';
 
 export type InboxItem = Item & { draft: string };
-import type { Theme } from '@/src/agents/insights';
 
 export type InboxData = {
   items: InboxItem[];
@@ -15,7 +19,12 @@ export type InboxData = {
   askOwner: string[];
   empty: boolean;
   themes: Theme[];
+  business: string;
+  channels: ChannelView[];
 };
+
+/** How often the open inbox asks every connected channel for new messages. */
+const CHECK_EVERY_MS = 30_000;
 
 type Toast = { text: string; undo?: { id: string; status: Status } };
 
@@ -34,8 +43,6 @@ function when(receivedAt: string) {
 export function Inbox({ data }: { data: InboxData }) {
   const [pending, start] = useTransition();
   const [toast, setToast] = useState<Toast | null>(null);
-  const [problems, setProblems] = useState<string[]>([]);
-  const [watching, setWatching] = useState(false);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<Status>('waiting');
   const known = useRef<Set<string>>(new Set(data.items.map(i => i.id)));
@@ -57,18 +64,16 @@ export function Inbox({ data }: { data: InboxData }) {
     return () => clearTimeout(t);
   }, [toast]);
 
+  // Connecting was the switch. While this page is open it checks every connected channel; a server job replaces this when Lighthouse goes live.
+  const live = data.channels.some(c => c.status === 'connected');
   useEffect(() => {
-    if (!watching) return;
+    if (!live) return;
     const timer = setInterval(async () => {
-      const { arrived } = await watchOnce();
-      if (arrived) setToast({ text: `New message from ${arrived}` });
-      else {
-        setWatching(false);
-        setToast({ text: 'All caught up. No new messages on your profiles.' });
-      }
-    }, 3500);
+      const { added } = await checkChannels();
+      if (added) setToast({ text: `${added} new message${added === 1 ? '' : 's'} caught` });
+    }, CHECK_EVERY_MS);
     return () => clearInterval(timer);
-  }, [watching]);
+  }, [live]);
 
   function act(item: InboxItem, status: Status) {
     start(async () => {
@@ -91,46 +96,24 @@ export function Inbox({ data }: { data: InboxData }) {
     });
   }
 
-  async function onFiles(files: FileList | null) {
-    if (!files?.length) return;
-    const results: AddResult[] = [];
-    for (const file of Array.from(files)) results.push(await addFile(file.name, await file.text()));
-    setProblems(results.filter(r => r.problem).map(r => `${r.file}: ${r.problem}`));
-    const added = results.reduce((n, r) => n + r.added, 0);
-    if (added) setToast({ text: `${added} new message${added === 1 ? '' : 's'} added` });
-    else if (results.every(r => !r.problem)) setToast({ text: 'Nothing new. These messages are already here.' });
-  }
-
   const today = data.todayIds.map(id => data.items.find(i => i.id === id)!).filter(Boolean);
   const listed = data.items.filter(i => i.status === tab && !(tab === 'waiting' && data.todayIds.includes(i.id)));
 
   return (
     <div className="mx-auto max-w-[44rem] px-4 pb-32 pt-6 sm:px-6">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <Wordmark />
-        <div className="ml-auto flex items-center gap-2">
-          {!data.empty && (
-            <button
-              onClick={() => setWatching(w => !w)}
-              aria-pressed={watching}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-bold ${watching ? 'border-navy bg-navy text-white' : 'border-shore bg-white'}`}
-            >
-              <span className={`h-2.5 w-2.5 rounded-full ${watching ? 'watching-dot bg-lamp' : 'bg-slate'}`} />
-              {watching ? 'Watching your profiles' : 'Watch my profiles'}
-            </button>
-          )}
-          {!data.empty && <FileButton onFiles={onFiles} quiet />}
-        </div>
+        <Wordmark business={data.business} />
+        <Link href="/connect" className="ml-auto rounded-lg border border-shore bg-white px-4 py-2 text-sm font-bold">Channels</Link>
       </header>
 
-      {problems.length > 0 && (
-        <div role="alert" className="mt-5 rounded-lg border border-alarm/30 bg-white p-4 text-sm">
-          {problems.map(p => <p key={p}>{p}</p>)}
-        </div>
-      )}
+      <OnWatch channels={data.channels} />
 
       {data.empty ? (
-        <Welcome onFiles={onFiles} onSample={() => start(() => loadSampleBakery())} busy={pending} />
+        <section className="mt-16 max-w-[34rem]">
+          <h1 className="text-[2.2rem] font-bold leading-tight">No messages yet.</h1>
+          <p className="mt-3 text-lg text-navy-soft">Connect a channel and every comment, review and chat lands here.</p>
+          <Link href="/connect" className="mt-7 inline-block rounded-lg bg-navy px-5 py-2.5 font-bold text-white">Connect a channel</Link>
+        </section>
       ) : (
         <>
           {data.askOwner.length > 0 && <WhichNameIsYou names={data.askOwner} />}
@@ -210,21 +193,6 @@ export function Inbox({ data }: { data: InboxData }) {
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-function Wordmark() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <svg width="26" height="30" viewBox="0 0 26 30" aria-hidden="true">
-        <path d="M9 10h8l2 18H7z" fill="#13294B" />
-        <rect x="8" y="4" width="10" height="6" rx="1.5" fill="#F2B705" />
-        <path d="M18 7 26 3v8z" fill="#F2B705" opacity="0.45" />
-        <path d="M8 7 0 3v8z" fill="#F2B705" opacity="0.45" />
-        <rect x="5" y="27" width="16" height="3" rx="1" fill="#13294B" />
-      </svg>
-      <span className="text-xl font-bold tracking-tight">Lighthouse</span>
     </div>
   );
 }
@@ -330,32 +298,26 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
   );
 }
 
-function FileButton({ onFiles, quiet }: { onFiles: (f: FileList | null) => void; quiet?: boolean }) {
+/** Which channels Lighthouse is watching, and when it last looked. A broken one says so, because its count is unknown. */
+function OnWatch({ channels }: { channels: ChannelView[] }) {
+  const on = channels.filter(c => c.status !== 'not_connected');
+  if (!on.length) return null;
   return (
-    <label className={`cursor-pointer rounded-lg px-4 py-2 font-bold focus-within:outline focus-within:outline-3 ${quiet ? 'border border-shore bg-white text-sm' : 'bg-navy text-white'}`}>
-      Add files
-      <input type="file" accept=".txt,.csv" multiple className="sr-only" onChange={e => { onFiles(e.target.files); e.target.value = ''; }} />
-    </label>
-  );
-}
-
-function Welcome({ onFiles, onSample, busy }: { onFiles: (f: FileList | null) => void; onSample: () => void; busy: boolean }) {
-  return (
-    <section className="mt-16 max-w-[34rem]">
-      <h1 className="text-[2.4rem] font-bold leading-tight">Every customer message in one list.</h1>
-      <p className="mt-3 text-lg text-navy-soft">
-        Add a WhatsApp chat export or a reviews file. Lighthouse counts every message, puts the most urgent on top, and shows you nothing was missed.
-      </p>
-      <div className="mt-7 flex flex-wrap items-center gap-3">
-        <FileButton onFiles={onFiles} />
-        <button disabled={busy} onClick={onSample} className="rounded-lg border border-shore bg-white px-4 py-2 font-bold disabled:opacity-50">
-          {busy ? 'Opening the bakery' : 'Try the sample bakery'}
-        </button>
-      </div>
-      <p className="mt-6 text-[15px] text-navy-soft">
-        A reviews file needs the columns platform, name, date and text. Stars are optional.
-      </p>
-    </section>
+    <ul className="mt-6 flex flex-wrap gap-2" aria-label="Channels Lighthouse is watching">
+      {on.map(c => (
+        <li key={c.channel} className="flex items-center gap-2.5 rounded-xl border border-shore bg-white py-1.5 pl-1.5 pr-3.5 text-[14px]">
+          <ChannelBadge channel={c.channel} />
+          <span>
+            <b className="block leading-tight">{c.label}</b>
+            {c.status === 'broken' ? (
+              <span className="font-bold text-alarm">Not reachable, connect again</span>
+            ) : (
+              <span className="text-navy-soft"><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-kelp" />{c.caught} caught, <Ago at={c.checkedAt} /></span>
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

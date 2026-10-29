@@ -1,5 +1,5 @@
 // The only module that talks to Postgres. One business for now; every row still carries its tenant id.
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import type { InboxMessage } from '../parse';
@@ -107,23 +107,28 @@ export async function load() {
   const factRows = await db.select().from(messageFacts).where(eq(messageFacts.tenantId, TENANT));
   const facts = Object.fromEntries(factRows.map(f => [f.contentId, f.facts]));
   const ownerNames = b?.ownerNames ?? [];
-  return { ownerNames, messages, state: toState(ownerNames, messages, events, facts) };
+  return { businessName: b?.name ?? null, ownerNames, messages, state: toState(ownerNames, messages, events, facts) };
 }
 
-/** Which of these ids are already stored, so the watcher only brings genuinely new comments. */
-export async function storedIds(ids: string[]): Promise<Set<string>> {
-  if (!ids.length) return new Set();
-  const rows = await db
-    .select({ contentId: message.contentId })
-    .from(message)
-    .where(and(eq(message.tenantId, TENANT), inArray(message.contentId, ids)));
-  return new Set(rows.map(r => r.contentId));
+/** The business the owner named at sign up, or null before sign up. */
+export async function businessName(): Promise<string | null> {
+  const [b] = await db.select({ name: business.name }).from(business).where(eq(business.tenantId, TENANT));
+  return b?.name ?? null;
+}
+
+export async function nameBusiness(name: string) {
+  await db
+    .insert(business)
+    .values({ tenantId: TENANT, name })
+    .onConflictDoUpdate({ target: business.tenantId, set: { name } });
 }
 
 /** Clears this business so a demo can start again. */
 export async function startOver() {
   await db.transaction(async tx => {
     await tx.delete(insight).where(eq(insight.tenantId, TENANT));
+    await tx.delete(event).where(eq(event.tenantId, TENANT));
+    await tx.delete(messageFacts).where(eq(messageFacts.tenantId, TENANT));
     await tx.delete(message).where(eq(message.tenantId, TENANT));
     await tx.delete(connection).where(eq(connection.tenantId, TENANT));
     await tx.delete(business).where(eq(business.tenantId, TENANT));
