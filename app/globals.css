@@ -1,0 +1,64 @@
+@import 'tailwindcss';
+
+/* Lighthouse identity. Amber is the lamp: it only ever marks a message still waiting for the owner. */
+@theme {
+  --color-navy: #13294b;
+  --color-navy-soft: #4a5d7a;
+  --color-mist: #f3f7f9;
+  --color-shore: #dfe7ec;
+  --color-lamp: #f2b705;
+  --color-lamp-soft: #fff4cc;
+  --color-kelp: #2f7d5b;
+  --color-kelp-soft: #e2f1ea;
+  --color-slate: #8a97a8;
+  --color-alarm: #b42318;
+  --font-body: var(--font-atkinson), system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-mist);
+  color: var(--color-navy);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-navy);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* The tally: one notch per message the books hold. */
+.notch {
+  height: 28px;
+  flex: 1 1 0;
+  min-width: 4px;
+  border-radius: 3px;
+  transition: background-color 400ms ease;
+}
+
+/* The one motion moment: a beam sweeps across a message the moment it arrives. */
+@keyframes beam {
+  from { background-position: -40% 0; }
+  to { background-position: 140% 0; }
+}
+.arrived {
+  background-image: linear-gradient(100deg, transparent 30%, rgb(242 183 5 / 0.35) 50%, transparent 70%);
+  background-size: 60% 100%;
+  background-repeat: no-repeat;
+  animation: beam 1.4s ease-out 2 forwards;
+}
+
+@keyframes pulse {
+  50% { opacity: 0.35; }
+}
+.watching-dot {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrived { animation: none; background-image: none; outline: 2px solid var(--color-lamp); }
+  .watching-dot { animation: none; }
+  .notch { transition: none; }
+}

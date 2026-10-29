@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OF4 inbox flow</title>
+<link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600&display=swap" rel="stylesheet">
+<style>
+  :root { --forest: #00584D; --jade: #009B74; --paper: #F6F8F7; --line: #D9E3E0; --muted: #6B7C78; --red: #C2410C; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #E9EFED; font-family: Switzer, system-ui, sans-serif; color: var(--forest); }
+  .stage { position: relative; width: 960px; height: 540px; background: var(--paper); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,88,77,.15); }
+  .caption { position: absolute; left: 40px; top: 26px; font-size: 26px; font-weight: 600; transition: opacity .4s; }
+  .caption small { display: block; font-size: 15px; font-weight: 400; color: var(--muted); margin-top: 4px; }
+  .card { position: absolute; width: 330px; height: 54px; padding: 8px 12px; background: #fff; border: 1px solid var(--line); border-radius: 10px;
+          transition: transform .9s cubic-bezier(.2,.8,.2,1), opacity .6s, background .4s, border-color .4s; font-size: 13px; }
+  .card b { font-weight: 600; } .card .src { float: right; font-size: 11px; color: var(--muted); }
+  .card .msg { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #24403B; }
+  .card .why { position: absolute; right: -8px; top: -9px; background: var(--jade); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 99px; opacity: 0; transition: opacity .4s; }
+  .card.done { background: #F1F4F3; color: var(--muted); } .card.done .msg { color: var(--muted); }
+  .card.spam { background: #F1F4F3; border-style: dashed; color: var(--muted); }
+  .card.top { border-color: var(--jade); box-shadow: 0 0 0 2px rgba(0,155,116,.25); }
+  .show-why .card .why { opacity: 1; }
+  .tag { position: absolute; font-size: 12px; color: var(--jade); font-weight: 600; opacity: 0; transition: opacity .4s; }
+  .phone { position: absolute; left: 620px; top: 96px; width: 290px; height: 380px; border: 2px solid var(--forest); border-radius: 28px; background: #fff; padding: 22px 16px; opacity: 0; transform: translateX(40px); transition: all .7s; }
+  .phone h4 { margin: 0 0 4px; font-size: 16px; } .phone p { margin: 0 0 14px; font-size: 12px; color: var(--muted); }
+  .row { font-size: 12.5px; padding: 9px 10px; border-radius: 8px; background: var(--paper); margin-bottom: 8px; opacity: 0; transform: translateY(8px); transition: all .5s; }
+  .row span { display: block; color: var(--jade); font-size: 11px; margin-top: 2px; }
+  .phone .more { font-size: 12px; color: var(--muted); opacity: 0; transition: opacity .5s; }
+  .counts { position: absolute; left: 40px; right: 40px; bottom: 22px; height: 50px; border-radius: 10px; background: var(--forest); color: #fff; display: flex; align-items: center; gap: 22px; padding: 0 20px; font-size: 16px; opacity: 0; transform: translateY(20px); transition: all .6s; }
+  .counts .ok { margin-left: auto; background: var(--jade); padding: 4px 12px; border-radius: 99px; font-weight: 600; }
+  .on { opacity: 1 !important; transform: none !important; }
+  button { margin-top: 14px; font: inherit; color: #fff; background: var(--forest); border: 0; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+  .wrap { text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage" id="stage">
+    <div class="caption" id="caption"></div>
+    <div class="tag" id="dupTag">counted once</div>
+    <div class="phone" id="phone">
+      <h4>Today's 3</h4><p>From Swayu, 9:00 in the morning</p>
+      <div class="row">Priya: cake arrived damaged<span>1 star, says damaged</span></div>
+      <div class="row">Tom: not delivered, need refund<span>says refund, waiting 26 hours</span></div>
+      <div class="row">Aisha: custom cake for Friday?<span>waiting 6 hours, wrote before</span></div>
+      <div class="more">and nothing else waiting</div>
+    </div>
+    <div class="counts" id="counts"><span>6 arrived</span><span>2 answered</span><span>3 waiting</span><span>1 spam</span><span class="ok">0 missed</span></div>
+  </div>
+  <button id="replay">Play again</button>
+</div>
+<script>
+const cards = [
+  { id: 'priya', who: 'Priya', src: 'Google review', msg: '1 star. The cake arrived damaged.', why: '1 star, says damaged' },
+  { id: 'tom', who: 'Tom', src: 'WhatsApp', msg: 'Order not delivered yet. I need a refund.', why: 'says refund, waiting 26 h' },
+  { id: 'aisha', who: 'Aisha', src: 'WhatsApp', msg: 'Can you do a custom cake for Friday?', why: 'waiting 6 h, wrote before' },
+  { id: 'diego', who: 'Diego', src: 'Instagram', msg: 'Best croissants in town!', why: 'answered' },
+  { id: 'mei', who: 'Mei', src: 'Google review', msg: '5 stars. Lovely staff.', why: 'answered' },
+  { id: 'spam', who: 'Unknown', src: 'WhatsApp', msg: 'You won a free phone, click here', why: 'spam, still counted' },
+  { id: 'dup', who: 'Tom', src: 'WhatsApp', msg: 'Order not delivered yet. I need a refund.', why: '' },
+];
+const scatter = { priya: [560, 120], tom: [80, 160], aisha: [420, 300], diego: [120, 380], mei: [600, 400], spam: [300, 200], dup: [60, 280] };
+const column = (i) => [40, 100 + i * 62];
+const stage = document.getElementById('stage');
+const el = {};
+for (const c of cards) {
+  const d = document.createElement('div');
+  d.className = 'card';
+  d.innerHTML = `<b>${c.who}</b><span class="src">${c.src}</span><span class="msg">${c.msg}</span>${c.why ? `<span class="why">${c.why}</span>` : ''}`;
+  stage.appendChild(d);
+  el[c.id] = d;
+}
+const place = (id, [x, y], rot = 0) => { el[id].style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`; };
+const say = (t, s) => { const c = document.getElementById('caption'); c.style.opacity = 0; setTimeout(() => { c.innerHTML = `${t}<small>${s}</small>`; c.style.opacity = 1; }, 250); };
+const $ = (id) => document.getElementById(id);
+let timers = [];
+const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+
+function play() {
+  timers.forEach(clearTimeout); timers = [];
+  stage.classList.remove('show-why');
+  ['phone', 'counts', 'dupTag'].forEach((id) => $(id).classList.remove('on'));
+  document.querySelectorAll('.row, .more').forEach((r) => r.classList.remove('on'));
+  for (const c of cards) { el[c.id].className = 'card'; el[c.id].style.opacity = 0; place(c.id, scatter[c.id], (Math.random() * 10 - 5)); }
+
+  // 0 to 3 s: messages arrive from everywhere
+  say('Customers write everywhere.', 'WhatsApp, Google reviews, Instagram. Some wait days. Some are never seen.');
+  cards.forEach((c, i) => at(200 + i * 300, () => { el[c.id].style.opacity = 1; }));
+
+  // 3 to 6 s: one list, counted once
+  at(3000, () => {
+    say('Swayu reads them into one list.', 'The same message from two files is counted once.');
+    ['priya', 'tom', 'aisha', 'diego', 'mei', 'spam', 'dup'].forEach((id, i) => place(id, column(i)));
+  });
+  at(4300, () => { $('dupTag').style.left = '390px'; $('dupTag').style.top = (100 + 6 * 62 + 18) + 'px'; $('dupTag').classList.add('on'); el.dup.style.opacity = 0.15; });
+  at(5400, () => { el.dup.style.opacity = 0; $('dupTag').classList.remove('on'); });
+
+  // 6 to 9 s: most urgent first, reason in words
+  at(6000, () => {
+    say('Most urgent first, and it says why.', 'Facts only: stars, hours waiting, refund words, repeat customer. Never mood.');
+    stage.classList.add('show-why');
+    el.diego.classList.add('done'); el.mei.classList.add('done'); el.spam.classList.add('spam');
+  });
+
+  // 9 to 12 s: push, Today's 3
+  at(9000, () => {
+    say("Today's 3 comes to the owner.", 'The full inbox is still there to open anytime. Same order, two doors.');
+    ['priya', 'tom', 'aisha'].forEach((id) => el[id].classList.add('top'));
+    $('phone').classList.add('on');
+    document.querySelectorAll('.row').forEach((r, i) => at(9500 + i * 450, () => r.classList.add('on')));
+    at(11000, () => document.querySelector('.more').classList.add('on'));
+  });
+
+  // 12 to 15 s: nothing missed, proven
+  at(12000, () => {
+    say('Nothing missed, and we can prove it.', 'Arrived equals answered plus waiting plus spam. Missed must be zero.');
+    $('counts').classList.add('on');
+  });
+}
+$('replay').onclick = play;
+play();
+</script>
+</body>
+</html>
