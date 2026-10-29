@@ -1,6 +1,7 @@
 // Turns the stored rows back into the inbox state. Pure, so the tests can check the bookkeeping without a database.
 import type { State, Status } from '../inbox';
 import type { Facts } from '../facts';
+import type { Theme } from '../agents/insights';
 
 export type MessageRow = {
   contentId: string;
@@ -44,4 +45,14 @@ export function toState(ownerNames: string[], messages: MessageRow[], events: Ev
 export function customerCount(ownerNames: string[], messages: MessageRow[]): number {
   const owners = new Set(ownerNames);
   return messages.filter(m => !owners.has(m.author)).length;
+}
+
+/** Keeps only the theme messages still stored, so themes found before Start over never reach the screen. */
+export function liveThemes(themes: Theme[], stored: Set<string>): Theme[] {
+  return themes
+    .map(t => {
+      const ids = t.ids.filter(id => stored.has(id));
+      return { ...t, ids, count: ids.length };
+    })
+    .filter(t => t.count >= 2);
 }

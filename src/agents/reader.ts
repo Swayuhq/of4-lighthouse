@@ -19,7 +19,7 @@ export const readerInput = (m: InboxMessage) =>
   `Platform: ${m.platform}${m.stars ? `, ${m.stars} stars` : ''}\n<message>\n${m.text.replaceAll('</message>', '')}\n</message>`;
 
 async function readOne(m: InboxMessage): Promise<Facts | null> {
-  const facts = await ask({ agent: 'reader', model: 'gpt-5-nano', instructions: INSTRUCTIONS, input: readerInput(m), shape: FactsShape, maxOutputTokens: 400 });
+  const facts = await ask({ agent: 'reader', model: 'gemini-3.1-flash-lite', instructions: INSTRUCTIONS, input: readerInput(m), shape: FactsShape, maxOutputTokens: 1000 });
   return facts ? tidy(facts) : null;
 }
 

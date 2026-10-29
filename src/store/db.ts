@@ -79,8 +79,11 @@ export async function storedIds(ids: string[]): Promise<Set<string>> {
 
 /** Clears this business so a demo can start again. */
 export async function startOver() {
-  await db.delete(message).where(eq(message.tenantId, TENANT));
-  await db.delete(business).where(eq(business.tenantId, TENANT));
+  await db.transaction(async tx => {
+    await tx.delete(insight).where(eq(insight.tenantId, TENANT));
+    await tx.delete(message).where(eq(message.tenantId, TENANT));
+    await tx.delete(business).where(eq(business.tenantId, TENANT));
+  });
 }
 
 /** Customer messages the reader has not labelled yet. The owner's own lines are skipped once the owner is known. */

@@ -25,7 +25,7 @@ export async function findThemes(messages: InboxMessage[]): Promise<Theme[]> {
   const recent = messages.slice(-MAX_MESSAGES);
   const byShortId = new Map(recent.map((m, i) => [`m${i + 1}`, m.id]));
   const input = recent.map((m, i) => `m${i + 1} (${m.platform})\n<message>\n${m.text.slice(0, 500).replaceAll('</message>', '')}\n</message>`).join('\n');
-  const answer = await ask({ agent: 'insights', model: 'gpt-5-mini', instructions: INSTRUCTIONS, input, shape: ThemesShape, maxOutputTokens: 1500, timeoutMs: 90_000 });
+  const answer = await ask({ agent: 'insights', model: 'gemini-3.1-flash-lite', instructions: INSTRUCTIONS, input, shape: ThemesShape, maxOutputTokens: 2500, timeoutMs: 90_000 });
   if (!answer) return [];
   return answer.themes
     .map(t => {

@@ -82,7 +82,7 @@ async function readNew() {
   if (!agentsOn()) return;
   const fresh = await unread();
   if (!fresh.length) return;
-  await saveFacts(await readAll(fresh), 'gpt-5-nano');
+  await saveFacts(await readAll(fresh), 'gemini-3.1-flash-lite');
   // New messages can change what customers keep saying, so the themes are found again.
   const { ownerNames, state } = await load();
   const owners = new Set(ownerNames);

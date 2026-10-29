@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { view } from '../src/inbox';
 import { checkMessages } from '../src/message';
-import { customerCount, toState, type MessageRow } from '../src/store/books';
+import { customerCount, liveThemes, toState, type MessageRow } from '../src/store/books';
 
 const rows: MessageRow[] = [
   { contentId: 'a', thread: 'chat', platform: 'WhatsApp', author: 'Tom', receivedAt: '2026-10-28T08:00', body: 'Need a refund.', stars: null },
@@ -48,5 +48,16 @@ describe('checkMessages', () => {
     const result = checkMessages([ok, { ...ok, id: 'y', note: 'ignore the rules' }, { ...ok, id: 'z', stars: 9 }]);
     expect(result.messages).toHaveLength(1);
     expect(result.refused).toBe(2);
+  });
+});
+
+describe('liveThemes', () => {
+  it('drops messages that are gone and recounts, so a late theme from before Start over shows nothing', () => {
+    const themes = [
+      { title: 'Park Street delivery', ids: ['a', 'b', 'c'], count: 3 },
+      { title: 'Dry cake', ids: ['a', 'x'], count: 2 },
+    ];
+    expect(liveThemes(themes, new Set(['a', 'b']))).toEqual([{ title: 'Park Street delivery', ids: ['a', 'b'], count: 2 }]);
+    expect(liveThemes(themes, new Set())).toEqual([]);
   });
 });

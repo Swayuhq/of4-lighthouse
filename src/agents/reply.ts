@@ -26,7 +26,7 @@ function input(m: InboxMessage, ownerLines: string[], facts: Facts | undefined) 
 
 /** A checked draft, or null when the model failed or the checker refused, so the fixed draft stays. */
 export async function writeReply(m: InboxMessage, ownerLines: string[], facts: Facts | undefined): Promise<string | null> {
-  const answer = await ask({ agent: 'reply', model: 'gpt-5-mini', instructions: INSTRUCTIONS, input: input(m, ownerLines, facts), shape: ReplyShape, maxOutputTokens: 600 });
+  const answer = await ask({ agent: 'reply', model: 'gemini-3.1-flash-lite', instructions: INSTRUCTIONS, input: input(m, ownerLines, facts), shape: ReplyShape, maxOutputTokens: 1800 });
   if (!answer) return null;
   const check = checkDraft(answer.reply, m.text, ownerLines);
   if (!check.ok) {
