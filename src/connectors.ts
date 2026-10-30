@@ -2,10 +2,12 @@
 // Sample channels feed saved comments through the same path until each platform approves Swayu.
 // The platform shapes below are written from memory of each API and are unverified until a live adapter replaces them.
 // Facebook is live through Composio since 30 Oct 2026, and its shape is checked against real answers.
+// WhatsApp is live on Meta's test number since 30 Oct 2026. Meta pushes its messages to our webhook, so it has no fetch.
 import { z } from 'zod';
 import type { InboxMessage } from './parse';
 import { checkMessages } from './message';
 import { facebookComments, facebookReply } from './composio';
+import { whatsappReply } from './whatsapp';
 
 export type Channel = 'whatsapp' | 'instagram' | 'facebook' | 'google_reviews';
 export type ConnectionStatus = 'connected' | 'broken';
@@ -60,8 +62,10 @@ function reader<T>(shape: z.ZodType<T>, pick: (item: T) => { platformId: string;
 export const ADAPTERS: Record<Channel, Adapter> = {
   whatsapp: {
     label: 'WhatsApp',
-    mode: 'sample',
-    read: reader(WhatsApp, m => ({ platformId: m.id, author: m.profile?.name ?? m.from, at: m.timestamp, text: m.text.body })),
+    mode: 'live',
+    // A reply needs the customer's number as well as the message it quotes, so the id carries both.
+    read: reader(WhatsApp, m => ({ platformId: `${m.from}|${m.id}`, author: m.profile?.name ?? m.from, at: m.timestamp, text: m.text.body })),
+    send: whatsappReply,
   },
   instagram: {
     label: 'Instagram',
