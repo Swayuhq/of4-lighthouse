@@ -1,0 +1,290 @@
+<title>Lighthouse Connector Build Log</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one wide landscape column (about 1180px). Two paths always sit side by side: Composio left, direct right. */
+:root {
+  --bg: #f3f7f9; --panel: #ffffff; --ink: #13294b; --soft: #4a5d7a; --line: #d3dde4;
+  --lamp: #f2b705; --lamp-soft: #fff4cc; --kelp: #2f7d5b; --kelp-soft: #e2f1ea;
+  --sea: #2b5fa8; --sea-soft: #e3ecf8; --alarm: #b42318; --alarm-soft: #fbe7e5; --muted: #8a97a8;
+  --display: 'Fraunces', Georgia, serif; --body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1a2e; --panel: #142540; --ink: #e6edf5; --soft: #a9b8cc; --line: #2a3d5c;
+  --lamp: #f5c53a; --lamp-soft: #3d3412; --kelp: #5cc093; --kelp-soft: #173528;
+  --sea: #7fa9e6; --sea-soft: #1a2f50; --alarm: #f07a6e; --alarm-soft: #3d1b18; --muted: #7d8ca1; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d1a2e; --panel: #142540; --ink: #e6edf5; --soft: #a9b8cc; --line: #2a3d5c;
+  --lamp: #f5c53a; --lamp-soft: #3d3412; --kelp: #5cc093; --kelp-soft: #173528;
+  --sea: #7fa9e6; --sea-soft: #1a2f50; --alarm: #f07a6e; --alarm-soft: #3d1b18; --muted: #7d8ca1; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 40px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 56px; }
+h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 4vw, 44px); line-height: 1.1; }
+h2 { font-size: 26px; }
+h3 { font-size: 17px; margin: 0; }
+p { margin: 0; max-width: 70ch; }
+section { display: grid; gap: 18px; min-width: 0; }
+.eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--soft); font-weight: 700; }
+.lede { color: var(--soft); font-size: 18px; }
+.scroll { overflow-x: auto; }
+code, .mono { font-family: var(--mono); font-size: 13.5px; }
+.pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 99px; white-space: nowrap; }
+.p-buy { background: var(--sea-soft); color: var(--sea); }
+.p-build { background: var(--kelp-soft); color: var(--kelp); }
+.p-done { background: var(--kelp-soft); color: var(--kelp); }
+.p-next { background: var(--lamp-soft); color: var(--ink); }
+.p-later { background: color-mix(in srgb, var(--line) 50%, var(--panel)); color: var(--soft); }
+.p-open { background: var(--alarm-soft); color: var(--alarm); }
+
+/* Decision banner */
+.decision { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.dcard { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: grid; gap: 8px; align-content: start; }
+.dcard.now { border: 2px solid var(--sea); }
+.dcard .big { font-family: var(--display); font-size: 22px; }
+
+/* Side by side path diagrams */
+.paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+.path { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.path header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.flow { display: grid; gap: 0; }
+.node { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; display: grid; gap: 2px; background: var(--bg); }
+.node.ours { border-color: var(--kelp); background: var(--kelp-soft); }
+.node.theirs { border-color: var(--sea); background: var(--sea-soft); }
+.node.meta { border-style: dashed; }
+.node b { font-size: 15px; }
+.node small { color: var(--soft); font-size: 13px; }
+.arrow { justify-self: center; color: var(--muted); font-family: var(--mono); font-size: 12px; padding: 4px 0; text-align: center; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--soft); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid; }
+
+/* Benchmark bars */
+.bench { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px; display: grid; gap: 22px; }
+.metric { display: grid; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: 90px 1fr 70px; align-items: center; gap: 12px; }
+.bar-row .who { font-size: 14px; font-weight: 700; }
+.track { position: relative; height: 22px; background: color-mix(in srgb, var(--line) 40%, var(--panel)); border-radius: 4px; }
+.fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
+.fill.buy { background: var(--sea); }
+.fill.build { background: var(--kelp); }
+.range { position: absolute; top: -3px; bottom: -3px; border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); opacity: .45; }
+.bar-row .val { font-family: var(--mono); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.axis { display: grid; grid-template-columns: 90px 1fr 70px; gap: 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.axis .ticks { display: flex; justify-content: space-between; }
+.note { font-size: 13px; color: var(--soft); }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 15px; }
+th { font-size: 13px; color: var(--soft); font-weight: 700; background: color-mix(in srgb, var(--line) 35%, var(--panel)); }
+tr:last-child td { border-bottom: 0; }
+td.owner { color: var(--soft); font-style: italic; }
+.win { font-weight: 700; }
+.compare { min-width: 980px; }
+
+/* Plug diagram: Lighthouse pipeline with the swappable socket */
+.pipe { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 0; align-items: stretch; min-width: 900px; }
+.stage { padding: 14px; border: 1px solid var(--line); background: var(--panel); display: grid; gap: 4px; align-content: start; }
+.stage:first-child { border-radius: 10px 0 0 10px; }
+.stage:last-child { border-radius: 0 10px 10px 0; }
+.stage + .stage { border-left: 0; }
+.stage.socket { background: var(--lamp-soft); border: 2px solid var(--lamp); }
+.stage small { color: var(--soft); font-size: 13px; }
+pre { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.6; }
+.k { color: var(--sea); } .c { color: var(--muted); }
+
+/* Build log */
+.log { display: grid; gap: 0; border-left: 2px solid var(--line); margin-left: 8px; }
+.entry { position: relative; padding: 0 0 20px 24px; display: grid; gap: 4px; }
+.entry::before { content: ""; position: absolute; left: -8px; top: 5px; width: 14px; height: 14px; border-radius: 50%; background: var(--panel); border: 2px solid var(--muted); }
+.entry.done::before { background: var(--kelp); border-color: var(--kelp); }
+.entry.next::before { background: var(--lamp); border-color: var(--lamp); }
+.entry .when { font-family: var(--mono); font-size: 12px; color: var(--soft); }
+.entry p { color: var(--soft); font-size: 15px; }
+
+/* Lessons */
+.lessons { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.lesson { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.lesson p { font-size: 15px; color: var(--soft); }
+
+footer { color: var(--muted); font-size: 13px; }
+a { color: var(--sea); }
+:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+
+<header style="display:grid;gap:14px">
+  <span class="eyebrow">OF4 Lighthouse · connectors · living build record</span>
+  <h1>Two ways to plug a channel into Lighthouse, and the one we use now</h1>
+  <p class="lede">Lighthouse needs to read every comment a business gets and post a reply back. We tried the same Facebook Page both ways: through Composio, a ready made connector service, and straight through Meta with our own app. Both worked. This page records what we measured, what we chose for the prototype, and how the build moves forward.</p>
+</header>
+
+<section aria-labelledby="dec">
+  <span class="eyebrow">Decision</span>
+  <h2 id="dec">Composio now, our own connector later</h2>
+  <div class="decision">
+    <div class="dcard now">
+      <span class="pill p-buy">Prototype, from 30 October</span>
+      <span class="big">Composio</span>
+      <p>Facebook goes live in Lighthouse through Composio. It replied on a real Page without waiting for Meta's app review, so the team can see real comments this week.</p>
+    </div>
+    <div class="dcard">
+      <span class="pill p-build">Product, after the prototype</span>
+      <span class="big">Our own Meta connector</span>
+      <p>Built from scratch on Meta's own interface once our Meta app passes review. Faster per call and no middle company holding the owner's login.</p>
+    </div>
+    <div class="dcard">
+      <span class="pill p-later">What makes the switch cheap</span>
+      <span class="big">One file changes</span>
+      <p>Every channel enters Lighthouse through one socket, <code>src/connectors.ts</code>. Swapping Composio for our own connector replaces one adapter. The inbox, counts and replies stay as they are.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="paths">
+  <span class="eyebrow">How each path reaches the Page</span>
+  <h2 id="paths">Side by side</h2>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--kelp-soft);border-color:var(--kelp)"></i>Ours</span>
+    <span><i class="sw" style="background:var(--sea-soft);border-color:var(--sea)"></i>Composio's</span>
+    <span><i class="sw" style="background:var(--bg);border-color:var(--line);border-style:dashed"></i>Meta's</span>
+  </div>
+  <div class="paths">
+    <article class="path">
+      <header><h3>Path A · Composio</h3><span class="pill p-buy">In use</span></header>
+      <div class="flow">
+        <div class="node ours"><b>Lighthouse facebook adapter</b><small>asks for posts, comments, or sends a reply</small></div>
+        <div class="arrow">↓ one request, our Composio key in a header</div>
+        <div class="node theirs"><b>Composio</b><small>runs a named action such as FACEBOOK_GET_COMMENTS</small></div>
+        <div class="arrow">↓ owner's Facebook login, held by Composio</div>
+        <div class="node theirs"><b>Composio's own Meta app</b><small>already reviewed by Meta</small></div>
+        <div class="arrow">↓</div>
+        <div class="node meta"><b>Meta Graph API</b><small>the Facebook Page</small></div>
+      </div>
+      <p class="note">Four hops. Reading comments costs one call for the posts, then one call per post.</p>
+    </article>
+    <article class="path">
+      <header><h3>Path B · Built from scratch</h3><span class="pill p-build">Proven, parked</span></header>
+      <div class="flow">
+        <div class="node ours"><b>Lighthouse facebook adapter</b><small>asks for posts, comments, or sends a reply</small></div>
+        <div class="arrow">↓ one request, the Page's own token</div>
+        <div class="node ours"><b>Our Meta app</b><small>works only for people with a role on it until Meta reviews it</small></div>
+        <div class="arrow">↓</div>
+        <div class="node meta"><b>Meta Graph API v26.0</b><small>the Facebook Page</small></div>
+      </div>
+      <p class="note">Two hops. One call reads posts and their comments together.</p>
+    </article>
+  </div>
+</section>
+
+<section aria-labelledby="bench">
+  <span class="eyebrow">Benchmark · 30 October 2026 · a test Facebook Page, 5 reads and 1 reply per path</span>
+  <h2 id="bench">What we measured</h2>
+  <div class="bench">
+    <div class="metric">
+      <h3>Read every comment on the newest posts (median of 5)</h3>
+      <div class="bar-row"><span class="who">Composio</span><div class="track"><div class="fill buy" style="width:62.1%"></div><div class="range" style="left:62.1%;width:22.7%"></div></div><span class="val">2.2 s</span></div>
+      <div class="bar-row"><span class="who">Direct</span><div class="track"><div class="fill build" style="width:20.5%"></div></div><span class="val">0.7 s</span></div>
+      <p class="note">Composio ran twice: medians 2.2 s and 3.0 s, shown as the bracket. Direct: 0.72 s median, 0.77 s slowest. Both read 5 of 5.</p>
+    </div>
+    <div class="metric">
+      <h3>Post one reply under a comment</h3>
+      <div class="bar-row"><span class="who">Composio</span><div class="track"><div class="fill buy" style="width:82%"></div></div><span class="val">2.9 s</span></div>
+      <div class="bar-row"><span class="who">Direct</span><div class="track"><div class="fill build" style="width:57.9%"></div></div><span class="val">2.0 s</span></div>
+      <p class="note">Both replies appear on the Page, confirmed by reading the comment's replies back from Facebook. The script's own check missed the Composio reply because the two services number replies differently.</p>
+    </div>
+    <div class="axis"><span></span><span class="ticks"><span>0 s</span><span>1 s</span><span>2 s</span><span>3 s</span><span>3.5 s</span></span><span></span></div>
+  </div>
+  <p class="note">Script: <code>scripts/bench-facebook.mjs</code>. Keys are read from 1Password at run time and never printed. Run it with <code>--write</code> to post a reply.</p>
+</section>
+
+<section aria-labelledby="cmp">
+  <span class="eyebrow">Comparison</span>
+  <h2 id="cmp">What each path means for the team and for the owner</h2>
+  <div class="scroll">
+  <table class="compare">
+    <thead><tr><th style="width:15%">Question</th><th style="width:23%">Composio</th><th style="width:23%">Built from scratch</th><th style="width:39%">What the owner using Swayu notices</th></tr></thead>
+    <tbody>
+      <tr><td>Works today on a real Page</td><td class="win">Yes, read and reply</td><td class="win">Yes, read and reply</td><td class="owner">Both show real comments in the inbox and post the owner's reply on Facebook.</td></tr>
+      <tr><td>Speed</td><td>Read 2.2 to 3.0 s, reply 2.9 s</td><td class="win">Read 0.7 s, reply 2.0 s</td><td class="owner">Seconds either way. A comment shows up a moment later through Composio.</td></tr>
+      <tr><td>Other businesses can connect</td><td class="win">Yes, through Composio's reviewed Meta app</td><td>Only after Meta reviews our app. Duration unverified</td><td class="owner">With Composio, any owner can click Connect now. Built from scratch, only our own test accounts can until review passes.</td></tr>
+      <tr><td>Who holds the owner's login</td><td>Composio</td><td class="win">Swayu</td><td class="owner">The owner's Facebook permission sits with one more company on the Composio path.</td></tr>
+      <tr><td>More channels</td><td class="win">Instagram, Gmail, YouTube and more exist as actions. Untested</td><td>Each channel is its own build and its own review</td><td class="owner">More places to connect sooner with Composio.</td></tr>
+      <tr><td>Cost per call</td><td>Unverified</td><td class="win">Free within Meta's limits</td><td class="owner">No difference on screen. A cost question for Swayu.</td></tr>
+      <tr><td>Key used in the test</td><td>A personal agent key. The multi customer developer setup is untested</td><td>A user token that expires in about an hour. A 60 day token is possible, not done</td><td class="owner">Neither is ready for real customers yet. The owner would see a broken channel when a key lapses.</td></tr>
+      <tr><td>Effort to build</td><td class="win">Small. One adapter calls named actions</td><td>Small for Facebook, grows per channel and per review</td><td class="owner">Nothing visible.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section aria-labelledby="plug">
+  <span class="eyebrow">How it fits Lighthouse</span>
+  <h2 id="plug">One socket, any connector behind it</h2>
+  <p>Every channel turns its own item into one strict message shape. Everything after the socket sees only that shape, so the owner's inbox does not know or care which path brought a comment in.</p>
+  <div class="scroll">
+    <div class="pipe">
+      <div class="stage socket"><b>Adapter</b><small><code>read</code> pulls items, <code>send</code> posts a reply. Composio today, Meta direct later</small></div>
+      <div class="stage"><b>One message shape</b><small>Zod strict check. Anything else is refused and counted</small></div>
+      <div class="stage"><b>Postgres store</b><small>each message written once, every change an event</small></div>
+      <div class="stage"><b>Agents</b><small>reader, insights, reply draft the owner can edit</small></div>
+      <div class="stage"><b>Inbox</b><small>arrived = answered + waiting + spam, missed is 0</small></div>
+    </div>
+  </div>
+  <pre><span class="c">// src/connectors.ts: the adapter grows a send beside read</span>
+<span class="k">type</span> Adapter = {
+  label: string;
+  mode: <span class="k">'sample'</span> | <span class="k">'live'</span>;     <span class="c">// facebook moves from sample to live</span>
+  read: (raw) =&gt; Message | null;
+  send?: (platformId, text) =&gt; Promise&lt;string&gt;;   <span class="c">// new: the reply id from the platform</span>
+};</pre>
+  <p class="note">WhatsApp, Instagram and Google reviews stay on saved sample files until each one has a live adapter.</p>
+</section>
+
+<section aria-labelledby="log">
+  <span class="eyebrow">Build record</span>
+  <h2 id="log">What has been built, and what comes next</h2>
+  <div class="log">
+    <div class="entry done"><span class="when">29 Oct</span><h3>One socket for four channels <span class="pill p-done">Done</span></h3><p>WhatsApp, Instagram, Facebook and Google reviews feed one pipeline from saved sample files.</p></div>
+    <div class="entry done"><span class="when">30 Oct</span><h3>Test Page and both paths connected <span class="pill p-done">Done</span></h3><p>A test Facebook Page with posts and comments. Our Meta app with Page read and reply permissions. A Facebook connection in Composio.</p></div>
+    <div class="entry done"><span class="when">30 Oct</span><h3>Benchmark, both paths <span class="pill p-done">Done</span></h3><p>5 reads and 1 reply each. Both pass. Composio chosen for the prototype.</p></div>
+    <div class="entry done"><span class="when">30 Oct</span><h3>Facebook live in Lighthouse through Composio <span class="pill p-done">Done</span></h3><p>Connecting Facebook brought the Page's 2 real comments into the inbox. Send reply posted on Facebook, and a readback from Facebook shows it under the comment. A reply Facebook refuses is never booked as sent. No sample data on Facebook. Code: <code>src/composio.ts</code>, 8 tests in <code>tests/composio.test.ts</code>.</p></div>
+    <div class="entry next"><span class="when">Next</span><h3>Watch the cost of checking <span class="pill p-next">Next</span></h3><p>While the inbox is open it checks every 30 seconds, about 5 Composio calls per check on a Page with 3 posts. Price per call is still unknown.</p></div>
+    <div class="entry"><span class="when">Later</span><h3>Instagram and Google reviews through Composio <span class="pill p-later">Later</span></h3><p>Same adapter pattern. Not yet tested.</p></div>
+    <div class="entry"><span class="when">Later</span><h3>Our own Meta connector for the product <span class="pill p-later">Later</span></h3><p>Replace the Composio adapter once our Meta app passes review. The benchmark script already holds the working calls.</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="learn">
+  <span class="eyebrow">Found while building</span>
+  <h2 id="learn">Things that cost time, so the next person skips them</h2>
+  <div class="lessons">
+    <div class="lesson"><h3>Composio wants the comment's own number</h3><p>Meta names a comment <code>postId_commentId</code>. Composio's reply action reads the part before the underscore as a Page and fails. Send only the part after the last underscore.</p></div>
+    <div class="lesson"><h3>Page ids come from Composio's own list</h3><p>The first Composio reply failed with "Page not found in your managed pages". Take the Page id from FACEBOOK_LIST_MANAGED_PAGES, never from a Meta id.</p></div>
+    <div class="lesson"><h3>The personal key fits one endpoint only</h3><p>The Composio key used here works on its MCP endpoint and returns 401 on the developer REST interface. The setup for many owners needs a different key.</p></div>
+    <div class="lesson"><h3>Meta offers only the use cases you add</h3><p>Our Meta app showed only WhatsApp permissions until the Pages use case was added. Page read and reply need pages_read_engagement, pages_read_user_content and pages_manage_engagement.</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="open">
+  <span class="eyebrow">Still open</span>
+  <h2 id="open">Questions before this reaches real owners</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Question</th><th>Why it matters</th><th>State</th></tr></thead>
+    <tbody>
+      <tr><td>Composio's price per call</td><td>Sets the cost of the Composio path at scale</td><td><span class="pill p-open">Unverified</span></td></tr>
+      <tr><td>Composio's developer setup for many owners</td><td>The test used a personal key. A product needs one connection per owner</td><td><span class="pill p-open">Untested</span></td></tr>
+      <tr><td>How long Meta's app review takes</td><td>Decides when the built from scratch path can serve other owners</td><td><span class="pill p-open">Unverified</span></td></tr>
+      <tr><td>Instagram, WhatsApp receive, Google reviews, webhooks</td><td>OF4 needs more than Facebook, and webhooks would replace polling</td><td><span class="pill p-open">Untested</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>Source: <code>docs/artifacts/connectors-build-vs-buy.html</code> in the Lighthouse repository. This page is updated as each build step lands.</footer>
+</div>

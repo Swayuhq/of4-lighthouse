@@ -84,8 +84,11 @@ export function Inbox({ data }: { data: InboxData }) {
 
   function send(item: InboxItem, text: string) {
     start(async () => {
-      await sendReply(item.id, text);
-      setToast({ text: `Reply saved for ${item.author === 'Unknown' ? 'this customer' : item.author}`, undo: { id: item.id, status: item.status } });
+      const { posted, problem } = await sendReply(item.id, text);
+      if (problem) return setToast({ text: problem });
+      const who = item.author === 'Unknown' ? 'this customer' : item.author;
+      // A reply already on the platform cannot be taken back from here, so it gets no Undo.
+      setToast(posted ? { text: `Reply posted for ${who} on ${item.platform}` } : { text: `Reply saved for ${who}`, undo: { id: item.id, status: item.status } });
     });
   }
 

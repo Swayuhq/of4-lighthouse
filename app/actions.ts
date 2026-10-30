@@ -43,9 +43,16 @@ export async function startBusiness(form: FormData) {
 export async function connectChannel(channel: string): Promise<{ added: number; refused: number; problem?: string }> {
   if (!isChannel(channel)) return { added: 0, refused: 0, problem: 'Swayu cannot connect that channel yet.' };
   await connect(channel);
-  const { added, refused } = await pull(channel, 1000);
-  revalidatePath('/', 'layout');
-  return { added, refused };
+  try {
+    const { added, refused } = await pull(channel, 1000);
+    revalidatePath('/', 'layout');
+    return { added, refused };
+  } catch {
+    const problem = `Swayu could not reach ${ADAPTERS[channel].label}. Connect it again.`;
+    await markBroken(channel, problem);
+    revalidatePath('/', 'layout');
+    return { added: 0, refused: 0, problem };
+  }
 }
 
 /** One check of every connected channel. A channel that fails is marked broken, so its count reads unknown. */
@@ -73,9 +80,21 @@ export async function markAs(id: string, status: 'waiting' | 'answered' | 'spam'
   revalidatePath('/', 'layout');
 }
 
-export async function sendReply(id: string, text: string) {
-  await record(id, 'sent', text.trim());
+/** Posts the reply on the channel when it is live, then books it. A reply the platform refuses is never booked as sent. */
+export async function sendReply(id: string, text: string): Promise<{ posted: boolean; problem?: string }> {
+  const reply = text.trim();
+  const [channel, ...rest] = id.split(':');
+  const adapter = isChannel(channel) ? ADAPTERS[channel] : undefined;
+  if (adapter?.send) {
+    try {
+      await adapter.send(rest.join(':'), reply);
+    } catch {
+      return { posted: false, problem: `${adapter.label} did not take the reply. Try again.` };
+    }
+  }
+  await record(id, 'sent', reply);
   revalidatePath('/', 'layout');
+  return { posted: Boolean(adapter?.send) };
 }
 
 /** A draft in the owner's voice for one message, or null so the screen keeps the fixed draft. */

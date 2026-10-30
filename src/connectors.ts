@@ -1,9 +1,13 @@
 // The socket every channel plugs into. Each channel reads its own shape; everything after this file sees one message shape.
 // Sample channels feed saved comments through the same path until each platform approves Swayu.
 // The platform shapes below are written from memory of each API and are unverified until a live adapter replaces them.
+// Facebook is live through Composio since 30 Oct 2026, and its shape is checked against real answers.
+// WhatsApp is live on Meta's test number since 30 Oct 2026. Meta pushes its messages to our webhook, so it has no fetch.
 import { z } from 'zod';
 import type { InboxMessage } from './parse';
 import { checkMessages } from './message';
+import { facebookComments, facebookReply } from './composio';
+import { whatsappReply } from './whatsapp';
 
 export type Channel = 'whatsapp' | 'instagram' | 'facebook' | 'google_reviews';
 export type ConnectionStatus = 'connected' | 'broken';
@@ -15,6 +19,10 @@ type Adapter = {
   mode: 'sample' | 'live';
   /** The platform's item, or null when it lacks what a message needs. */
   read: (raw: unknown) => Omit<InboxMessage, 'id' | 'platform'> & { platformId: string } | null;
+  /** Live only: every item the platform holds now. Storing dedupes on id, so items seen before add nothing. */
+  fetch?: () => Promise<unknown[]>;
+  /** Live only: posts the owner's reply under one item and returns the platform's id for it. */
+  send?: (platformId: string, text: string) => Promise<string>;
 };
 
 /** Any timestamp a platform gives, as UTC YYYY-MM-DDTHH:MM, or null. */
@@ -54,8 +62,10 @@ function reader<T>(shape: z.ZodType<T>, pick: (item: T) => { platformId: string;
 export const ADAPTERS: Record<Channel, Adapter> = {
   whatsapp: {
     label: 'WhatsApp',
-    mode: 'sample',
-    read: reader(WhatsApp, m => ({ platformId: m.id, author: m.profile?.name ?? m.from, at: m.timestamp, text: m.text.body })),
+    mode: 'live',
+    // A reply needs the customer's number as well as the message it quotes, so the id carries both.
+    read: reader(WhatsApp, m => ({ platformId: `${m.from}|${m.id}`, author: m.profile?.name ?? m.from, at: m.timestamp, text: m.text.body })),
+    send: whatsappReply,
   },
   instagram: {
     label: 'Instagram',
@@ -64,8 +74,10 @@ export const ADAPTERS: Record<Channel, Adapter> = {
   },
   facebook: {
     label: 'Facebook',
-    mode: 'sample',
+    mode: 'live',
     read: reader(Facebook, c => ({ platformId: c.id, author: c.from.name, at: c.created_time, text: c.message })),
+    fetch: facebookComments,
+    send: facebookReply,
   },
   google_reviews: {
     label: 'Google reviews',

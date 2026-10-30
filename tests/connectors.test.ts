@@ -31,7 +31,7 @@ describe('Each channel turns its own shape into one message shape', () => {
     const { messages } = toMessages('whatsapp', [
       { id: 'wamid.HB1', from: '447700900123', timestamp: '1761728400', type: 'text', text: { body: 'Is the shop open?' }, profile: { name: 'Aisha' } },
     ]);
-    expect(messages[0]).toMatchObject({ id: 'whatsapp:wamid.HB1', platform: 'WhatsApp', author: 'Aisha', text: 'Is the shop open?' });
+    expect(messages[0]).toMatchObject({ id: 'whatsapp:447700900123|wamid.HB1', platform: 'WhatsApp', author: 'Aisha', text: 'Is the shop open?' });
   });
 
   it('an item missing what we need is refused and counted, never stored half filled', () => {
