@@ -22,10 +22,17 @@ export async function readNew() {
 
 export type PullResult = { channel: Channel; added: number; refused: number; left: number };
 
-/** Brings the next comments from one connected channel. Sample channels read their saved feed. */
+/** Brings the next comments from one connected channel. Live channels ask the platform; sample channels read their saved feed. */
 export async function pull(channel: Channel, take = 1): Promise<PullResult> {
   const conn = (await connections()).find(c => c.channel === channel);
   if (!conn || conn.status !== 'connected') throw new Error(`${ADAPTERS[channel].label} is not connected`);
+  const { fetch } = ADAPTERS[channel];
+  if (fetch) {
+    const { messages, refused } = toMessages(channel, await fetch());
+    const added = await storeFromChannel(channel, messages, conn.cursor);
+    if (added) await readNew();
+    return { channel, added, refused, left: 0 };
+  }
   const feed: unknown[] = JSON.parse(await readFile(join(process.cwd(), 'samples', 'channels', `${channel}.json`), 'utf8'));
   const next = pullSample(feed, conn.cursor, take);
   const { messages, refused } = toMessages(channel, next.items);

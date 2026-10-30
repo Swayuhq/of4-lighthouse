@@ -1,9 +1,11 @@
 // The socket every channel plugs into. Each channel reads its own shape; everything after this file sees one message shape.
 // Sample channels feed saved comments through the same path until each platform approves Swayu.
 // The platform shapes below are written from memory of each API and are unverified until a live adapter replaces them.
+// Facebook is live through Composio since 30 Oct 2026, and its shape is checked against real answers.
 import { z } from 'zod';
 import type { InboxMessage } from './parse';
 import { checkMessages } from './message';
+import { facebookComments, facebookReply } from './composio';
 
 export type Channel = 'whatsapp' | 'instagram' | 'facebook' | 'google_reviews';
 export type ConnectionStatus = 'connected' | 'broken';
@@ -15,6 +17,10 @@ type Adapter = {
   mode: 'sample' | 'live';
   /** The platform's item, or null when it lacks what a message needs. */
   read: (raw: unknown) => Omit<InboxMessage, 'id' | 'platform'> & { platformId: string } | null;
+  /** Live only: every item the platform holds now. Storing dedupes on id, so items seen before add nothing. */
+  fetch?: () => Promise<unknown[]>;
+  /** Live only: posts the owner's reply under one item and returns the platform's id for it. */
+  send?: (platformId: string, text: string) => Promise<string>;
 };
 
 /** Any timestamp a platform gives, as UTC YYYY-MM-DDTHH:MM, or null. */
@@ -64,8 +70,10 @@ export const ADAPTERS: Record<Channel, Adapter> = {
   },
   facebook: {
     label: 'Facebook',
-    mode: 'sample',
+    mode: 'live',
     read: reader(Facebook, c => ({ platformId: c.id, author: c.from.name, at: c.created_time, text: c.message })),
+    fetch: facebookComments,
+    send: facebookReply,
   },
   google_reviews: {
     label: 'Google reviews',
