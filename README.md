@@ -55,8 +55,46 @@ Open http://127.0.0.1:4174. It listens on this computer only. Stop it with Ctrl+
 
 Loading the same file twice adds nothing. Each message is stored once by its content.
 
+## Tech stack
+
+Next.js 16 and React 19 with server actions, Postgres 18 through Drizzle, Zod strict shapes, Gemini through one model door with a daily cap, Composio for Facebook, Meta's Cloud API for WhatsApp, secrets from 1Password at start. Full table, versions and file paths: [`docs/tech-stack.md`](docs/tech-stack.md).
+
+```mermaid
+flowchart LR
+    subgraph IN["Where messages come from"]
+        WA["WhatsApp<br/>Meta pushes to the webhook"]
+        FB["Facebook comments<br/>Composio, checked every 30 s"]
+        FILES["WhatsApp export<br/>reviews CSV"]
+    end
+    GUARD["Tunnel guard<br/>verify token + signature"]
+    CONN["connectors.ts<br/>one strict message shape"]
+    PIPE["pipeline.ts<br/>store once"]
+    DB[("Postgres 18<br/>message · event · facts<br/>model_call · insight")]
+    subgraph AG["Agents"]
+        READ["reader<br/>facts in closed lists"]
+        REPLY["reply<br/>draft in owner's voice"]
+        CHECK["checker<br/>plain code"]
+    end
+    DOOR["model.ts<br/>one door, daily cap"]
+    GEM["Gemini"]
+    UI["Inbox<br/>counts line, Today's 3"]
+    OWNER["Owner presses Send"]
+
+    WA --> GUARD --> CONN
+    FB --> CONN
+    FILES --> CONN
+    CONN --> PIPE --> DB
+    PIPE --> READ --> DOOR
+    REPLY --> CHECK
+    REPLY --> DOOR
+    DOOR <--> GEM
+    DB --> UI --> OWNER
+    OWNER -- "reply out" --> WA
+    OWNER -- "reply out" --> FB
+```
+
 ## Status
 
-A working prototype. Sources today are file imports (WhatsApp chat exports and a reviews CSV) and a simulated watcher. Sending a reply records it and sends nothing. Real connections come later.
+A prototype, stopped on 30 October 2026 after Dhruv agreed the OF4 direction. Facebook is live through Composio and WhatsApp through Meta's webhook on a test number; file imports still work. WhatsApp end to end from a real phone was never tested. The story is in [`docs/prototype-journey.md`](docs/prototype-journey.md).
 
 Part of Swayu outcome family OF4, customer insights and brand monitoring. Owner: Sujit.
