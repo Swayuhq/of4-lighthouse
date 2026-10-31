@@ -55,11 +55,13 @@ flowchart LR
 
 ## What it is built with
 
+Full stack and architecture diagram: [`tech-stack.md`](tech-stack.md).
+
 | Part | Choice | Why |
 |---|---|---|
 | Screens and buttons | Next.js 16 and React 19, server actions | No separate API to keep in step |
 | Data | Postgres 18 | The counts line and "counted once" are database rules |
-| Background jobs | pg-boss inside Postgres | Watchers run as jobs with no extra service |
+| Checking channels | The open inbox checks connected channels every 30 seconds | Fastest to prove; webhooks or a server job replace it |
 | Agents | Gemini, key read from 1Password at start | Insights and themes |
 | Facebook | Composio | Fastest path to a real read and reply on a test Page |
 | WhatsApp | Meta Cloud API webhook | Meta pushes each message to us |

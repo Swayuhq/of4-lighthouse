@@ -18,6 +18,8 @@ Every choice below serves that one line.
 
 ## 2. The stack
 
+This section is the plan of 29 October. What was actually built is in [`tech-stack.md`](tech-stack.md).
+
 The stack is the one `Swayuhq/swayu-app` already runs, at the same pinned versions. If Lighthouse wins, it moves into the product with no rewrite.
 
 | Layer | Choice | Version | Why this one |
