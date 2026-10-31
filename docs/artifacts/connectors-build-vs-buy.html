@@ -253,8 +253,10 @@ a { color: var(--sea); }
     <div class="entry done"><span class="when">30 Oct</span><h3>Test Page and both paths connected <span class="pill p-done">Done</span></h3><p>A test Facebook Page with posts and comments. Our Meta app with Page read and reply permissions. A Facebook connection in Composio.</p></div>
     <div class="entry done"><span class="when">30 Oct</span><h3>Benchmark, both paths <span class="pill p-done">Done</span></h3><p>5 reads and 1 reply each. Both pass. Composio chosen for the prototype.</p></div>
     <div class="entry done"><span class="when">30 Oct</span><h3>Facebook live in Lighthouse through Composio <span class="pill p-done">Done</span></h3><p>Connecting Facebook brought the Page's 2 real comments into the inbox. Send reply posted on Facebook, and a readback from Facebook shows it under the comment. A reply Facebook refuses is never booked as sent. No sample data on Facebook. Code: <code>src/composio.ts</code>, 8 tests in <code>tests/composio.test.ts</code>.</p></div>
-    <div class="entry next"><span class="when">Next</span><h3>Watch the cost of checking <span class="pill p-next">Next</span></h3><p>While the inbox is open it checks every 30 seconds, about 5 Composio calls per check on a Page with 3 posts. Price per call is still unknown.</p></div>
-    <div class="entry"><span class="when">Later</span><h3>Instagram and Google reviews through Composio <span class="pill p-later">Later</span></h3><p>Same adapter pattern. Not yet tested.</p></div>
+    <div class="entry done"><span class="when">30 Oct</span><h3>Cost of checking measured <span class="pill p-done">Done</span></h3><p>Counted from the code: one Facebook check makes 27 calls, not 5. A 30 second check uses about 14,400 calls a day per open inbox. Composio Hobby allows 100,000 a month; Pro is 29 dollars plus 0.0003 dollars a call, about 700 dollars per owner a month at this rate. Meta allows 4,800 calls times engaged users a day per Page. Polling does not survive scale; webhooks do.</p></div>
+    <div class="entry done"><span class="when">30 Oct</span><h3>WhatsApp through Meta's webhook <span class="pill p-done">Done</span></h3><p>Meta pushes each message to Lighthouse. Three locks: the verify handshake (wrong token 403), a signature check with the app secret (unsigned 401), and a tunnel guard so only the webhook answers through the public tunnel (inbox 404). 103 of 103 tests; the guard's test goes red when the guard is removed. A message from a real phone was not tested. Code: <code>src/whatsapp.ts</code>, <code>app/api/webhooks/whatsapp/route.ts</code>, <code>proxy.ts</code>.</p></div>
+    <div class="entry done"><span class="when">30 Oct</span><h3>Prototype stopped <span class="pill p-done">Done</span></h3><p>Dhruv saw Lighthouse and agreed the OF4 direction, which was its job. The build stops here. The full story is in <code>docs/prototype-journey.md</code>, <a href="https://github.com/Swayuhq/of4-lighthouse/pull/3">pull request 3</a>.</p></div>
+    <div class="entry"><span class="when">Not built</span><h3>Instagram, Facebook webhooks, one click Connect with Meta <span class="pill p-later">Stopped</span></h3><p>Same adapter pattern. Left for the real build in Swayu.</p></div>
     <div class="entry"><span class="when">Later</span><h3>Our own Meta connector for the product <span class="pill p-later">Later</span></h3><p>Replace the Composio adapter once our Meta app passes review. The benchmark script already holds the working calls.</p></div>
   </div>
 </section>
@@ -277,10 +279,12 @@ a { color: var(--sea); }
   <table>
     <thead><tr><th>Question</th><th>Why it matters</th><th>State</th></tr></thead>
     <tbody>
-      <tr><td>Composio's price per call</td><td>Sets the cost of the Composio path at scale</td><td><span class="pill p-open">Unverified</span></td></tr>
+      <tr><td>Composio's price per call</td><td>Sets the cost of the Composio path at scale</td><td><span class="pill p-done">29 dollars plus 0.0003 a call</span></td></tr>
       <tr><td>Composio's developer setup for many owners</td><td>The test used a personal key. A product needs one connection per owner</td><td><span class="pill p-open">Untested</span></td></tr>
       <tr><td>How long Meta's app review takes</td><td>Decides when the built from scratch path can serve other owners</td><td><span class="pill p-open">Unverified</span></td></tr>
-      <tr><td>Instagram, WhatsApp receive, Google reviews, webhooks</td><td>OF4 needs more than Facebook, and webhooks would replace polling</td><td><span class="pill p-open">Untested</span></td></tr>
+      <tr><td>WhatsApp receive through a webhook</td><td>Push instead of polling</td><td><span class="pill p-done">Built, real phone untested</span></td></tr>
+      <tr><td>Instagram, Google reviews, Facebook webhooks</td><td>OF4 needs more than Facebook</td><td><span class="pill p-open">Not built, prototype stopped</span></td></tr>
+      <tr><td>Meta Business Verification, App Review, Tech Provider</td><td>They set the launch date for real owners, not the code</td><td><span class="pill p-open">Question for Harish</span></td></tr>
     </tbody>
   </table>
   </div>
