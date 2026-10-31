@@ -4,6 +4,54 @@ Version 1. Owner: Sujit. Date: 29 October 2026. Status: draft for Dhruv's review
 
 The PRD (`docs/prd.md`) says what the owner gets. This page says how it is built, and why.
 
+## The tech stack as built
+
+Read this first. The sections below are the plan of 29 October; this is what runs after the build of 30 October. Versions, file paths and the full diagram: [`tech-stack.md`](tech-stack.md).
+
+```mermaid
+flowchart LR
+    subgraph IN["Where messages come from"]
+        WA["WhatsApp<br/>Meta pushes to the webhook"]
+        FB["Facebook comments<br/>Composio, checked every 30 s"]
+        FILES["WhatsApp export<br/>reviews CSV"]
+    end
+    GUARD["Tunnel guard<br/>verify token + signature"]
+    CONN["connectors.ts<br/>one strict message shape"]
+    PIPE["pipeline.ts<br/>store once"]
+    DB[("Postgres 18<br/>message · event · facts<br/>model_call · insight")]
+    subgraph AG["Agents"]
+        READ["reader<br/>facts in closed lists"]
+        REPLY["reply<br/>draft in owner's voice"]
+        CHECK["checker<br/>plain code"]
+    end
+    DOOR["model.ts<br/>one door, daily cap"]
+    GEM["Gemini"]
+    UI["Inbox<br/>counts line, Today's 3"]
+    OWNER["Owner presses Send"]
+
+    WA --> GUARD --> CONN
+    FB --> CONN
+    FILES --> CONN
+    CONN --> PIPE --> DB
+    PIPE --> READ --> DOOR
+    REPLY --> CHECK
+    REPLY --> DOOR
+    DOOR <--> GEM
+    DB --> UI --> OWNER
+    OWNER -- "reply out" --> WA
+    OWNER -- "reply out" --> FB
+```
+
+| Layer | Built with |
+|---|---|
+| Screens and buttons | Next.js 16, React 19, server actions |
+| Data | Postgres 18 through Drizzle |
+| Input checking | Zod, strict shapes |
+| Model | Gemini through one model door with a daily cap |
+| Facebook | Composio, checked every 30 seconds while the inbox is open |
+| WhatsApp | Meta Cloud API webhook in, Graph API out |
+| Secrets | 1Password at start, never in a file |
+
 ## 1. The one idea the design protects
 
 Most inbox tools count by looking. They show a list and trust that the list is complete. Lighthouse counts by bookkeeping. Every message that arrives is written once, every change to it is written as an event, and the counts line is a sum the database computes. If the sum ever fails to add up, the screen turns red.
