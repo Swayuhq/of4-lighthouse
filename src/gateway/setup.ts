@@ -39,7 +39,7 @@ async function hold({ channel, args }: CallRequest): Promise<'held'> {
   const found = await messageForRef(channel, String(args.ref ?? ''));
   if (!found) throw new Error('no inbox message matches this comment');
   const check = checkDraft(text, found.text, found.ownerLines);
-  if (!check.ok) throw new Error(`the reply ${check.reason}`);
+  if (!check.ok) throw new Error(`it ${check.reason}`);
   await holdReply(found.contentId, text);
   return 'held';
 }

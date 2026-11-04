@@ -51,7 +51,7 @@ export function createGateway(deps: GatewayDeps) {
       try {
         verdict = await deps.askOwner(request);
       } catch (error) {
-        const reason = `Swayu could not keep this reply for the owner: ${error instanceof Error ? error.message : 'unknown error'}`;
+        const reason = `The reply was not kept: ${error instanceof Error ? error.message : 'unknown error'}.`;
         await log(request, 'refused', { note: reason });
         return { ok: false, reason };
       }

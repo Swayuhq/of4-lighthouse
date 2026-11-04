@@ -34,6 +34,17 @@ describe('The activity list', () => {
     expect(activity(rows)[2].at.toISOString()).toBe('2026-11-04T10:01:00.000Z');
   });
 
+  it('the checks every 30 seconds fold into one line each, even when two channels take turns', () => {
+    const ig = (id: number, s: number) => row({ id, channel: 'instagram', at: new Date(Date.UTC(2026, 10, 4, 10, 0, s)) });
+    const fb = (id: number, s: number) => row({ id, at: new Date(Date.UTC(2026, 10, 4, 10, 0, s)) });
+    const held = row({ id: 9, action: 'reply', outcome: 'held', provider: null, at: new Date(Date.UTC(2026, 10, 4, 9, 0, 0)) });
+    expect(activity([fb(1, 0), ig(2, 1), fb(3, 30), ig(4, 31), held]).map(a => [a.text, a.times])).toEqual([
+      ['Read new comments on Instagram through Zernio.', 2],
+      ['Read new comments on Facebook through Zernio.', 2],
+      ['Wrote a reply on Facebook and kept it for you to send.', 1],
+    ]);
+  });
+
   it('marks what was stopped or failed, so it stands out', () => {
     expect(activity([row({ outcome: 'refused', note: 'x' })])[0].kind).toBe('stopped');
     expect(activity([row({ outcome: 'failed', note: 'x' })])[0].kind).toBe('stopped');

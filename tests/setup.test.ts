@@ -31,7 +31,7 @@ describe('One gateway, two doors', () => {
   it('a lead reply to a comment the inbox does not hold is refused, so it is never lost silently', async () => {
     sent.known = false;
     const out = await leadGateway().call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: 'nope', text: 'Hi' } });
-    expect(out).toMatchObject({ ok: false, reason: expect.stringContaining('could not keep this reply') });
+    expect(out).toMatchObject({ ok: false, reason: expect.stringContaining('The reply was not kept') });
     expect(sent.calls).toEqual([]);
     expect(sent.ledger).toMatchObject([{ outcome: 'refused' }]);
   });

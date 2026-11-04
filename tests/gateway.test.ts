@@ -97,7 +97,7 @@ describe('A call that needs the owner waits for the owner', () => {
   it('a reply that cannot be kept for the owner is refused in plain words and never sent', async () => {
     const { gateway, composio, ledger } = setup({ askOwner: async () => { throw new Error('no inbox message matches this comment'); } });
     const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
-    expect(out).toEqual({ ok: false, reason: 'Swayu could not keep this reply for the owner: no inbox message matches this comment' });
+    expect(out).toEqual({ ok: false, reason: 'The reply was not kept: no inbox message matches this comment.' });
     expect(composio).not.toHaveBeenCalled();
     expect(ledger).toMatchObject([{ outcome: 'refused' }]);
   });
