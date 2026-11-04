@@ -10,6 +10,7 @@ import { agentsOn } from '@/src/agents/model';
 import { pull, readNew } from '@/src/pipeline';
 import { ADAPTERS, isChannel } from '@/src/connectors';
 import { writeReply } from '@/src/agents/reply';
+import { draftWaiting } from '@/src/drafting';
 
 function read(name: string, text: string): ParseResult {
   if (/\.txt$/i.test(name)) return parseWhatsAppExport(text);
@@ -46,6 +47,7 @@ export async function connectChannel(channel: string): Promise<{ added: number; 
   await connect(channel);
   try {
     const { added, refused } = await pull(channel, 1000);
+    draftWaiting();
     revalidatePath('/', 'layout');
     return { added, refused };
   } catch {
@@ -67,6 +69,8 @@ export async function checkChannels(): Promise<{ added: number }> {
       await markBroken(c.channel, `Swayu could not reach ${ADAPTERS[c.channel].label}. Connect it again.`);
     }
   }
+  // Replies get drafted in the background; the next check shows them.
+  draftWaiting();
   revalidatePath('/', 'layout');
   return { added };
 }

@@ -16,6 +16,11 @@ describe('Each lead is handed only the tools its rules allow', () => {
     expect(allowedTools(POLICIES, 'ads').map(t => t.name)).toEqual(['facebook_read', 'instagram_read']);
   });
 
+  it('a lead can be handed a narrower set, so drafting replies carries no read tool', () => {
+    expect(allowedTools(POLICIES, 'replies', ['reply']).map(t => t.name)).toEqual(['facebook_reply', 'instagram_reply', 'google_reviews_reply', 'whatsapp_reply']);
+    expect(allowedTools(POLICIES, 'ads', ['reply'])).toEqual([]);
+  });
+
   it('a lead with no rules has no tools', () => {
     expect(allowedTools(POLICIES, 'seo')).toEqual([]);
   });

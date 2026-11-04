@@ -11,7 +11,8 @@ vi.mock('../src/gateway/providers', () => {
 });
 vi.mock('../src/store/db', () => ({
   saveCall: async (row: Record<string, unknown>) => { sent.ledger.push(row); },
-  holdReply: async (channel: string, ref: string, text: string) => { if (sent.known) sent.held.push([channel, ref, text]); return sent.known; },
+  messageForRef: async (channel: string, ref: string) => (sent.known ? { contentId: `${channel}:${ref}`, text: 'Do you deliver?', ownerLines: [] } : null),
+  holdReply: async (contentId: string, text: string) => { sent.held.push([contentId, text]); },
 }));
 
 import { leadGateway, ownerGateway, ROUTES } from '../src/gateway/setup';
@@ -23,7 +24,7 @@ describe('One gateway, two doors', () => {
     const out = await leadGateway().call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Hi' } });
     expect(out).toEqual({ ok: false, reason: "Held for the owner's approval." });
     expect(sent.calls).toEqual([]);
-    expect(sent.held).toEqual([['facebook', '1_2', 'Hi']]);
+    expect(sent.held).toEqual([['facebook:1_2', 'Hi']]);
     expect(sent.ledger).toMatchObject([{ lead: 'replies', channel: 'facebook', action: 'reply', outcome: 'held' }]);
   });
 
@@ -32,6 +33,13 @@ describe('One gateway, two doors', () => {
     const out = await leadGateway().call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: 'nope', text: 'Hi' } });
     expect(out).toMatchObject({ ok: false, reason: expect.stringContaining('could not keep this reply') });
     expect(sent.calls).toEqual([]);
+    expect(sent.ledger).toMatchObject([{ outcome: 'refused' }]);
+  });
+
+  it('a lead reply that invents a price is refused by the checker and never kept', async () => {
+    const out = await leadGateway().call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Yes, delivery is 50 rupees.' } });
+    expect(out).toMatchObject({ ok: false, reason: expect.stringContaining('50') });
+    expect(sent.held).toEqual([]);
     expect(sent.ledger).toMatchObject([{ outcome: 'refused' }]);
   });
 

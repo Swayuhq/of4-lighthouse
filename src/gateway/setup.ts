@@ -2,6 +2,7 @@
 // Two doors with the same rules. The owner's Send button is the owner's approval. A lead agent's reply waits for the owner.
 import { createGateway, type CallRequest, type GatewayDeps, type LedgerRow } from './gateway';
 import { readPolicies } from './policy';
+import { checkDraft } from '../agents/checker';
 import { composio, own, zernioProvider } from './providers';
 
 /**
@@ -28,10 +29,18 @@ async function record(row: LedgerRow) {
   await saveCall(row);
 }
 
-/** Keeps a lead's reply as a draft on the message it answers, for the owner to check and send. */
+/**
+ * Keeps a lead's reply as a draft on the message it answers, for the owner to check and send.
+ * The same checker as the reply agent refuses a draft that invents a number, a day or a promise.
+ */
 async function hold({ channel, args }: CallRequest): Promise<'held'> {
-  const { holdReply } = await import('../store/db');
-  if (!(await holdReply(channel, String(args.ref ?? ''), String(args.text ?? '')))) throw new Error('no inbox message matches this comment');
+  const { holdReply, messageForRef } = await import('../store/db');
+  const text = String(args.text ?? '').trim();
+  const found = await messageForRef(channel, String(args.ref ?? ''));
+  if (!found) throw new Error('no inbox message matches this comment');
+  const check = checkDraft(text, found.text, found.ownerLines);
+  if (!check.ok) throw new Error(`the reply ${check.reason}`);
+  await holdReply(found.contentId, text);
   return 'held';
 }
 

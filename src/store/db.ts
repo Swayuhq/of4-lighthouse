@@ -179,19 +179,25 @@ export async function saveCall(row: { lead: string; channel: string; action: str
 }
 
 /**
- * Keeps a lead's reply as a draft on the message it answers. The lead names the message by the ref its read returned,
- * which is the stored reply ref, or ends in the platform id whichever provider read it. False when no message matches.
+ * The stored message a lead's reply answers, with what the checker needs. The lead names it by the ref it was given,
+ * which is the stored reply ref, or ends in the platform id whichever provider read it. Null when none matches.
  */
-export async function holdReply(channel: string, ref: string, text: string): Promise<boolean> {
-  const reply = text.trim();
-  if (!ref || !reply) return false;
+export async function messageForRef(channel: string, ref: string): Promise<{ contentId: string; text: string; ownerLines: string[] } | null> {
+  if (!ref) return null;
   const ids = [`${channel}:${ref}`, `${channel}:${ref.split('|').at(-1)}`];
-  const [hit] = await db.select({ contentId: message.contentId }).from(message)
+  const [hit] = await db.select({ contentId: message.contentId, text: message.body }).from(message)
     .where(and(eq(message.tenantId, TENANT), like(message.contentId, `${channel}:%`), or(eq(message.replyRef, ref), inArray(message.contentId, ids))))
     .limit(1);
-  if (!hit) return false;
-  await db.insert(event).values({ tenantId: TENANT, contentId: hit.contentId, kind: 'drafted', replyText: reply });
-  return true;
+  if (!hit) return null;
+  const [b] = await db.select({ owners: business.ownerNames }).from(business).where(eq(business.tenantId, TENANT));
+  const owners = b?.owners ?? [];
+  const lines = owners.length ? await db.select({ body: message.body }).from(message).where(and(eq(message.tenantId, TENANT), inArray(message.author, owners))) : [];
+  return { ...hit, ownerLines: lines.map(l => l.body) };
+}
+
+/** Keeps a lead's checked reply as a draft on its message, for the owner to check and send. */
+export async function holdReply(contentId: string, text: string) {
+  await db.insert(event).values({ tenantId: TENANT, contentId, kind: 'drafted', replyText: text });
 }
 
 /** The provider's reply handle for one stored message, or null when it has none. */
