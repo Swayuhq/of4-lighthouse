@@ -1,0 +1,311 @@
+<title>Lighthouse Message Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one wide column of about 1180px. The layer diagram leads, the channel picker sits above it, the numbered walk of the chosen channel sits beside it, then the provider calls and the Swayu mapping. */
+:root{
+  --bg:#f3f7f9; --surface:#ffffff; --ink:#13294b; --soft:#4a5d7a; --line:#dfe7ec; --band:#e9f0f4;
+  --in:#13294b; --draft:#c48f00; --out:#2f7d5b; --lamp-soft:#fff4cc; --kelp-soft:#e2f1ea; --warn:#b42318;
+  --body:"Atkinson Hyperlegible",system-ui,sans-serif;
+  --mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1828; --surface:#14233a; --ink:#e8eef6; --soft:#a3b3c8; --line:#2a3d5a; --band:#112036;
+  --in:#9cc2ff; --draft:#f2b705; --out:#5cc196; --lamp-soft:#3a3010; --kelp-soft:#16362a; --warn:#f08b80; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1828; --surface:#14233a; --ink:#e8eef6; --soft:#a3b3c8; --line:#2a3d5a; --band:#112036;
+  --in:#9cc2ff; --draft:#f2b705; --out:#5cc196; --lamp-soft:#3a3010; --kelp-soft:#16362a; --warn:#f08b80; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:52px}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:clamp(2rem,4.4vw,3rem);letter-spacing:-.015em}
+h2{font-size:1.55rem}
+h3{font-size:1.05rem}
+p{margin:0;max-width:68ch}
+section{display:grid;gap:18px;min-width:0}
+.lede{color:var(--soft);font-size:1.15rem;max-width:64ch}
+.pick{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pick button{font:inherit;font-weight:700;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 16px;cursor:pointer}
+.pick button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pick button:focus-visible{outline:3px solid var(--draft);outline-offset:2px}
+.key{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:.92rem;color:var(--soft)}
+.key span{display:inline-flex;align-items:center;gap:8px}
+.key i{display:inline-block;width:26px;height:0;border-top:3px solid}
+.stage{display:grid;gap:22px}
+.fig{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;overflow-x:auto}
+.fig svg{display:block;width:100%;min-width:900px;height:auto;color:var(--ink)}
+.fig figcaption{font-size:.88rem;color:var(--soft);padding:8px 6px 2px}
+.steps{display:grid;gap:10px;align-content:start}
+.steps h3{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.state{font-size:.8rem;font-weight:700;border-radius:999px;padding:2px 10px}
+.state.ok{background:var(--kelp-soft);color:var(--out)}
+.state.part{background:var(--lamp-soft);color:var(--ink)}
+.steps ol{margin:0;padding-left:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px 28px;counter-reset:n}
+@media (max-width:760px){.steps ol{grid-template-columns:1fr}}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;counter-increment:n;font-size:.95rem}
+.steps li::before{content:counter(n);display:grid;place-items:center;width:26px;height:26px;border-radius:50%;font-size:.8rem;font-weight:700;color:var(--bg);background:var(--c,var(--in))}
+.steps li.d{--c:var(--draft)} .steps li.o{--c:var(--out)}
+.steps li b{font-weight:700}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;font-size:.94rem;min-width:820px}
+th,td{text-align:left;vertical-align:top;padding:11px 14px;border-bottom:1px solid var(--line)}
+thead th{font-size:.88rem;color:var(--soft)}
+tbody th{white-space:nowrap}
+tr:last-child td,tr:last-child th{border-bottom:0}
+code{font-family:var(--mono);font-size:.84em}
+.cap{font-size:.9rem;color:var(--soft)}
+@media (prefers-reduced-motion: no-preference){.route{transition:opacity .25s}}
+</style>
+
+<div class="wrap">
+
+<header style="display:grid;gap:14px">
+  <h1>Lighthouse Message Flow</h1>
+  <p class="lede">A customer comments on Instagram, Facebook, Google or WhatsApp. This page follows that message down through five layers to the owner, and the owner's reply back up to the customer. It also marks the step where Zernio, Composio or Meta does the work.</p>
+</header>
+
+<section aria-labelledby="flow">
+  <h2 id="flow">Follow one message</h2>
+  <div class="pick" role="group" aria-label="Choose a channel">
+    <button type="button" id="ch-instagram" data-ch="instagram" aria-pressed="true">Instagram</button>
+    <button type="button" id="ch-facebook" data-ch="facebook" aria-pressed="false">Facebook</button>
+    <button type="button" id="ch-google" data-ch="google" aria-pressed="false">Google reviews</button>
+    <button type="button" id="ch-whatsapp" data-ch="whatsapp" aria-pressed="false">WhatsApp</button>
+  </div>
+  <div class="key"><span><i style="border-color:var(--in)"></i>The customer's message coming in</span><span><i style="border-color:var(--draft);border-top-style:dashed"></i>Swayu writing a draft</span><span><i style="border-color:var(--out)"></i>The owner's reply going out</span></div>
+  <div class="stage">
+    <figure class="fig">
+      <svg id="map" viewBox="0 0 1180 760" role="img" aria-label="Five layers from the customer's platform to the owner, with the path of one message in, the draft, and the reply out"></svg>
+      <figcaption id="cap">Instagram: Zernio reads the comment and posts the owner's reply. Composio is not on this path.</figcaption>
+    </figure>
+    <div class="steps" aria-live="polite">
+      <h3><span id="st-title">Instagram</span><span id="st-state" class="state ok">Both ways tested</span></h3>
+      <ol id="st-list"></ol>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="who">
+  <h2 id="who">What each provider is asked to do</h2>
+  <p>Swayu never calls a provider directly from the inbox or from an agent. Every call goes through the gateway, which checks the rules, picks the provider from the route table, and writes a ledger row.</p>
+  <div class="tbl"><table>
+    <thead><tr><th scope="col">Provider</th><th scope="col">What triggers it</th><th scope="col">The call it makes</th><th scope="col">Channels in Lighthouse today</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Zernio</th><td>Swayu asks every 30 seconds while the inbox is open; the owner's Send</td><td><code>GET /accounts</code>, <code>GET /inbox/comments</code>, <code>GET /inbox/comments/{post}</code> with each comment's replies and owner flag; <code>POST /inbox/comments/{post}</code> with a retry key; <code>GET /inbox/reviews</code>, <code>POST /inbox/reviews/{id}/reply</code></td><td>Reads Instagram and Facebook. Replies on Instagram. Google reviews read and reply, untested</td></tr>
+      <tr><th scope="row">Composio</th><td>The owner's Send on a Facebook comment</td><td>One MCP call, <code>COMPOSIO_MULTI_EXECUTE_TOOL</code>, naming a tool: <code>FACEBOOK_CREATE_COMMENT</code> to reply. Also wired for reading: <code>FACEBOOK_GET_PAGE_POSTS</code>, <code>FACEBOOK_GET_COMMENTS</code>, <code>INSTAGRAM_GET_IG_MEDIA_COMMENTS</code></td><td>Replies on Facebook. Its readers are kept for comparison, not routed</td></tr>
+      <tr><th scope="row">Meta, Swayu's own app</th><td>Meta pushes each WhatsApp message the moment it arrives; the owner's Send</td><td>Webhook <code>POST /api/webhooks/whatsapp</code>, signature checked; reply through the Cloud API <code>/messages</code></td><td>WhatsApp, on Meta's test number</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="swayu">
+  <h2 id="swayu">How this connects to Swayu</h2>
+  <p>Lighthouse is where the shared connector layer was tried on real accounts. Each part has a place waiting for it in Swayu.</p>
+  <div class="tbl"><table>
+    <thead><tr><th scope="col">In Lighthouse</th><th scope="col">In Swayu</th><th scope="col">What the owner sees</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Connector gateway</th><td>The shared connector gateway every lead calls; not built on main yet</td><td>Nothing. Providers stay out of sight</td></tr>
+      <tr><th scope="row">Cedar rules per lead, channel and action</th><td>Lead permissions at the connector level, as agreed on 4 November</td><td>Nothing, until a rule asks for approval</td></tr>
+      <tr><th scope="row">Replies lead on Mastra</th><td>A lead under the head of marketing, on the same Mastra version as Swayu</td><td>A reply already written</td></tr>
+      <tr><th scope="row">Held reply, then Send</th><td>The owner's approval in Needs you</td><td>Ready to send, then Send</td></tr>
+      <tr><th scope="row">Checker on every draft</th><td>The review gate before anything reaches the owner</td><td>No invented price, day or refund</td></tr>
+      <tr><th scope="row">Ledger and Activity page</th><td>The ledger written at each call, rule 2</td><td>One plain sentence per thing done</td></tr>
+      <tr><th scope="row">Zernio, Composio, Meta</th><td>The route table behind the gateway; Swayu's own logins already exist on main for Google, Meta and WhatsApp</td><td>Connect, on the account card</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Tested on 4 November 2026 on the Instagram account priya_test_at and the Facebook Page Sujit Test Cafe. Google reviews needs a Business Profile to test. WhatsApp ran on Meta's test number, never from a real phone.</p>
+</section>
+
+</div>
+
+<script>
+(function(){
+  var NS = 'http://www.w3.org/2000/svg';
+  var svg = document.getElementById('map');
+  var LAYERS = [
+    { y: 18,  h: 104, name: "Customer's platform" },
+    { y: 160, h: 104, name: 'Connector provider' },
+    { y: 302, h: 116, name: 'Swayu connector layer' },
+    { y: 456, h: 116, name: 'Swayu inbox and agents' },
+    { y: 610, h: 132, name: 'Owner' }
+  ];
+  var W = 176, H = 56;
+  var N = {
+    whatsapp:  { x: 340, y: 70,  t: 'WhatsApp', w: 160 },
+    instagram: { x: 545, y: 70,  t: 'Instagram', w: 160 },
+    facebook:  { x: 750, y: 70,  t: 'Facebook', w: 160 },
+    google:    { x: 955, y: 70,  t: 'Google reviews', w: 160 },
+    meta:      { x: 340, y: 212, t: 'Meta, own app', w: 160 },
+    zernio:    { x: 750, y: 212, t: 'Zernio', w: 470 },
+    composio:  { x: 1100, y: 212, t: 'Composio', w: 130 },
+    webhook:   { x: 340, y: 360, t: 'Webhook, signed', w: 160 },
+    rules:     { x: 560, y: 360, t: 'Rules (Cedar)', w: 160 },
+    hold:      { x: 830, y: 360, t: 'Hold for owner', w: 160 },
+    route:     { x: 1100, y: 360, t: 'Route table', w: 130 },
+    store:     { x: 360, y: 514, t: 'Inbox, stored once', w: 170 },
+    reader:    { x: 565, y: 514, t: 'Reader agent', w: 150 },
+    lead:      { x: 770, y: 514, t: 'Replies lead', w: 150 },
+    checker:   { x: 965, y: 514, t: 'Checker', w: 140 },
+    card:      { x: 800, y: 676, t: 'Ready to send', w: 180 },
+    send:      { x: 1095, y: 676, t: 'Owner sends', w: 140 }
+  };
+  var C = {
+    instagram: {
+      state: ['ok', 'Both ways tested'],
+      cap: 'Instagram: Zernio reads the comment and posts the owner’s reply. Composio is not on this path.',
+      inn: [['instagram'], ['zernio', 'Swayu asks every 30 s'], ['rules', 'read allowed'], ['store', 'one shape, counted'], ['reader'], ['lead']],
+      draft: [['lead'], ['hold', 'needs owner'], ['checker', 'checked'], ['card', 'passed']],
+      out: [['card'], ['send', 'owner edits'], ['route', 'owner approved'], ['zernio', 'POST reply'], ['instagram', 'posted']],
+      steps: [
+        ['i', '<b>The customer comments</b> on a post of the business account.'],
+        ['i', '<b>Swayu asks the gateway</b> for new comments every 30 seconds. The rules allow the read; the route table names <b>Zernio</b>.'],
+        ['i', '<b>Zernio reads Instagram</b> and returns each comment with its replies, its author and its link.'],
+        ['i', '<b>The inbox stores it once</b> under Instagram’s own id and counts it. The reader agent notes what the customer wants.'],
+        ['d', '<b>The replies lead writes a reply</b> and calls its reply tool. The gateway holds it: a reply needs the owner.'],
+        ['d', '<b>The checker passes it</b>: no price, day or refund nobody wrote. It appears on the card as Ready to send.'],
+        ['o', '<b>The owner presses Send.</b> The gateway records the approval and routes the reply to <b>Zernio</b>.'],
+        ['o', '<b>Zernio posts it on Instagram</b> under the comment. The ledger notes it; the card moves to Answered with a link.']
+      ]
+    },
+    facebook: {
+      state: ['ok', 'Both ways tested'],
+      cap: 'Facebook: Zernio reads the comment, Composio posts the owner’s reply. One channel, two providers.',
+      inn: [['facebook'], ['zernio', 'Swayu asks every 30 s'], ['rules', 'read allowed'], ['store', 'one shape, counted'], ['reader'], ['lead']],
+      draft: [['lead'], ['hold', 'needs owner'], ['checker', 'checked'], ['card', 'passed']],
+      out: [['card'], ['send', 'owner edits'], ['route', 'owner approved'], ['composio', 'create comment'], ['facebook', 'posted', [[1100, 140], [800, 140]]]],
+      steps: [
+        ['i', '<b>The customer comments</b> on a post of the business Page.'],
+        ['i', '<b>Swayu asks the gateway</b> every 30 seconds. The route table names <b>Zernio</b> for reading, because Meta gives Zernio every author’s name.'],
+        ['i', '<b>Zernio reads Facebook</b>, with each comment’s replies. A comment the Page already answered on Facebook counts as answered.'],
+        ['i', '<b>The inbox stores it once</b> under Facebook’s own id and counts it.'],
+        ['d', '<b>The replies lead writes a reply</b>; the gateway holds it for the owner.'],
+        ['d', '<b>The checker passes it</b> and it appears as Ready to send.'],
+        ['o', '<b>The owner presses Send.</b> The route table names <b>Composio</b> for Facebook replies.'],
+        ['o', '<b>Composio posts it</b> through its own Meta app, which Meta has already reviewed. The ledger notes the provider.']
+      ]
+    },
+    google: {
+      state: ['part', 'Wired, untested'],
+      cap: 'Google reviews: Zernio both ways. No test Business Profile yet, so the read fails closed and the count shows unknown, never zero.',
+      inn: [['google'], ['zernio', 'Swayu asks every 30 s'], ['rules', 'read allowed'], ['store', 'one shape, counted'], ['reader'], ['lead']],
+      draft: [['lead'], ['hold', 'needs owner'], ['checker', 'checked'], ['card', 'passed']],
+      out: [['card'], ['send', 'owner edits'], ['route', 'owner approved'], ['zernio', 'POST review reply'], ['google', 'posted']],
+      steps: [
+        ['i', '<b>The customer leaves a review</b> with stars.'],
+        ['i', '<b>Swayu asks the gateway</b>; the route table names <b>Zernio</b>. Composio has no Google reviews toolkit.'],
+        ['i', '<b>Zernio reads the reviews</b> that have no reply yet. With no profile connected, the read fails and the channel shows unknown.'],
+        ['i', '<b>The inbox stores each review once</b>; low stars move it up Today’s 3.'],
+        ['d', '<b>The replies lead writes a reply</b>, held by the gateway, checked by the checker.'],
+        ['o', '<b>The owner presses Send</b>; <b>Zernio</b> posts the review reply.'],
+        ['o', '<b>Untested</b>: Google shows Zernio’s name when the owner connects.']
+      ]
+    },
+    whatsapp: {
+      state: ['part', 'Test number only'],
+      cap: 'WhatsApp: Meta pushes each message to Swayu’s own webhook, so it skips the read through the gateway. The reply still goes through the gateway.',
+      inn: [['whatsapp'], ['meta', 'Meta pushes at once'], ['webhook', 'signature checked'], ['store', 'one shape, counted'], ['reader'], ['lead']],
+      draft: [['lead'], ['hold', 'needs owner'], ['checker', 'checked'], ['card', 'passed']],
+      out: [['card'], ['send', 'owner edits'], ['route', 'owner approved'], ['meta', 'Cloud API', [[1060, 290], [430, 290]]], ['whatsapp', 'delivered']],
+      steps: [
+        ['i', '<b>The customer sends a WhatsApp message</b> to the business number.'],
+        ['i', '<b>Meta pushes it</b> to Swayu’s webhook the moment it arrives. No asking every 30 seconds.'],
+        ['i', '<b>Swayu checks Meta’s signature</b>, then stores the message once. Unsigned messages are refused.'],
+        ['d', '<b>The replies lead writes a reply</b>, held by the gateway, checked by the checker.'],
+        ['o', '<b>The owner presses Send</b>; the route table names <b>Swayu’s own Meta app</b>. Composio only sends on WhatsApp and cannot receive.'],
+        ['o', '<b>Meta delivers it.</b> Tested on Meta’s test number, never from a real phone.']
+      ]
+    }
+  };
+
+  function el(tag, attrs, text){
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text) e.textContent = text;
+    return e;
+  }
+
+  var defs = el('defs', {});
+  [['in', 'var(--in)'], ['draft', 'var(--draft)'], ['out', 'var(--out)']].forEach(function(m){
+    var mk = el('marker', { id: 'a-' + m[0], viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' });
+    mk.appendChild(el('path', { d: 'M0 0 L10 5 L0 10 z', fill: m[1] }));
+    defs.appendChild(mk);
+  });
+  svg.appendChild(defs);
+
+  LAYERS.forEach(function(L){
+    svg.appendChild(el('rect', { x: 8, y: L.y, width: 1164, height: L.h, rx: 12, fill: 'var(--band)' }));
+    L.name.split(' ').reduce(function(lines, w){ var l = lines[lines.length - 1]; if ((l + ' ' + w).trim().length > 14) lines.push(w); else lines[lines.length - 1] = (l + ' ' + w).trim(); return lines; }, ['']).forEach(function(line, i, all){ svg.appendChild(el('text', { x: 24, y: L.y + L.h / 2 + 5 + (i - (all.length - 1) / 2) * 17, 'font-size': 14, 'font-weight': 700, fill: 'var(--soft)' }, line)); });
+  });
+
+  Object.keys(N).forEach(function(k){
+    var n = N[k], w = n.w || W;
+    var g = el('g', { id: 'n-' + k });
+    g.appendChild(el('rect', { x: n.x - w / 2, y: n.y - H / 2, width: w, height: H, rx: 10, fill: 'var(--surface)', stroke: 'var(--line)', 'stroke-width': 1.5 }));
+    g.appendChild(el('text', { x: n.x, y: n.y + 5, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 700, fill: 'currentColor' }, n.t));
+    svg.appendChild(g);
+  });
+
+  var layer = el('g', { id: 'routes' });
+  svg.appendChild(layer);
+
+  // Each path gets its own small offset, so three paths through the same box stay apart.
+  var OFF = { inn: -7, draft: 0, out: 7 };
+  var COL = { inn: 'var(--in)', draft: 'var(--draft)', out: 'var(--out)' };
+  var MK = { inn: 'a-in', draft: 'a-draft', out: 'a-out' };
+
+  function edgePoint(n, toward, off){
+    var w = (n.w || W) / 2 + 2, h = H / 2 + 2;
+    var dx = toward.x - n.x, dy = toward.y - n.y;
+    var sx = dx === 0 ? Infinity : w / Math.abs(dx), sy = dy === 0 ? Infinity : h / Math.abs(dy);
+    var s = Math.min(sx, sy);
+    return { x: n.x + dx * s + off, y: n.y + dy * s + off };
+  }
+
+  function draw(kind, seq){
+    for (var i = 0; i < seq.length - 1; i++){
+      var a = N[seq[i][0]], b = N[seq[i + 1][0]], label = seq[i + 1][1], via = seq[i + 1][2] || [];
+      var o = OFF[kind];
+      var first = via.length ? { x: via[0][0], y: via[0][1] } : b;
+      var last = via.length ? { x: via[via.length - 1][0], y: via[via.length - 1][1] } : a;
+      var pts = [edgePoint(a, first, o)].concat(via.map(function(v){ return { x: v[0] + o, y: v[1] + o }; }), [edgePoint(b, last, o)]);
+      layer.appendChild(el('polyline', { points: pts.map(function(p){ return p.x + ',' + p.y; }).join(' '), fill: 'none', stroke: COL[kind], 'stroke-width': 3, 'stroke-linejoin': 'round', 'stroke-dasharray': kind === 'draft' ? '7 5' : 'none', 'marker-end': 'url(#' + MK[kind] + ')', class: 'route' }));
+      if (label){
+        var m = Math.floor((pts.length - 1) / 2), p = pts[m], q = pts[m + 1];
+        // On a short upright hop the in and out labels would sit on top of each other, so each moves to its own side.
+        var upright = Math.abs(p.x - q.x) < 40;
+        var mx = (p.x + q.x) / 2 + (upright ? { inn: -70, draft: 0, out: 70 }[kind] : 0), my = (p.y + q.y) / 2;
+        var wid = label.length * 7.4 + 16;
+        layer.appendChild(el('rect', { x: mx - wid / 2, y: my - 12, width: wid, height: 24, rx: 6, fill: 'var(--surface)', stroke: COL[kind], 'stroke-width': 1 }));
+        layer.appendChild(el('text', { x: mx, y: my + 5, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700, fill: COL[kind] }, label));
+      }
+    }
+  }
+
+  function show(ch){
+    var c = C[ch];
+    while (layer.firstChild) layer.removeChild(layer.firstChild);
+    Object.keys(N).forEach(function(k){
+      var used = [c.inn, c.draft, c.out].some(function(s){ return s.some(function(x){ return x[0] === k; }); });
+      document.getElementById('n-' + k).setAttribute('opacity', used ? '1' : '0.35');
+    });
+    draw('inn', c.inn); draw('draft', c.draft); draw('out', c.out);
+    // The ledger takes one row at every step in the connector layer.
+    layer.appendChild(el('text', { x: 24, y: 410, 'font-size': 12, fill: 'var(--soft)' }, 'every step here writes a ledger row'));
+    document.getElementById('cap').textContent = c.cap;
+    document.getElementById('st-title').textContent = document.getElementById('ch-' + ch).textContent;
+    var st = document.getElementById('st-state');
+    st.textContent = c.state[1]; st.className = 'state ' + c.state[0];
+    var ol = document.getElementById('st-list');
+    ol.innerHTML = c.steps.map(function(s){ return '<li class="' + s[0] + '"><span>' + s[1] + '</span></li>'; }).join('');
+    document.querySelectorAll('.pick button').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.ch === ch)); });
+    svg.setAttribute('aria-label', c.cap);
+  }
+
+  document.querySelectorAll('.pick button').forEach(function(b){
+    b.addEventListener('click', function(){ show(b.dataset.ch); try { location.hash = b.dataset.ch; } catch (e) {} });
+  });
+  var start = (location.hash || '').slice(1);
+  show(C[start] ? start : 'instagram');
+})();
+</script>
