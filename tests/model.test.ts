@@ -56,3 +56,14 @@ it('a second copy of the client still has the key, as the page and the API route
   const second = await import('../src/agents/model');
   expect(second.agentsOn()).toBe(true);
 });
+
+describe('Gemini 3 tool call signatures survive the round trip', () => {
+  it('a signature on a tool call the model made is put back on that call in the next request, and only on it', async () => {
+    const { carrySignatures, keepSignatures } = await import('../src/agents/model');
+    const kept = new Map<string, unknown>();
+    keepSignatures({ choices: [{ message: { tool_calls: [{ id: 'c1', extra_content: { google: { thought_signature: 'sig1' } } }, { id: 'c2' }] } }] }, kept);
+    const next = carrySignatures({ messages: [{}, { tool_calls: [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }] }] }, kept);
+    expect(next.messages?.[1].tool_calls).toEqual([{ id: 'c1', extra_content: { google: { thought_signature: 'sig1' } } }, { id: 'c2' }, { id: 'c3' }]);
+    expect(next.messages?.[0]).toEqual({});
+  });
+});

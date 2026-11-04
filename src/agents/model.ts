@@ -116,15 +116,45 @@ export async function ask<T>(a: Ask<T>): Promise<T | null> {
  * which reserves the largest possible cost first and books the real cost after. A response without
  * usage keeps its reserved maximum, so spend is over counted, never under counted.
  */
+type ToolCall = { id?: string; extra_content?: unknown };
+type ChatBody = { messages?: { tool_calls?: ToolCall[] }[]; choices?: { message?: { tool_calls?: ToolCall[] } }[] };
+
+/** Remembers the signature Gemini 3 puts on each tool call it makes, keyed by the call's id. */
+export function keepSignatures(answer: ChatBody, kept: Map<string, unknown>) {
+  for (const call of answer.choices?.flatMap(c => c.message?.tool_calls ?? []) ?? []) {
+    if (call.id && call.extra_content) kept.set(call.id, call.extra_content);
+  }
+}
+
+/**
+ * Puts each remembered signature back on the tool call it belongs to. Gemini 3 refuses the next turn with 400
+ * when a tool call comes back without it, and the OpenAI shaped client drops it (seen 4 Nov 2026).
+ * https://ai.google.dev/gemini-api/docs/thought-signatures
+ */
+export function carrySignatures(request: ChatBody, kept: Map<string, unknown>): ChatBody {
+  return {
+    ...request,
+    messages: request.messages?.map(m => m.tool_calls
+      ? { ...m, tool_calls: m.tool_calls.map(c => (c.id && kept.has(c.id) && !c.extra_content ? { ...c, extra_content: kept.get(c.id) } : c)) }
+      : m),
+  };
+}
+
 export function cappedFetch(agent: string, model: Model, maxOutputTokens: number): typeof fetch {
+  const signatures = new Map<string, unknown>();
   return async (input, init) => {
     if (!agentsOn()) throw new Error('The agents are switched off: no Gemini key or no daily allowance.');
+    if (typeof init?.body === 'string' && init.body.includes('"tool_calls"')) {
+      init = { ...init, body: JSON.stringify(carrySignatures(JSON.parse(init.body) as ChatBody, signatures)) };
+    }
     const bodyText = typeof init?.body === 'string' ? init.body : '';
     const id = await reserve(agent, model, usd(model, Math.ceil(bodyText.length / 3), maxOutputTokens));
     if (id === null) throw new Error('The daily spending cap for the agents is reached.');
     try {
       const res = await fetch(input, { ...init, headers: { ...(init?.headers as Record<string, string>), authorization: `Bearer ${KEY}` } });
-      const u = await res.clone().json().then(b => b?.usage, () => undefined);
+      const answer = await res.clone().json().catch(() => undefined) as (ChatBody & { usage?: { prompt_tokens?: number; total_tokens?: number; completion_tokens?: number } }) | undefined;
+      if (answer) keepSignatures(answer, signatures);
+      const u = answer?.usage;
       const used = u ? usd(model, u.prompt_tokens ?? 0, Math.max((u.total_tokens ?? 0) - (u.prompt_tokens ?? 0), u.completion_tokens ?? 0)) : null;
       await book(id, res.ok ? 'ok' : `refused ${res.status}`, used);
       return res;
