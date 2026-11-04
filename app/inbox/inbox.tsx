@@ -298,6 +298,12 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
         </div>
       )}
 
+      {!item.reply && item.status === 'answered' && item.link && (
+        <p className="ml-4 mt-3 border-l-2 border-kelp pl-4 text-[15px] font-bold text-kelp">
+          <a href={item.link} target="_blank" rel="noreferrer" className="underline underline-offset-4">See the answer on {item.platform}</a>
+        </p>
+      )}
+
       {waiting && item.heldReply && !writing && (
         <div className="ml-4 mt-4 border-l-2 border-lamp pl-4">
           <p className="text-[15px] font-bold text-navy-soft">Ready to send</p>
