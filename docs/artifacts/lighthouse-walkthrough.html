@@ -198,16 +198,16 @@ flowchart LR
       <tr><th scope="row">Reply on Instagram</th><td><span class="m open">Untested</span>not wired in Lighthouse</td><td><span class="m yes">Measured</span>1 of 1 posted, read back from Instagram</td></tr>
       <tr><th scope="row">See replies the owner made in the platform's own app</th><td><span class="m no">Missing</span>in the read Lighthouse uses</td><td><span class="m yes">Measured</span>replies with an owner flag; 7 comments counted as answered</td></tr>
       <tr><th scope="row">Link to the comment on the platform</th><td><span class="m open">Untested</span>not in the read Lighthouse uses</td><td><span class="m yes">Measured</span>post address returned; links open on both platforms</td></tr>
-      <tr><th scope="row">Google reviews</th><td><span class="m no">Missing</span>no toolkit</td><td><span class="m open">Untested</span>endpoints wired; no test Business Profile, so the read fails closed</td></tr>
+      <tr><th scope="row">Google reviews</th><td><span class="m open">Untested</span>review read and reply tools listed in its catalogue</td><td><span class="m open">Untested</span>endpoints wired; no test Business Profile, so the read fails closed</td></tr>
       <tr><th scope="row">WhatsApp messages in</th><td><span class="m no">Missing</span>send only</td><td><span class="m open">Untested</span>listed by webhook. Lighthouse uses its own Meta app</td></tr>
-      <tr><th scope="row">Email, Gmail and Outlook</th><td><span class="m open">Untested</span>covered in the catalogue</td><td><span class="m no">Missing</span></td></tr>
+      <tr><th scope="row">Email, Gmail and Outlook</th><td><span class="m open">Untested</span>covered in the catalogue</td><td><span class="m open">Untested</span>listed as Google and Microsoft email and calendar</td></tr>
       <tr><th scope="row">Ads, Meta and Google</th><td><span class="m open">Untested</span>Meta Ads and Google Ads tools listed: campaigns, ad sets, ads, insights</td><td><span class="m open">Untested</span>about 200 ad endpoints listed: Meta, Google, TikTok, boost, rules, audiences</td></tr>
       <tr><th scope="row">Safe retry on a reply</th><td><span class="m open">Untested</span>no retry key found in the tool call</td><td><span class="m yes">Measured</span>retry key sent on every reply</td></tr>
       <tr><th scope="row">Whose name the owner sees when connecting</th><td>Composio's reviewed Meta app</td><td>Zernio, including on Google's consent screen</td></tr>
       <tr><th scope="row">Speed of one read</th><td>1 to 5 seconds</td><td>1 to 5 seconds. Single runs, so speed does not separate them</td></tr>
     </tbody>
   </table></div>
-  <p class="cap">Measured on 4 November 2026, one test business, the same accounts connected in both. Ads and email rows come from each provider's own catalogue and docs, not from a run.</p>
+  <p class="cap">Measured on 4 November 2026, one test business, the same accounts connected in both. Google reviews, WhatsApp, email and ads rows come from each provider's own catalogue and docs, read on 4 November 2026, not from a run.</p>
 </section>
 
 <section>
@@ -218,7 +218,7 @@ flowchart LR
       <ul>
         <li>Meta gives it fewer author names on Facebook: 8 of 12, so a third of customers would read as “Someone”.</li>
         <li>The read used here returns no replies and no owner flag, so an answer typed in the Facebook app looks unanswered and the count drifts.</li>
-        <li>No Google reviews, and WhatsApp is send only, so two of the four OF4 channels need another provider anyway.</li>
+        <li>WhatsApp is send only, so it cannot bring customer messages in. Its Google review tools are listed but untested.</li>
         <li>Instagram replies are not yet wired or tested.</li>
       </ul>
       <p class="cap">Where it leads: an already reviewed Meta app, 5 of 5 Facebook replies, and email in the same catalogue.</p>
@@ -229,7 +229,6 @@ flowchart LR
         <li>Facebook replies are untested, and Google reviews are untested until a Business Profile is connected.</li>
         <li>The owner sees Zernio's name on Google's consent screen.</li>
         <li>The free plan stops at two connected accounts; a card was added to lift it.</li>
-        <li>No email channel.</li>
       </ul>
       <p class="cap">Where it leads: every name, the owner's own replies, links to each comment, one REST shape for comments and reviews, and a retry key.</p>
     </div>
