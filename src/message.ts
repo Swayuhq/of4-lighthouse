@@ -10,6 +10,7 @@ export const MessageShape = z
     receivedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
     text: z.string().max(4000),
     stars: z.number().int().min(1).max(5).optional(),
+    replyRef: z.string().min(1).max(1000).optional(),
   })
   .strict();
 

@@ -25,6 +25,8 @@ export const message = pgTable(
     receivedAt: text('received_at').notNull(),
     body: text('body').notNull(),
     stars: integer('stars'),
+    /** What the provider that read it needs to reply. */
+    replyRef: text('reply_ref'),
   },
   t => [primaryKey({ columns: [t.tenantId, t.contentId] })],
 );
@@ -73,3 +75,16 @@ export const connection = pgTable(
   },
   t => [primaryKey({ columns: [t.tenantId, t.channel] })],
 );
+
+/** One row for every call through the connector gateway, written at the call. */
+export const connectorCall = pgTable('connector_call', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  tenantId: uuid('tenant_id').notNull(),
+  lead: text('lead').notNull(),
+  channel: text('channel').notNull(),
+  action: text('action').notNull(),
+  outcome: text('outcome').notNull(),
+  provider: text('provider'),
+  note: text('note'),
+  at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+});

@@ -11,6 +11,8 @@ export type InboxMessage = {
   text: string;
   /** Review stars, 1 to 5, when the file gives them. */
   stars?: number;
+  /** What the provider that read it needs to reply. Only live channels have one. */
+  replyRef?: string;
 };
 
 export type ParseResult = {

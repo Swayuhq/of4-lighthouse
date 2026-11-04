@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { parseCsv, parseWhatsAppExport, type ParseResult } from '@/src/parse';
 import { checkMessages } from '@/src/message';
-import { connect, connections, load, markBroken, nameBusiness, record, setOwnerNames, startOver, store } from '@/src/store/db';
+import { connect, connections, load, markBroken, nameBusiness, record, replyRefFor, setOwnerNames, startOver, store } from '@/src/store/db';
+import { ownerGateway } from '@/src/gateway/setup';
 import { agentsOn } from '@/src/agents/model';
 import { pull, readNew } from '@/src/pipeline';
 import { ADAPTERS, isChannel } from '@/src/connectors';
@@ -80,21 +81,21 @@ export async function markAs(id: string, status: 'waiting' | 'answered' | 'spam'
   revalidatePath('/', 'layout');
 }
 
-/** Posts the reply on the channel when it is live, then books it. A reply the platform refuses is never booked as sent. */
+/**
+ * Posts the reply through the connector gateway when the message came from a channel, then books it.
+ * Pressing Send is the owner's approval. A reply the gateway or the platform refuses is never booked as sent.
+ */
 export async function sendReply(id: string, text: string): Promise<{ posted: boolean; problem?: string }> {
   const reply = text.trim();
   const [channel, ...rest] = id.split(':');
-  const adapter = isChannel(channel) ? ADAPTERS[channel] : undefined;
-  if (adapter?.send) {
-    try {
-      await adapter.send(rest.join(':'), reply);
-    } catch {
-      return { posted: false, problem: `${adapter.label} did not take the reply. Try again.` };
-    }
+  if (isChannel(channel)) {
+    const ref = (await replyRefFor(id)) ?? rest.join(':');
+    const out = await ownerGateway().call({ lead: 'replies', channel, action: 'reply', args: { ref, text: reply } });
+    if (!out.ok) return { posted: false, problem: `${ADAPTERS[channel].label} did not take the reply. Try again.` };
   }
   await record(id, 'sent', reply);
   revalidatePath('/', 'layout');
-  return { posted: Boolean(adapter?.send) };
+  return { posted: isChannel(channel) };
 }
 
 /** A draft in the owner's voice for one message, or null so the screen keeps the fixed draft. */

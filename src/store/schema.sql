@@ -69,3 +69,19 @@ create table if not exists connection (
   last_pull_at timestamptz,
   primary key (tenant_id, channel)
 );
+
+-- What the provider that read a message needs to reply to it. Added 4 Nov 2026 with the connector gateway.
+alter table message add column if not exists reply_ref text;
+
+-- One row for every call a lead or the owner makes through the connector gateway, written at the call.
+create table if not exists connector_call (
+  id bigserial primary key,
+  tenant_id uuid not null,
+  lead text not null,
+  channel text not null,
+  action text not null,
+  outcome text not null check (outcome in ('refused', 'approved', 'declined', 'done', 'failed')),
+  provider text,
+  note text,
+  at timestamptz not null default now()
+);

@@ -6,7 +6,7 @@ import type { InboxMessage } from '../parse';
 import type { Status } from '../inbox';
 import type { Facts } from '../facts';
 import type { Theme } from '../agents/insights';
-import { business, connection, event, insight, message, messageFacts } from './schema';
+import { business, connection, connectorCall, event, insight, message, messageFacts } from './schema';
 import { ADAPTERS, type Channel } from '../connectors';
 import { toState } from './books';
 
@@ -39,6 +39,7 @@ async function insertMessages(tx: Tx, messages: InboxMessage[], thread: string):
       receivedAt: m.receivedAt,
       body: m.text,
       stars: m.stars ?? null,
+      replyRef: m.replyRef ?? null,
     })))
     .onConflictDoNothing()
     .returning({ contentId: message.contentId });
@@ -167,4 +168,19 @@ export async function saveThemes(themes: Theme[]) {
 export async function loadThemes(): Promise<Theme[]> {
   const [row] = await db.select().from(insight).where(eq(insight.tenantId, TENANT));
   return row?.themes ?? [];
+}
+
+/** Writes one gateway ledger row. The reply text is not copied here; the sent event already holds it. */
+export async function saveCall(row: { lead: string; channel: string; action: string; outcome: string; provider?: string; note?: string; at: string }) {
+  await db.insert(connectorCall).values({
+    tenantId: TENANT, lead: row.lead, channel: row.channel, action: row.action, outcome: row.outcome,
+    provider: row.provider ?? null, note: row.note ?? null, at: new Date(row.at),
+  });
+}
+
+/** The provider's reply handle for one stored message, or null when it has none. */
+export async function replyRefFor(contentId: string): Promise<string | null> {
+  const rows = await db.select({ ref: message.replyRef }).from(message)
+    .where(and(eq(message.tenantId, TENANT), eq(message.contentId, contentId)));
+  return rows[0]?.ref ?? null;
 }
