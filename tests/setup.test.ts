@@ -70,3 +70,11 @@ describe('One gateway, two doors', () => {
     expect(ROUTES['whatsapp:reply']).toBe('own');
   });
 });
+
+describe('The app keeps one gateway per door', () => {
+  it('every lead read in this process goes through the same gateway, so reads in flight can be shared', () => {
+    expect(leadGateway()).toBe(leadGateway());
+    expect(ownerGateway()).toBe(ownerGateway());
+    expect(leadGateway()).not.toBe(ownerGateway());
+  });
+});

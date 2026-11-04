@@ -9,6 +9,7 @@ import { ownerGateway } from '@/src/gateway/setup';
 import { agentsOn } from '@/src/agents/model';
 import { pull, readNew } from '@/src/pipeline';
 import { ADAPTERS, isChannel } from '@/src/connectors';
+import { RateLimited } from '@/src/gateway/limiter';
 import { writeReply } from '@/src/agents/reply';
 import { draftWaiting } from '@/src/drafting';
 
@@ -71,7 +72,9 @@ export async function checkChannels(): Promise<{ added: number }> {
     }
     try {
       added += (await pull(c.channel, 50)).added;
-    } catch {
+    } catch (error) {
+      // A provider that asked us to slow down is not a broken channel. The ledger has the wait; the next check reads it.
+      if (error instanceof RateLimited) continue;
       await markBroken(c.channel, `Swayu could not reach ${ADAPTERS[c.channel].label}. Connect it again.`);
     }
   }

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createGateway, type GatewayDeps, type LedgerRow } from '../src/gateway/gateway';
 import { readFileSync } from 'node:fs';
 import { decide, loadPolicies } from '../src/gateway/policy';
+import { RateLimited } from '../src/gateway/limiter';
 
 const SCHEMA = readFileSync('policies/connectors.cedarschema', 'utf8');
 const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'), SCHEMA);
@@ -117,6 +118,43 @@ describe('Failures are recorded in plain words, never hidden', () => {
     const { gateway, ledger } = setup({ providers: { composio: async () => { throw new Error('rate limited'); }, zernio: async () => ({}), own: vi.fn() } });
     const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
     expect(out).toEqual({ ok: false, reason: 'Composio could not read Facebook: rate limited' });
+    expect(ledger[0]).toMatchObject({ outcome: 'failed', provider: 'composio' });
+  });
+});
+
+describe('Many leads at once', () => {
+  it('ten leads reading the same channel at once share one provider read, and each gets its own ledger row', async () => {
+    let finish!: (v: unknown) => void;
+    const composio = vi.fn(() => new Promise(r => { finish = r; }));
+    const { gateway, ledger } = setup({ providers: { composio, zernio: vi.fn(), own: vi.fn() } });
+    const calls = Array.from({ length: 10 }, () => gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} }));
+    await Promise.resolve();
+    finish([{ id: 'c1' }]);
+    const out = await Promise.all(calls);
+    expect(composio).toHaveBeenCalledTimes(1);
+    expect(out.every(o => o.ok && (o.result as unknown[]).length === 1)).toBe(true);
+    expect(ledger.filter(r => r.outcome === 'done')).toHaveLength(10);
+  });
+
+  it('a read that has finished is not reused: the next read asks the provider again', async () => {
+    const { gateway, composio } = setup();
+    await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    expect(composio).toHaveBeenCalledTimes(2);
+  });
+
+  it('replies are never shared, even with the same words', async () => {
+    const { gateway, composio } = setup();
+    const reply = { lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: 'c1', text: 'Thanks' } };
+    await Promise.all([gateway.call(reply), gateway.call(reply)]);
+    expect(composio).toHaveBeenCalledTimes(2);
+  });
+
+  it('a provider that says wait passes the seconds back, so the caller can try later instead of calling the channel broken', async () => {
+    const composio = vi.fn(async () => { throw new RateLimited('Composio', 58); });
+    const { gateway, ledger } = setup({ providers: { composio, zernio: vi.fn(), own: vi.fn() } });
+    const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    expect(out).toEqual({ ok: false, reason: 'Composio could not read Facebook: Composio asked Lighthouse to wait 58 seconds', waitSeconds: 58 });
     expect(ledger[0]).toMatchObject({ outcome: 'failed', provider: 'composio' });
   });
 });

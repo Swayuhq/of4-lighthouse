@@ -48,8 +48,12 @@ function gateway(askOwner: GatewayDeps['askOwner']) {
   return createGateway({ policies: rules(), routes: ROUTES, providers: { composio, zernio: zernioProvider, own }, askOwner, record });
 }
 
+// One gateway per door for the whole process, so every open tab and every lead share the reads already in flight.
+let owner: ReturnType<typeof gateway> | undefined;
+let lead: ReturnType<typeof gateway> | undefined;
+
 /** The owner pressed Send, so a call that needs the owner's approval has it. */
-export const ownerGateway = () => gateway(async () => 'approved');
+export const ownerGateway = () => (owner ??= gateway(async () => 'approved'));
 
 /** A lead agent acting alone. Anything that needs the owner is kept as a draft in the inbox, never sent. */
-export const leadGateway = () => gateway(hold);
+export const leadGateway = () => (lead ??= gateway(hold));

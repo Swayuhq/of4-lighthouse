@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { facebookComments, facebookReply, instagramComments } from '../composio';
 import { whatsappReply } from '../whatsapp';
 import type { Provider } from './gateway';
+import { LIMITS, RateLimited, retryAfter } from './limiter';
 
 /**
  * One comment or review, whichever provider read it. `id` is the platform's own id, the same through every provider,
@@ -41,15 +42,25 @@ export const composio: Provider = async (channel, action, args) => {
 
 // ---------- Zernio ----------
 
-async function zernio<T>(path: string, init: RequestInit = {}): Promise<T> {
+/** One request to Zernio inside its budget. A 429 pauses every Zernio call; the request is sent once more only if the wait is short. */
+async function zernio<T>(path: string, init: RequestInit = {}, again = false): Promise<T> {
   const key = process.env.SWAYU_ZERNIO_API_KEY;
   if (!key) throw new Error('SWAYU_ZERNIO_API_KEY is not set. Start Lighthouse with pnpm start:op.');
+  await LIMITS.zernio.take();
   const res = await fetch(`${ZERNIO}${path}`, {
     ...init,
     headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json', ...init.headers },
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
-  const body = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string };
+  LIMITS.zernio.learn(res.headers.get('x-ratelimit-limit'));
+  const body = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string; details?: { retryAfterSeconds?: number } };
+  if (res.status === 429) {
+    const seconds = retryAfter(res.headers.get('retry-after'), body);
+    LIMITS.zernio.pause(seconds);
+    // The same init goes again, so a reply keeps its Idempotency-Key and cannot post twice.
+    if (!again) return zernio(path, init, true);
+    throw new RateLimited('Zernio', seconds);
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status} ${body.error ?? body.message ?? ''}`.trim());
   return body;
 }

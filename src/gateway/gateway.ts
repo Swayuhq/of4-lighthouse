@@ -1,11 +1,13 @@
 // The one door between a lead agent and every connector provider.
 // Order on every call: permission check, owner approval when asked, route to one provider, ledger row at each step.
 import { decide, type Policies } from './policy';
+import { RateLimited } from './limiter';
 
 export type ProviderName = 'composio' | 'zernio' | 'own';
 export type Provider = (channel: string, action: string, args: Record<string, unknown>) => Promise<unknown>;
 export type CallRequest = { lead: string; channel: string; action: string; args: Record<string, unknown> };
-export type CallResult = { ok: true; provider: ProviderName; result: unknown } | { ok: false; reason: string };
+/** `waitSeconds` means the provider asked us to slow down: the channel works, try again after that many seconds. */
+export type CallResult = { ok: true; provider: ProviderName; result: unknown } | { ok: false; reason: string; waitSeconds?: number };
 export type LedgerRow = CallRequest & { outcome: 'refused' | 'approved' | 'held' | 'done' | 'failed'; provider?: ProviderName; note?: string; at: string };
 
 export type GatewayDeps = {
@@ -25,6 +27,21 @@ const ING: Record<string, string> = { read: 'reading', reply: 'replying on' };
 const label = (channel: string) => LABEL[channel] ?? channel;
 
 export function createGateway(deps: GatewayDeps) {
+  // A read already on its way is shared by every lead that asks for the same one, so ten leads cost one read.
+  // Only while it is in flight: a finished read is never served again. Replies are never shared.
+  const reading = new Map<string, Promise<unknown>>();
+
+  function send(provider: ProviderName, { channel, action, args }: CallRequest): Promise<unknown> {
+    if (action !== 'read') return deps.providers[provider](channel, action, args);
+    const key = `${provider}:${channel}:${JSON.stringify(args)}`;
+    let read = reading.get(key);
+    if (!read) {
+      read = deps.providers[provider](channel, action, args).finally(() => reading.delete(key));
+      reading.set(key, read);
+    }
+    return read;
+  }
+
   async function log(request: CallRequest, outcome: LedgerRow['outcome'], extra: Partial<LedgerRow> = {}) {
     await deps.record({ ...request, outcome, ...extra, at: new Date().toISOString() });
   }
@@ -63,13 +80,13 @@ export function createGateway(deps: GatewayDeps) {
     }
 
     try {
-      const result = await deps.providers[provider](channel, action, request.args);
+      const result = await send(provider, request);
       await log(request, 'done', { provider });
       return { ok: true, provider, result };
     } catch (error) {
       const reason = `${PROVIDER_LABEL[provider]} could not ${VERB[action] ?? action} ${label(channel)}: ${error instanceof Error ? error.message : 'unknown error'}`;
       await log(request, 'failed', { provider, note: reason });
-      return { ok: false, reason };
+      return error instanceof RateLimited ? { ok: false, reason, waitSeconds: error.seconds } : { ok: false, reason };
     }
   }
 

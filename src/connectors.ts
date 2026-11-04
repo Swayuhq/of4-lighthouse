@@ -8,6 +8,7 @@ import { z } from 'zod';
 import type { InboxMessage } from './parse';
 import { checkMessages } from './message';
 import { leadGateway } from './gateway/setup';
+import { RateLimited } from './gateway/limiter';
 
 export type Channel = 'whatsapp' | 'instagram' | 'facebook' | 'google_reviews';
 export type ConnectionStatus = 'connected' | 'broken';
@@ -40,10 +41,14 @@ const WhatsApp = z.object({
 /** The one shape every provider behind the gateway answers. `id` is the platform's own id; `ref` is the reply handle. */
 const GatewayItem = z.object({ id: z.string().min(1), ref: z.string().min(1), author: z.string().min(1), text: z.string(), at: z.string(), stars: z.number().int().min(1).max(5).optional(), link: z.string().optional(), answered: z.boolean().optional() });
 
-/** Reads one channel through the gateway as the replies lead. A refusal or a provider failure throws, so the channel shows broken. */
+/**
+ * Reads one channel through the gateway as the replies lead. A refusal or a provider failure throws, so the channel shows broken.
+ * A provider that only asked us to wait throws RateLimited instead: the channel works, and the next check reads it.
+ */
 function throughGateway(channel: Channel) {
   return async (): Promise<unknown[]> => {
     const out = await leadGateway().call({ lead: 'replies', channel, action: 'read', args: {} });
+    if (!out.ok && out.waitSeconds !== undefined) throw new RateLimited(ADAPTERS[channel].label, out.waitSeconds, out.reason);
     if (!out.ok) throw new Error(out.reason);
     return out.result as unknown[];
   };

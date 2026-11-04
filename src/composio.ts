@@ -1,6 +1,7 @@
 // Facebook and Instagram through Composio: Composio holds the owner's logins and its own Meta app, which Meta has already reviewed.
 // Chosen for the prototype on 30 Oct 2026 (docs/artifacts/connectors-build-vs-buy.html). Our own Meta connector replaces this file later.
 // The key is read from the environment on each call and never logged.
+import { LIMITS, RateLimited, retryAfter } from './gateway/limiter';
 
 const ENDPOINT = 'https://connect.composio.dev/mcp';
 /** The logins connected in Composio for the test business. One set per owner once Lighthouse has more than one business. */
@@ -12,15 +13,24 @@ const TIMEOUT_MS = 20_000;
 type Answer = { data?: unknown[]; id?: string };
 
 /** Runs one Composio action and returns what Meta answered. Any refusal throws with Composio's own reason. */
-async function run(slug: string, args: Record<string, unknown>, toolkit: Toolkit = 'facebook'): Promise<Answer> {
+async function run(slug: string, args: Record<string, unknown>, toolkit: Toolkit = 'facebook', again = false): Promise<Answer> {
   const key = process.env.SWAYU_COMPOSIO_API_KEY;
   if (!key) throw new Error('SWAYU_COMPOSIO_API_KEY is not set. Start Lighthouse with pnpm start:op.');
+  await LIMITS.composio.take();
   const res = await fetch(ENDPOINT, {
     method: 'POST',
     headers: { 'x-consumer-api-key': key, 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'COMPOSIO_MULTI_EXECUTE_TOOL', arguments: { tools: [{ tool_slug: slug, arguments: args, account: ACCOUNTS[toolkit] }] } } }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
+  LIMITS.composio.learn(res.headers.get('x-ratelimit'));
+  if (res.status === 429) {
+    // Composio refused before running the action, so sending it once more cannot post twice.
+    const seconds = retryAfter(res.headers.get('retry-after'));
+    LIMITS.composio.pause(seconds);
+    if (!again) return run(slug, args, toolkit, true);
+    throw new RateLimited('Composio', seconds);
+  }
   const line = (await res.text()).split('\n').find(l => l.startsWith('data: '));
   if (!line) throw new Error(`Composio answered HTTP ${res.status} with nothing to read`);
   const out = JSON.parse(JSON.parse(line.slice(6)).result?.content?.[0]?.text ?? '{}');
