@@ -85,3 +85,9 @@ create table if not exists connector_call (
   note text,
   at timestamptz not null default now()
 );
+
+-- A lead's reply kept for the owner, and the gateway outcome for it. Added 4 Nov 2026.
+alter table event drop constraint if exists event_kind_check;
+alter table event add constraint event_kind_check check (kind in ('arrived', 'waiting', 'answered', 'spam', 'sent', 'drafted'));
+alter table connector_call drop constraint if exists connector_call_outcome_check;
+alter table connector_call add constraint connector_call_outcome_check check (outcome in ('refused', 'approved', 'declined', 'held', 'done', 'failed'));

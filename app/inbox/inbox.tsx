@@ -247,8 +247,10 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
   const [drafting, setDrafting] = useState(false);
 
   // The fixed draft shows at once. The reply agent's draft replaces it only if the owner has not started typing.
+  // A reply already waiting for the owner is the one to check, so no new draft is written over it.
   async function startReply() {
     setWriting(true);
+    if (item.heldReply) return;
     setDrafting(true);
     const better = await draftFor(item.id).catch(() => null);
     setDrafting(false);
@@ -291,7 +293,7 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
         </div>
       ) : (
         <div className="mt-4 flex flex-wrap gap-1.5 sm:gap-2">
-          {waiting && <button disabled={busy} onClick={startReply} className="rounded-lg bg-navy px-3.5 py-2 font-bold text-white sm:px-4">Reply</button>}
+          {waiting && <button disabled={busy} onClick={startReply} className="rounded-lg bg-navy px-3.5 py-2 font-bold text-white sm:px-4">{item.heldReply ? 'Check reply' : 'Reply'}</button>}
           {waiting && <button disabled={busy} onClick={() => onAct(item, 'answered')} className="rounded-lg border border-shore bg-white px-3.5 py-2 sm:px-4">Mark answered</button>}
           {waiting && <button disabled={busy} onClick={() => onAct(item, 'spam')} className="rounded-lg px-2.5 py-2 text-navy-soft sm:px-3">Spam</button>}
           {!waiting && <button disabled={busy} onClick={() => onAct(item, 'waiting')} className="rounded-lg border border-shore bg-white px-4 py-2">{item.status === 'spam' ? 'Not spam' : 'Back to waiting'}</button>}

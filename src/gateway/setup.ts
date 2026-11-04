@@ -28,12 +28,19 @@ async function record(row: LedgerRow) {
   await saveCall(row);
 }
 
-function gateway(askOwner: (request: CallRequest) => Promise<boolean>) {
+/** Keeps a lead's reply as a draft on the message it answers, for the owner to check and send. */
+async function hold({ channel, args }: CallRequest): Promise<'held'> {
+  const { holdReply } = await import('../store/db');
+  if (!(await holdReply(channel, String(args.ref ?? ''), String(args.text ?? '')))) throw new Error('no inbox message matches this comment');
+  return 'held';
+}
+
+function gateway(askOwner: GatewayDeps['askOwner']) {
   return createGateway({ policies: rules(), routes: ROUTES, providers: { composio, zernio: zernioProvider, own }, askOwner, record });
 }
 
 /** The owner pressed Send, so a call that needs the owner's approval has it. */
-export const ownerGateway = () => gateway(async () => true);
+export const ownerGateway = () => gateway(async () => 'approved');
 
-/** A lead agent acting alone. Anything that needs the owner is held, never sent. */
-export const leadGateway = () => gateway(async () => false);
+/** A lead agent acting alone. Anything that needs the owner is kept as a draft in the inbox, never sent. */
+export const leadGateway = () => gateway(hold);

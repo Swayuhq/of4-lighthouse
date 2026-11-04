@@ -35,7 +35,7 @@ export const event = pgTable('event', {
   id: bigserial('id', { mode: 'number' }).primaryKey(),
   tenantId: uuid('tenant_id').notNull(),
   contentId: text('content_id').notNull(),
-  /** arrived, waiting, answered, spam or sent. The newest one that is not arrived is the state. */
+  /** arrived, waiting, answered, spam, sent or drafted. The newest status event is the state; drafted holds a lead's reply. */
   kind: text('kind').notNull(),
   replyText: text('reply_text'),
   at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),

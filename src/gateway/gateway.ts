@@ -6,14 +6,15 @@ export type ProviderName = 'composio' | 'zernio' | 'own';
 export type Provider = (channel: string, action: string, args: Record<string, unknown>) => Promise<unknown>;
 export type CallRequest = { lead: string; channel: string; action: string; args: Record<string, unknown> };
 export type CallResult = { ok: true; provider: ProviderName; result: unknown } | { ok: false; reason: string };
-export type LedgerRow = CallRequest & { outcome: 'refused' | 'approved' | 'declined' | 'done' | 'failed'; provider?: ProviderName; note?: string; at: string };
+export type LedgerRow = CallRequest & { outcome: 'refused' | 'approved' | 'held' | 'done' | 'failed'; provider?: ProviderName; note?: string; at: string };
 
 export type GatewayDeps = {
   policies: Policies;
   /** Key is "channel:action". One line moves a channel to another provider. */
   routes: Partial<Record<string, ProviderName>>;
   providers: Record<ProviderName, Provider>;
-  askOwner: (request: CallRequest) => Promise<boolean>;
+  /** The owner approved it, or it is kept for the owner to check. A throw means it could not be kept, so it is refused. */
+  askOwner: (request: CallRequest) => Promise<'approved' | 'held'>;
   record: (row: LedgerRow) => Promise<void>;
 };
 
@@ -46,9 +47,17 @@ export function createGateway(deps: GatewayDeps) {
     }
 
     if (decision === 'ask') {
-      if (!(await deps.askOwner(request))) {
-        await log(request, 'declined');
-        return { ok: false, reason: 'The owner did not approve this.' };
+      let verdict: 'approved' | 'held';
+      try {
+        verdict = await deps.askOwner(request);
+      } catch (error) {
+        const reason = `Swayu could not keep this reply for the owner: ${error instanceof Error ? error.message : 'unknown error'}`;
+        await log(request, 'refused', { note: reason });
+        return { ok: false, reason };
+      }
+      if (verdict === 'held') {
+        await log(request, 'held');
+        return { ok: false, reason: "Held for the owner's approval." };
       }
       await log(request, 'approved');
     }

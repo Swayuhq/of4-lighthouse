@@ -21,7 +21,7 @@ describe('Each lead is handed only the tools its rules allow', () => {
   });
 
   it('a tool call goes through the gateway, so the owner is still asked', async () => {
-    const askOwner = vi.fn(async () => false);
+    const askOwner = vi.fn(async () => 'held' as const);
     const provider = vi.fn(async () => ({ id: 'x' }));
     const gateway = createGateway({
       policies: POLICIES, routes: { 'facebook:reply': 'composio' }, providers: { composio: provider, zernio: provider, own: provider },
@@ -32,6 +32,6 @@ describe('Each lead is handed only the tools its rules allow', () => {
     const out = await execute({ ref: 'c1', text: 'Thanks!' }, {});
     expect(askOwner).toHaveBeenCalledOnce();
     expect(provider).not.toHaveBeenCalled();
-    expect(out).toEqual({ ok: false, reason: 'The owner did not approve this.' });
+    expect(out).toEqual({ ok: false, reason: "Held for the owner's approval." });
   });
 });

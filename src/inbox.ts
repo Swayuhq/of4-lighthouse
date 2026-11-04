@@ -19,13 +19,15 @@ export type State = {
   reply: Record<string, string>;
   /** What the reader agent found. A message without facts is judged by the keyword rules instead. */
   facts: Record<string, Facts>;
+  /** A reply a lead wrote and the owner has not acted on yet. Only the owner's Send posts it. */
+  drafts: Record<string, string>;
 };
 
-export type Item = InboxMessage & { status: Status; points: number; reasons: string[]; reply?: string; facts?: Facts };
+export type Item = InboxMessage & { status: Status; points: number; reasons: string[]; reply?: string; facts?: Facts; heldReply?: string };
 
 export type View = { items: Item[]; today: Item[]; more: number; counts: Counts; tone: Tone };
 
-export const emptyState = (): State => ({ messages: [], thread: {}, ownerNames: [], status: {}, reply: {}, facts: {} });
+export const emptyState = (): State => ({ messages: [], thread: {}, ownerNames: [], status: {}, reply: {}, facts: {}, drafts: {} });
 
 /** Adds messages from one source. A message already read is skipped, so loading a file twice changes nothing. */
 export function ingest(state: State, messages: InboxMessage[], thread: string): State {
@@ -106,7 +108,7 @@ export function view(state: State): View {
     const guess: Status = ownerReplied ? 'answered' : looksSpam ? 'spam' : 'waiting';
     const wroteBefore = m.author !== 'Unknown' && seenAuthors.has(m.author);
     seenAuthors.add(m.author);
-    items.push({ ...m, status: state.status[m.id] ?? guess, ...score(m, now, wroteBefore, facts), reply: state.reply[m.id], facts });
+    items.push({ ...m, status: state.status[m.id] ?? guess, ...score(m, now, wroteBefore, facts), reply: state.reply[m.id], facts, heldReply: state.drafts[m.id] });
   }
   // Most points first; equal points, the one waiting longer first.
   items.sort((a, b) => b.points - a.points || a.receivedAt.localeCompare(b.receivedAt));

@@ -14,7 +14,7 @@ function setup(overrides: Partial<GatewayDeps> = {}) {
     policies: POLICIES,
     routes: { 'facebook:read': 'composio', 'facebook:reply': 'composio' },
     providers: { composio, zernio, own: vi.fn() },
-    askOwner: vi.fn(async () => true),
+    askOwner: vi.fn(async () => 'approved' as const),
     record: async row => { ledger.push(row); },
     ...overrides,
   };
@@ -86,12 +86,20 @@ describe('A call that needs the owner waits for the owner', () => {
     expect(ledger.map(r => r.outcome)).toEqual(['approved', 'done']);
   });
 
-  it('the owner says no, so nothing is sent', async () => {
-    const { gateway, composio, ledger } = setup({ askOwner: async () => false });
+  it('a lead acting alone has its reply held for the owner, so nothing is sent', async () => {
+    const { gateway, composio, ledger } = setup({ askOwner: async () => 'held' });
     const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
-    expect(out).toEqual({ ok: false, reason: 'The owner did not approve this.' });
+    expect(out).toEqual({ ok: false, reason: "Held for the owner's approval." });
     expect(composio).not.toHaveBeenCalled();
-    expect(ledger.map(r => r.outcome)).toEqual(['declined']);
+    expect(ledger.map(r => r.outcome)).toEqual(['held']);
+  });
+
+  it('a reply that cannot be kept for the owner is refused in plain words and never sent', async () => {
+    const { gateway, composio, ledger } = setup({ askOwner: async () => { throw new Error('no inbox message matches this comment'); } });
+    const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
+    expect(out).toEqual({ ok: false, reason: 'Swayu could not keep this reply for the owner: no inbox message matches this comment' });
+    expect(composio).not.toHaveBeenCalled();
+    expect(ledger).toMatchObject([{ outcome: 'refused' }]);
   });
 });
 

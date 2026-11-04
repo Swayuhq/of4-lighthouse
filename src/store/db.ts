@@ -1,5 +1,5 @@
 // The only module that talks to Postgres. One business for now; every row still carries its tenant id.
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, like, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import type { InboxMessage } from '../parse';
@@ -176,6 +176,22 @@ export async function saveCall(row: { lead: string; channel: string; action: str
     tenantId: TENANT, lead: row.lead, channel: row.channel, action: row.action, outcome: row.outcome,
     provider: row.provider ?? null, note: row.note ?? null, at: new Date(row.at),
   });
+}
+
+/**
+ * Keeps a lead's reply as a draft on the message it answers. The lead names the message by the ref its read returned,
+ * which is the stored reply ref, or ends in the platform id whichever provider read it. False when no message matches.
+ */
+export async function holdReply(channel: string, ref: string, text: string): Promise<boolean> {
+  const reply = text.trim();
+  if (!ref || !reply) return false;
+  const ids = [`${channel}:${ref}`, `${channel}:${ref.split('|').at(-1)}`];
+  const [hit] = await db.select({ contentId: message.contentId }).from(message)
+    .where(and(eq(message.tenantId, TENANT), like(message.contentId, `${channel}:%`), or(eq(message.replyRef, ref), inArray(message.contentId, ids))))
+    .limit(1);
+  if (!hit) return false;
+  await db.insert(event).values({ tenantId: TENANT, contentId: hit.contentId, kind: 'drafted', replyText: reply });
+  return true;
 }
 
 /** The provider's reply handle for one stored message, or null when it has none. */
