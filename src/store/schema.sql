@@ -69,3 +69,28 @@ create table if not exists connection (
   last_pull_at timestamptz,
   primary key (tenant_id, channel)
 );
+
+-- What the provider that read a message needs to reply to it. Added 4 Nov 2026 with the connector gateway.
+alter table message add column if not exists reply_ref text;
+
+-- One row for every call a lead or the owner makes through the connector gateway, written at the call.
+create table if not exists connector_call (
+  id bigserial primary key,
+  tenant_id uuid not null,
+  lead text not null,
+  channel text not null,
+  action text not null,
+  outcome text not null check (outcome in ('refused', 'approved', 'declined', 'done', 'failed')),
+  provider text,
+  note text,
+  at timestamptz not null default now()
+);
+
+-- Where each message lives on its platform, for the inbox link. Added 4 Nov 2026.
+alter table message add column if not exists link text;
+
+-- A lead's reply kept for the owner, and the gateway outcome for it. Added 4 Nov 2026.
+alter table event drop constraint if exists event_kind_check;
+alter table event add constraint event_kind_check check (kind in ('arrived', 'waiting', 'answered', 'spam', 'sent', 'drafted'));
+alter table connector_call drop constraint if exists connector_call_outcome_check;
+alter table connector_call add constraint connector_call_outcome_check check (outcome in ('refused', 'approved', 'declined', 'held', 'done', 'failed'));

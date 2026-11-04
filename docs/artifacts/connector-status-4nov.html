@@ -1,0 +1,246 @@
+<title>Connector Status, 4 November</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one wide column, status first, each claim beside its proof. Wide figures, so the column is 1180px. */
+:root {
+  --bg: #f6f7f5; --panel: #ffffff; --ink: #17231f; --muted: #5b6a64; --line: #d9e0dc;
+  --accent: #00584d; --mark: #009b74;
+  --done: #1f7a4d; --done-bg: #e3f3ea; --part: #9a6400; --part-bg: #fbf0d9; --open: #a33b2b; --open-bg: #f8e3df;
+  --display: "Fraunces", Georgia, serif; --body: "Public Sans", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1614; --panel: #16201d; --ink: #e6eeea; --muted: #9aaba4; --line: #2a3733;
+  --accent: #5fd0b0; --mark: #2fbf93;
+  --done: #7fd7a6; --done-bg: #173126; --part: #f0c060; --part-bg: #33290f; --open: #f19a8a; --open-bg: #3a1d18; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1614; --panel: #16201d; --ink: #e6eeea; --muted: #9aaba4; --line: #2a3733;
+  --accent: #5fd0b0; --mark: #2fbf93;
+  --done: #7fd7a6; --done-bg: #173126; --part: #f0c060; --part-bg: #33290f; --open: #f19a8a; --open-bg: #3a1d18; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(28px, 4vw, 42px); color: var(--accent); }
+h2 { font-size: 24px; }
+h3 { margin: 0; font-size: 15px; }
+p { margin: 0; max-width: 72ch; }
+.lead { font-size: 18px; max-width: 70ch; }
+.eyebrow { font: 600 12px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+section { display: grid; gap: 16px; min-width: 0; }
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font: 600 12px/20px var(--body); white-space: nowrap; }
+.done { color: var(--done); background: var(--done-bg); } .part { color: var(--part); background: var(--part-bg); } .open { color: var(--open); background: var(--open-bg); }
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.q { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.q .ans { font-family: var(--display); font-size: 20px; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 12px/1.3 var(--body); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); }
+.figure { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.figure svg { display: block; width: 100%; height: auto; min-width: 900px; }
+.figure svg text { fill: var(--ink); font-family: var(--body); }
+.figure svg .sub { fill: var(--muted); font-size: 12px; }
+.figure svg .box { fill: var(--bg); stroke: var(--line); }
+.figure svg .key { fill: var(--done-bg); stroke: var(--done); }
+.figure svg .edge { stroke: var(--muted); fill: none; stroke-width: 1.5; }
+.figure svg .new { fill: var(--part-bg); stroke: var(--part); }
+.figure svg .head { fill: var(--accent); }
+.bars { display: grid; gap: 14px; }
+.bar { display: grid; grid-template-columns: 220px 1fr 64px; gap: 12px; align-items: center; }
+.bar .track { height: 22px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; position: relative; }
+.bar .fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px; }
+.bar .fill.good { background: var(--mark); } .bar .fill.bad { background: var(--open); }
+.bar .limit { position: absolute; top: -4px; bottom: -4px; border-left: 2px dashed var(--ink); }
+.bar span.v { font: 600 14px var(--mono); font-variant-numeric: tabular-nums; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.two > * { min-width: 0; }
+ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.note { color: var(--muted); font-size: 13px; }
+code { font-family: var(--mono); font-size: 13px; }
+a { color: var(--accent); }
+@media (max-width: 560px) { .bar { grid-template-columns: 1fr; } }
+</style>
+
+<div class="wrap">
+
+<header style="display:grid;gap:12px">
+  <span class="eyebrow">OF4 · Connectors and channels (shared layer) · Lighthouse prototype</span>
+  <h1>Connector Status, 4 November</h1>
+  <p class="lead">Connectors run through one gateway in the Lighthouse prototype. Ten lead agents can read the same channel at the same time without being blocked. The provider choice for each channel is half proven: six checks are still open.</p>
+</header>
+
+<section>
+  <span class="eyebrow">The three questions from the day</span>
+  <div class="strip">
+    <div class="q"><span class="pill part">Partly answered</span><h3>Morning call: Composio or Zernio, for each channel?</h3><p class="ans">Both are used. Reads go to Zernio; replies are split by what was proven.</p><p class="note">Proven on real accounts for Facebook and Instagram. Google reviews, WhatsApp and ads still need real accounts.</p></div>
+    <div class="q"><span class="pill done">Answered</span><h3>Evening call: can 8 to 10 leads call the same connector at once?</h3><p class="ans">Yes. Ten leads now cost one read.</p><p class="note">Proven on live accounts and in the running app with two inbox tabs open. Composio was not load tested.</p></div>
+    <div class="q"><span class="pill done">Fixed</span><h3>Why did the demo lose its connection?</h3><p class="ans">Zernio's limit is 60 requests a minute, and the inbox needed about 100.</p><p class="note">Zernio answered "retry after 58 seconds". The provider reports the limit as 60 with 2 accounts connected.</p></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">How one connector call travels</span>
+  <h2>One door for every lead</h2>
+  <div class="figure scroll">
+    <svg viewBox="0 0 1140 300" role="img" aria-label="A lead's request passes the permission check, owner approval for replies, the route table, shared reads and the provider budget, then reaches Composio, Zernio or Swayu's own Meta app. Each step writes a ledger row.">
+      <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>
+      <rect class="box" x="10" y="90" width="140" height="80" rx="8"/>
+      <text x="80" y="122" text-anchor="middle" font-weight="600">Lead agent</text>
+      <text class="sub" x="80" y="142" text-anchor="middle">replies, ads, others</text>
+      <rect class="key" x="185" y="90" width="150" height="80" rx="8"/>
+      <text x="260" y="122" text-anchor="middle" font-weight="600">Permission check</text>
+      <text class="sub" x="260" y="142" text-anchor="middle">allow, ask or block</text>
+      <rect class="key" x="370" y="90" width="150" height="80" rx="8"/>
+      <text x="445" y="122" text-anchor="middle" font-weight="600">Owner approval</text>
+      <text class="sub" x="445" y="142" text-anchor="middle">replies wait as drafts</text>
+      <rect class="key" x="555" y="90" width="140" height="80" rx="8"/>
+      <text x="625" y="122" text-anchor="middle" font-weight="600">Route table</text>
+      <text class="sub" x="625" y="142" text-anchor="middle">one line per channel</text>
+      <rect class="new" x="730" y="90" width="150" height="80" rx="8"/>
+      <text x="805" y="118" text-anchor="middle" font-weight="600">Shared reads</text>
+      <text x="805" y="138" text-anchor="middle" font-weight="600">and budget</text>
+      <text class="sub" x="805" y="158" text-anchor="middle">new today</text>
+      <rect class="box" x="935" y="20" width="195" height="62" rx="8"/>
+      <text x="1032" y="47" text-anchor="middle" font-weight="600">Zernio</text>
+      <text class="sub" x="1032" y="66" text-anchor="middle">reads; Instagram and review replies</text>
+      <rect class="box" x="935" y="99" width="195" height="62" rx="8"/>
+      <text x="1032" y="126" text-anchor="middle" font-weight="600">Composio</text>
+      <text class="sub" x="1032" y="145" text-anchor="middle">Facebook replies</text>
+      <rect class="box" x="935" y="178" width="195" height="62" rx="8"/>
+      <text x="1032" y="205" text-anchor="middle" font-weight="600">Swayu's own Meta app</text>
+      <text class="sub" x="1032" y="224" text-anchor="middle">WhatsApp replies</text>
+      <path class="edge" d="M150 130 H183" marker-end="url(#arr)"/>
+      <path class="edge" d="M335 130 H368" marker-end="url(#arr)"/>
+      <path class="edge" d="M520 130 H553" marker-end="url(#arr)"/>
+      <path class="edge" d="M695 130 H728" marker-end="url(#arr)"/>
+      <path class="edge" d="M880 130 C905 130 905 51 933 51" marker-end="url(#arr)"/>
+      <path class="edge" d="M880 130 H933" marker-end="url(#arr)"/>
+      <path class="edge" d="M880 130 C905 130 905 209 933 209" marker-end="url(#arr)"/>
+      <rect class="box" x="185" y="232" width="695" height="44" rx="8"/>
+      <text x="532" y="259" text-anchor="middle" font-weight="600">Ledger: one row at every step (refused, held, approved, done, failed)</text>
+      <path class="edge" d="M260 170 V230 M445 170 V230 M625 170 V230 M805 170 V230" stroke-dasharray="3 4"/>
+    </svg>
+  </div>
+  <p class="note">Green steps were built and proven before today. The amber step is today's work: identical reads that are already on their way are shared, each provider has a request budget, and a "please wait" from a provider pauses every lead at once.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Proof for the evening question</span>
+  <h2>Ten leads, one connector</h2>
+  <div class="two">
+    <div class="figure">
+      <h3 style="margin-bottom:14px">Requests Zernio received for 20 lead reads (10 Facebook, 10 Instagram)</h3>
+      <div class="bars">
+        <div class="bar"><span>Shared reads (now)</span><div class="track"><div class="fill good" style="width:16.7%"></div><div class="limit" style="left:83.3%"></div></div><span class="v">12</span></div>
+        <div class="bar"><span>Each lead on its own (before)</span><div class="track"><div class="fill bad" style="width:83.3%"></div><div class="limit" style="left:83.3%"></div></div><span class="v">60</span></div>
+        <div class="bar"><span>Asked to wait (429)</span><div class="track"><div class="fill bad" style="width:15.3%"></div></div><span class="v">11</span></div>
+      </div>
+      <p class="note" style="margin-top:12px">Dashed line: Zernio's limit of 60 a minute. Shared reads gave 0 waits and all 20 leads got their comments in 3.4 seconds. Without sharing, 1 of 20 leads got its comments. When Zernio said wait, every other lead stopped at once instead of asking again. The 60 requests it sent were Lighthouse's own budget.</p>
+    </div>
+    <div class="figure">
+      <h3 style="margin-bottom:10px">The demo case: two inbox tabs open for five minutes</h3>
+      <div id="twotabs" style="display:grid;gap:8px">
+        <p><span class="pill done">Passed</span></p>
+        <ul>
+          <li>Requests that came back "please wait": <b>0</b></li>
+          <li>Channel checks that ran: <b>92</b> (46 Facebook, 46 Instagram), failed: <b>0</b></li>
+          <li>Channels marked broken: <b>0</b></li>
+        </ul>
+        <p class="note">Each tab checks every channel every 30 seconds, the same as the demo. Counted from the ledger and the server log. Midway, Zernio reported 24 of its 60 requests used in the last minute.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Proof for the morning question</span>
+  <h2>Each channel and what is proven</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Channel</th><th>Read comments</th><th>Reply</th><th>Route today</th></tr></thead>
+    <tbody>
+      <tr><td><b>Facebook</b></td><td><span class="pill done">Both measured</span><br><span class="note">Zernio named all 12 authors; Composio missed 4 of 12</span></td><td><span class="pill done">Composio 5 of 5</span> <span class="pill open">Zernio not tried</span></td><td>Read Zernio, reply Composio</td></tr>
+      <tr><td><b>Instagram</b></td><td><span class="pill done">Both measured</span></td><td><span class="pill done">Zernio posted</span> <span class="pill open">Composio not tried</span></td><td>Zernio both ways</td></tr>
+      <tr><td><b>Google reviews</b></td><td><span class="pill open">No real profile</span></td><td><span class="pill open">Not tried</span></td><td>Zernio, wired but unproven</td></tr>
+      <tr><td><b>WhatsApp</b></td><td><span class="pill part">Test number only</span></td><td><span class="pill part">Test number only</span></td><td>Swayu's own Meta app</td></tr>
+      <tr><td><b>Ads</b></td><td><span class="pill open">Not touched</span></td><td><span class="pill open">Not touched</span></td><td>None</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">The final route for each channel is Dhruv's call. One line in the route table moves a channel to the other provider.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Against the shared layer architecture</span>
+  <h2>What works and what is not built yet</h2>
+  <div class="scroll"><table>
+    <thead><tr><th style="width:50%">Works in the prototype</th><th>Not built yet</th></tr></thead>
+    <tbody>
+      <tr><td>A permission check before every call (allow, ask, block)</td><td>The request budget and the shared reads live inside one server. Two servers would not see each other's requests</td></tr>
+      <tr><td>One route table; moving a channel is one line</td><td>Not in swayu-app; pull requests there wait for the refactor</td></tr>
+      <tr><td>A ledger row for every step, with a business id on every row</td><td>One test business is wired in; real owner logins per business are not</td></tr>
+      <tr><td>A lead's reply is held as a draft until the owner sends it</td><td>Channels are checked from an open inbox tab, not a scheduled server job</td></tr>
+      <tr><td>Shared reads and a "please wait" pause for each provider (today)</td><td>No Zernio webhooks, so the inbox asks instead of being told</td></tr>
+      <tr><td></td><td>Meta's own limits, seen through Composio, are not handled</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <span class="eyebrow">Standup of 4 November</span>
+  <h2>Action items for OF4</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Action</th><th>Status</th><th>What exists</th></tr></thead>
+    <tbody>
+      <tr><td>Connector decision call with Dhruv, and close connectors today</td><td><span class="pill part">Partly</span></td><td>Call held and notes posted. Both providers are used. Routes per channel wait on the six open checks above</td></tr>
+      <tr><td>Smoke test both providers for parallel calls (evening call)</td><td><span class="pill part">Zernio only</span></td><td>Shared read test and the two tab test above. Composio carries only Facebook replies today</td></tr>
+      <tr><td>Fix the demo connection issue</td><td><span class="pill done">Done</span></td><td>Cause found and fixed, proven in the running app</td></tr>
+      <tr><td>Study verification loops for an hour</td><td><span class="pill part">Started</span></td><td>Maanas's build verify skill reviewed, below</td></tr>
+      <tr><td>Evaluate the E2E verification tool against Swayu's setup</td><td><span class="pill open">Open</span></td><td>Due 5 November</td></tr>
+      <tr><td>Research a third connector platform</td><td><span class="pill open">Open</span></td><td>Not started</td></tr>
+      <tr><td>Hold pull requests until the refactor lands</td><td><span class="pill done">Held</span></td><td>Work stays on local branches</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <span class="eyebrow">From #knowledge</span>
+  <h2>Two tools reviewed for our way of working</h2>
+  <div class="two">
+    <div class="q">
+      <span class="pill part">Take two parts, not the whole skill</span>
+      <h3>Build verify loop skill (Maanas)</h3>
+      <ul>
+        <li><b>Safe:</b> two text files with no scripts, no network calls and no hidden instructions. The commands it names all exist in swayu-app.</li>
+        <li><b>Already covered:</b> write what done looks like, watch the test fail first, run the checks, never weaken a test, stop after a few tries.</li>
+        <li><b>Worth adding:</b> the outcome quality judge. It uses a rubric, good and bad examples, and a check that it rejects a bad page before anyone trusts it. Only "must fix" findings block, and a fix may never add a fact. This fits OF4 reply drafts, which today are only checked for invented numbers and promises.</li>
+        <li><b>Use with care:</b> a fresh reviewing agent on every round costs tokens. Keep it for changes before a push.</li>
+      </ul>
+    </div>
+    <div class="q">
+      <span class="pill open">Do not add now</span>
+      <h3>executor.sh</h3>
+      <ul>
+        <li>One open source gateway that puts many tools behind one connection, with allow, ask and block rules.</li>
+        <li>The connector decision of 4 November already dropped it for customer connectors. Its own research page says it is for internal agents only.</li>
+        <li>For our engineering work it adds a second place where logins live, outside 1Password. It also duplicates the tool connections we already have. It is connected here with zero integrations.</li>
+        <li>Its block rules have not been shown to stop a real call.</li>
+        <li>Look again if one place to set agent permissions across many tools becomes the need.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Next</span>
+  <h2>What closes the day's questions</h2>
+  <ul>
+    <li>Run the same parallel test on Composio, so both providers are measured the same way.</li>
+    <li>Write one table of limits per minute, hour and day, for each provider and each platform.</li>
+    <li>Try the four untried replies: Facebook through Zernio, Instagram through Composio, Google reviews and WhatsApp on real accounts.</li>
+    <li>Ask Dhruv which "not built yet" items the prototype must show, and which wait for swayu-app.</li>
+  </ul>
+</section>
+
+</div>

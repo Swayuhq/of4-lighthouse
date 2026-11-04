@@ -18,7 +18,7 @@ export default async function Page() {
   const chatAuthors = [...new Set(messages.filter(m => m.platform === 'WhatsApp' && m.thread !== 'WhatsApp').map(m => m.author))];
 
   const data: InboxData = {
-    items: v.items.map(i => ({ ...i, draft: draftReply(i, v.tone) })),
+    items: v.items.map(i => ({ ...i, draft: i.heldReply ?? draftReply(i, v.tone) })),
     todayIds: v.today.map(i => i.id),
     more: v.more,
     counts: { ...v.counts, arrived: held, missed: held - shown },

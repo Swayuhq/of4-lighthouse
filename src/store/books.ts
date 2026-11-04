@@ -11,6 +11,7 @@ export type MessageRow = {
   receivedAt: string;
   body: string;
   stars: number | null;
+  link?: string | null;
 };
 
 export type EventRow = { id: number; contentId: string; kind: string; replyText: string | null };
@@ -18,7 +19,7 @@ export type EventRow = { id: number; contentId: string; kind: string; replyText:
 const STATUS_KINDS: Record<string, Status> = { waiting: 'waiting', answered: 'answered', spam: 'spam', sent: 'answered' };
 
 export function toState(ownerNames: string[], messages: MessageRow[], events: EventRow[], facts: Record<string, Facts> = {}): State {
-  const state: State = { messages: [], thread: {}, ownerNames, status: {}, reply: {}, facts };
+  const state: State = { messages: [], thread: {}, ownerNames, status: {}, reply: {}, facts, drafts: {} };
   for (const m of messages) {
     state.messages.push({
       id: m.contentId,
@@ -27,13 +28,20 @@ export function toState(ownerNames: string[], messages: MessageRow[], events: Ev
       receivedAt: m.receivedAt,
       text: m.body,
       ...(m.stars === null ? {} : { stars: m.stars }),
+      ...(m.link ? { link: m.link } : {}),
     });
     state.thread[m.contentId] = m.thread;
   }
   // Events apply in the order they were written. The newest one decides the state.
   for (const e of [...events].sort((a, b) => a.id - b.id)) {
+    if (e.kind === 'drafted') {
+      state.drafts[e.contentId] = e.replyText ?? '';
+      continue;
+    }
     const status = STATUS_KINDS[e.kind];
     if (!status) continue;
+    // Whatever the owner does next decides the message, so a lead draft from before it is gone.
+    delete state.drafts[e.contentId];
     state.status[e.contentId] = status;
     if (e.kind === 'sent') state.reply[e.contentId] = e.replyText ?? '';
     else delete state.reply[e.contentId];

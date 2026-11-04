@@ -7,6 +7,10 @@ import type { Theme } from '@/src/agents/insights';
 import { checkChannels, chooseOwner, clearAll, draftFor, markAs, sendReply } from '../actions';
 import { Ago } from '../ago';
 import { ChannelBadge, Wordmark } from '../brand';
+import type { Channel } from '@/src/connectors';
+
+// The browser never loads the connectors module, which holds the gateway; this list is all it needs.
+const CHANNELS: Channel[] = ['whatsapp', 'instagram', 'facebook', 'google_reviews'];
 import type { ChannelView } from '../channels';
 
 export type InboxItem = Item & { draft: string };
@@ -45,6 +49,11 @@ export function Inbox({ data }: { data: InboxData }) {
   const [toast, setToast] = useState<Toast | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<Status>('waiting');
+  // ?tab=answered opens on that tab, so a link can show the owner's sent replies.
+  useEffect(() => {
+    const asked = new URLSearchParams(window.location.search).get('tab');
+    if (asked === 'answered' || asked === 'spam') setTab(asked);
+  }, []);
   const known = useRef<Set<string>>(new Set(data.items.map(i => i.id)));
 
   // A message the owner has not seen on this screen yet gets the beam once.
@@ -65,7 +74,8 @@ export function Inbox({ data }: { data: InboxData }) {
   }, [toast]);
 
   // Connecting was the switch. While this page is open it checks every connected channel; a server job replaces this when Lighthouse goes live.
-  const live = data.channels.some(c => c.status === 'connected');
+  // A broken channel counts too: the check is what tries it again.
+  const live = data.channels.some(c => c.status === 'connected' || c.status === 'broken');
   useEffect(() => {
     if (!live) return;
     const timer = setInterval(async () => {
@@ -106,7 +116,8 @@ export function Inbox({ data }: { data: InboxData }) {
     <div className="mx-auto max-w-[44rem] px-4 pb-32 pt-6 sm:px-6">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <Wordmark business={data.business} />
-        <Link href="/connect" className="ml-auto rounded-lg border border-shore bg-white px-4 py-2 text-sm font-bold">Channels</Link>
+        <Link href="/activity" className="ml-auto px-3 py-2 text-sm font-bold text-navy-soft">Activity</Link>
+        <Link href="/connect" className="rounded-lg border border-shore bg-white px-4 py-2 text-sm font-bold">Channels</Link>
       </header>
 
       <OnWatch channels={data.channels} />
@@ -247,21 +258,27 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
   const [drafting, setDrafting] = useState(false);
 
   // The fixed draft shows at once. The reply agent's draft replaces it only if the owner has not started typing.
+  // A reply already waiting for the owner is the one to check, so no new draft is written over it.
   async function startReply() {
     setWriting(true);
+    if (item.heldReply) return;
     setDrafting(true);
     const better = await draftFor(item.id).catch(() => null);
     setDrafting(false);
     if (better) setText(current => (current === item.draft ? better : current));
   }
   const waiting = item.status === 'waiting';
+  const prefix = item.id.split(':')[0];
+  const channel = CHANNELS.find(c => c === prefix) ?? null;
   const shell = lead ? 'rounded-xl border-l-[5px] border-lamp bg-white p-5 shadow-[0_1px_0_#dfe7ec]' : 'py-5';
 
   return (
     <article className={`${shell} ${fresh ? 'arrived' : ''}`}>
-      <div className="flex flex-wrap items-baseline gap-x-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {channel && <ChannelBadge channel={channel} size="sm" />}
         <h3 className="font-bold">{item.author === 'Unknown' ? 'Someone' : item.author}</h3>
         <span className="text-[15px] text-navy-soft">{item.platform}, {when(item.receivedAt)}</span>
+        {item.link && waiting && <a href={item.link} target="_blank" rel="noreferrer" className="text-[15px] text-navy-soft underline decoration-shore underline-offset-4 hover:text-navy">Open on {item.platform}</a>}
         {item.stars !== undefined && <span className="text-[15px]" aria-label={`${item.stars} out of 5 stars`}>{'★'.repeat(item.stars)}<span className="text-shore">{'★'.repeat(5 - item.stars)}</span></span>}
       </div>
       <p className="mt-1.5 max-w-[60ch] whitespace-pre-line">{item.text}</p>
@@ -272,7 +289,27 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
         </p>
       )}
 
-      {item.reply && <p className="mt-3 border-l-2 border-kelp pl-3 text-[15px] text-kelp">Your reply: {item.reply}</p>}
+      {item.reply && (
+        <div className="ml-4 mt-3 border-l-2 border-kelp pl-4">
+          <p className="whitespace-pre-line text-[15px]">{item.reply}</p>
+          <p className="mt-1 text-[15px] font-bold text-kelp">
+            {item.link ? <a href={item.link} target="_blank" rel="noreferrer" className="underline underline-offset-4">See your reply on {item.platform}</a> : 'You replied'}
+          </p>
+        </div>
+      )}
+
+      {!item.reply && item.status === 'answered' && item.link && (
+        <p className="ml-4 mt-3 border-l-2 border-kelp pl-4 text-[15px] font-bold text-kelp">
+          <a href={item.link} target="_blank" rel="noreferrer" className="underline underline-offset-4">See the answer on {item.platform}</a>
+        </p>
+      )}
+
+      {waiting && item.heldReply && !writing && (
+        <div className="ml-4 mt-4 border-l-2 border-lamp pl-4">
+          <p className="text-[15px] font-bold text-navy-soft">Ready to send</p>
+          <p className="mt-1 max-w-[60ch] whitespace-pre-line">{item.heldReply}</p>
+        </div>
+      )}
 
       {writing ? (
         <div className="mt-4">
@@ -291,7 +328,8 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
         </div>
       ) : (
         <div className="mt-4 flex flex-wrap gap-1.5 sm:gap-2">
-          {waiting && <button disabled={busy} onClick={startReply} className="rounded-lg bg-navy px-3.5 py-2 font-bold text-white sm:px-4">Reply</button>}
+          {waiting && item.heldReply && <button disabled={busy} onClick={() => onSend(item, item.heldReply!)} className="rounded-lg bg-navy px-3.5 py-2 font-bold text-white sm:px-4">Send</button>}
+          {waiting && <button disabled={busy} onClick={startReply} className={item.heldReply ? 'rounded-lg border border-shore bg-white px-3.5 py-2 sm:px-4' : 'rounded-lg bg-navy px-3.5 py-2 font-bold text-white sm:px-4'}>{item.heldReply ? 'Edit' : 'Reply'}</button>}
           {waiting && <button disabled={busy} onClick={() => onAct(item, 'answered')} className="rounded-lg border border-shore bg-white px-3.5 py-2 sm:px-4">Mark answered</button>}
           {waiting && <button disabled={busy} onClick={() => onAct(item, 'spam')} className="rounded-lg px-2.5 py-2 text-navy-soft sm:px-3">Spam</button>}
           {!waiting && <button disabled={busy} onClick={() => onAct(item, 'waiting')} className="rounded-lg border border-shore bg-white px-4 py-2">{item.status === 'spam' ? 'Not spam' : 'Back to waiting'}</button>}

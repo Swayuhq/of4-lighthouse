@@ -1,0 +1,256 @@
+<title>Swayu Connector Switchboard</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a switchboard. People on top, the shared connector layer in the middle as four buckets by who can carry each connector, the providers underneath. One wide column of about 1180px; a detail panel opens under the board. */
+:root{
+  --bg:#f3f7f9; --surface:#ffffff; --ink:#13294b; --soft:#4a5d7a; --line:#dfe7ec; --band:#e9f0f4;
+  --comp:#6a4bd6; --comp-soft:#ece7fd; --zern:#0f7f86; --zern-soft:#dff3f4; --both:#13294b; --both-soft:#e3e9f2; --own:#a15c00; --own-soft:#fbefdc; --lamp:#f2b705;
+  --body:"Atkinson Hyperlegible",system-ui,sans-serif;
+  --mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1828; --surface:#14233a; --ink:#e8eef6; --soft:#a3b3c8; --line:#2a3d5a; --band:#112036;
+  --comp:#a996ff; --comp-soft:#2a2250; --zern:#4fd0d8; --zern-soft:#103a3e; --both:#c9d6ea; --both-soft:#1d2c45; --own:#f0b35e; --own-soft:#3a2a12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1828; --surface:#14233a; --ink:#e8eef6; --soft:#a3b3c8; --line:#2a3d5a; --band:#112036;
+  --comp:#a996ff; --comp-soft:#2a2250; --zern:#4fd0d8; --zern-soft:#103a3e; --both:#c9d6ea; --both-soft:#1d2c45; --own:#f0b35e; --own-soft:#3a2a12; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:36px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:34px}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:clamp(2rem,4.4vw,3rem);letter-spacing:-.015em}
+h2{font-size:1.45rem}
+p{margin:0;max-width:70ch}
+.lede{color:var(--soft);font-size:1.12rem}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:3px solid var(--lamp);outline-offset:2px}
+
+.people{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.person{border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:12px;text-align:left;cursor:pointer;display:grid;gap:2px;transition:transform .2s,border-color .2s,box-shadow .2s}
+.person b{font-size:1.02rem}
+.person span{font-size:.86rem;color:var(--soft)}
+.person em{font-style:normal;font-size:.8rem;font-weight:700;color:var(--soft)}
+.person[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink) inset;transform:translateY(-2px)}
+.person.quiet b{color:var(--soft)}
+
+.board{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:14px}
+.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2}
+.wires path{fill:none;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:6 7;animation:flow 1.2s linear infinite;opacity:.85}
+@keyframes flow{to{stroke-dashoffset:-26}}
+.buckets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;position:relative}
+.bucket{border-radius:12px;padding:12px;display:grid;gap:10px;align-content:start;background:var(--band)}
+.bucket h3{font-size:.98rem;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.bucket h3 small{font-size:.8rem;color:var(--soft);font-weight:400}
+.bucket[data-b="comp"]{box-shadow:inset 0 4px 0 var(--comp)}
+.bucket[data-b="both"]{box-shadow:inset 0 4px 0 var(--both)}
+.bucket[data-b="zern"]{box-shadow:inset 0 4px 0 var(--zern)}
+.bucket[data-b="own"]{box-shadow:inset 0 4px 0 var(--own)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:.88rem;cursor:pointer;transition:opacity .25s,transform .25s,border-color .25s,background .25s}
+.chip.dim{opacity:.28}
+.chip.on{transform:scale(1.04);font-weight:700}
+.bucket[data-b="comp"] .chip.on{border-color:var(--comp);background:var(--comp-soft)}
+.bucket[data-b="both"] .chip.on{border-color:var(--both);background:var(--both-soft)}
+.bucket[data-b="zern"] .chip.on{border-color:var(--zern);background:var(--zern-soft)}
+.bucket[data-b="own"] .chip.on{border-color:var(--own);background:var(--own-soft)}
+.chip[aria-pressed="true"]{outline:2.5px solid var(--lamp);outline-offset:1px}
+.chip.m::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--zern);margin-left:6px;vertical-align:middle}
+
+.providers{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:56px;position:relative}
+.prov{border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700}
+.prov[data-p="comp"]{background:var(--comp-soft);color:var(--comp)}
+.prov[data-p="zern"]{background:var(--zern-soft);color:var(--zern)}
+.prov[data-p="own"]{background:var(--own-soft);color:var(--own)}
+.prov .n{font-family:var(--mono);font-size:1.5rem;font-variant-numeric:tabular-nums}
+.prov small{display:block;font-weight:400;font-size:.82rem;color:var(--soft)}
+
+.detail{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:14px;min-height:180px}
+.detail .head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline}
+.pill{font-size:.8rem;font-weight:700;border-radius:999px;padding:2px 10px}
+.pill.comp{background:var(--comp-soft);color:var(--comp)} .pill.zern{background:var(--zern-soft);color:var(--zern)} .pill.both{background:var(--both-soft);color:var(--both)} .pill.own{background:var(--own-soft);color:var(--own)}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.cols>div{min-width:0;display:grid;gap:6px;align-content:start}
+.cols h4{margin:0;font-size:.9rem;color:var(--soft)}
+.who{display:grid;gap:8px}
+.who div{border-left:3px solid var(--line);padding-left:10px;font-size:.92rem}
+code{font-family:var(--mono);font-size:.82em;word-break:break-word}
+.note{font-size:.88rem;color:var(--soft)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.88rem;color:var(--soft)}
+.legend .chip{cursor:default;font-size:.8rem;padding:2px 9px}
+@media (max-width:980px){.people{grid-template-columns:repeat(3,minmax(0,1fr))}.buckets{grid-template-columns:1fr 1fr}.cols{grid-template-columns:1fr}}
+@media (max-width:560px){.people{grid-template-columns:1fr 1fr}.buckets{grid-template-columns:1fr}.providers{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){.wires path{animation:none}.chip,.person{transition:none}}
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:12px">
+    <h1>Swayu Connector Switchboard</h1>
+    <p class="lede">Every outcome family asked for connectors in the survey. Many ask for the same ones. This board shows each connector once, sorted by which provider can carry it, so one connection can serve every family that needs it.</p>
+  </header>
+
+  <section style="display:grid;gap:12px" aria-labelledby="who">
+    <h2 id="who">Pick a family</h2>
+    <div class="people" role="group" aria-label="Outcome families" id="people"></div>
+  </section>
+
+  <section class="board" aria-labelledby="layer" id="board">
+    <svg class="wires" id="wires" aria-hidden="true"></svg>
+    <h2 id="layer" style="position:relative">The shared connector layer</h2>
+    <div class="legend" style="position:relative"><span><span class="chip m">Measured</span> tested on Lighthouse's test accounts</span><span>Everything else is from each provider's own catalogue, not yet run</span></div>
+    <div class="buckets" id="buckets"></div>
+    <div class="providers" id="providers"></div>
+  </section>
+
+  <section class="detail" id="detail" aria-live="polite"></section>
+
+  <section style="display:grid;gap:10px">
+    <h2>How a connector finds its home</h2>
+    <p>The rule from the connectors call of 4 November: a connector only one provider has goes to that provider. A connector both have is tested on real accounts and picked against what the families asked for. A connector neither has needs Swayu's own adapter or a paid partner. Every family then reaches it through the same gateway, with its own permissions.</p>
+    <p class="note">Sources: the Swayu connectors survey, answers of 2 November 2026 from Dhruv, HRB, Maanas and Sujit; Composio's live tool search and Zernio's published platform list, both read on 4 November 2026; Lighthouse measurements on 4 November 2026. Hatim has no survey answer yet, so the ads and video family shows what other families asked for ads.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+  var FAM = [
+    { id: 'all', name: 'Everyone', fam: 'All families', note: '' },
+    { id: 'OF1', name: 'HRB', fam: 'OF1 Plans and reports', note: 'Read only, daily' },
+    { id: 'OF2', name: 'Dhruv', fam: 'OF2 Social, shared layer', note: 'Read and write, daily' },
+    { id: 'OF3', name: 'Maanas', fam: 'OF3 Google and website', note: 'On request, 12 answers' },
+    { id: 'OF4', name: 'Sujit', fam: 'OF4 Customer replies', note: 'Instant, under a minute' },
+    { id: 'OF5', name: 'Hatim', fam: 'OF5 Ads and video', note: 'No survey answer yet', quiet: true }
+  ];
+  var BUCKET = {
+    comp: { t: 'Only Composio', s: 'goes to Composio' },
+    both: { t: 'Both offer it', s: 'test both, pick one' },
+    zern: { t: 'Only Zernio', s: 'goes to Zernio' },
+    own:  { t: 'Neither', s: 'own adapter or partner' }
+  };
+  // need: family -> what they asked. c / z: what each provider shows. m: measured in Lighthouse.
+  var K = [
+    { n: 'Instagram', b: 'both', m: 1, need: { OF1: 'Read numbers', OF2: 'Publish, read insights', OF4: 'Read comments, reply, instant' }, c: 'Read measured 7 of 7. Reply listed: <code>INSTAGRAM_POST_IG_COMMENT_REPLIES</code>', z: 'Read measured 7 of 7, reply measured 1 of 1, owner replies and links included', home: 'Zernio, measured both ways' },
+    { n: 'Facebook Page', b: 'both', m: 1, need: { OF1: 'Read numbers', OF2: 'Publish, read insights', OF3: 'Edit page info', OF4: 'Read comments, reply, instant' }, c: 'Read measured, 8 of 12 names. Reply measured 5 of 5', z: 'Read measured, 12 of 12 names, owner replies included. Reply untested', home: 'Zernio to read; reply on either. Editing page info needs Meta app review (Maanas)' },
+    { n: 'WhatsApp Business', b: 'own', need: { OF1: 'Read numbers', OF4: 'Read messages, reply, instant' }, c: 'Only phone number tools found; sending only, no incoming', z: 'Listed under messaging, untested', home: 'Swayu’s own Meta app, built and running on Meta’s test number. Zernio is the one to test against it' },
+    { n: 'Google Business Profile', b: 'both', need: { OF1: 'Read numbers', OF3: 'Read reviews, publish posts, edit listing', OF4: 'Read reviews, reply' }, c: 'Listed: <code>GOOGLE_BUSINESS_PROFILE_GET_REVIEWS</code>, <code>UPDATE_REVIEW_REPLY</code>. An earlier map said no toolkit', z: 'Listed as <code>googlebusiness</code>; wired in Lighthouse, untested', home: 'Open. Maanas: Swayu’s own Google project must be approved and no vendor removes that. Test both on a real profile to settle it' },
+    { n: 'LinkedIn', b: 'both', need: { OF1: 'Read numbers', OF2: 'Publish, read insights', OF4: 'Read and reply' }, c: 'Listed: <code>LINKEDIN_CREATE_LINKED_IN_POST</code>', z: 'Listed for posting', home: 'Test both' },
+    { n: 'X', b: 'both', need: { OF1: 'Read numbers', OF2: 'Publish, read insights' }, c: 'Listed: <code>TWITTER_CREATION_OF_A_POST</code>', z: 'Listed for posting, and X Ads', home: 'Test both. HRB asks whether reading X costs money' },
+    { n: 'YouTube', b: 'both', need: { OF1: 'Read numbers', OF2: 'Publish video, read insights' }, c: 'Listed: <code>YOUTUBE_MULTIPART_UPLOAD_VIDEO</code>', z: 'Listed for posting', home: 'Test both' },
+    { n: 'TikTok', b: 'both', need: { OF1: 'Read numbers', OF2: 'Publish video, read insights' }, c: 'Listed: <code>TIKTOK_PUBLISH_VIDEO</code>', z: 'Listed for posting, and TikTok Ads', home: 'Test both' },
+    { n: 'Gmail or Outlook', b: 'both', need: { OF4: 'Read and reply to customer email' }, c: 'Listed: <code>GMAIL_FETCH_EMAILS</code>, <code>OUTLOOK_QUERY_EMAILS</code>', z: 'Listed as Google and Microsoft email and calendar', home: 'Test both' },
+    { n: 'Google Analytics 4', b: 'both', need: { OF1: 'Read numbers daily', OF3: 'Visits and enquiries once beta starts' }, c: 'Listed: <code>GOOGLE_ANALYTICS_BATCH_RUN_REPORTS</code>', z: 'Listed under analytics', home: 'Test both' },
+    { n: 'Google Ads', b: 'both', need: { OF1: 'Read numbers', OF5: 'Ads (no survey answer)' }, c: 'Listed: <code>GOOGLEADS_SEARCH_STREAM_GAQL</code>', z: 'Listed under advertising', home: 'Test both, read only first' },
+    { n: 'Meta Ads', b: 'both', need: { OF1: 'Read numbers', OF5: 'Ads (no survey answer)' }, c: 'Listed: <code>METAADS_GET_INSIGHTS</code>', z: 'Listed under advertising', home: 'Test both, read only first' },
+    { n: 'Shopify', b: 'both', need: { OF1: 'Read numbers', OF3: 'Edit products' }, c: 'Listed: <code>SHOPIFY_UPDATES_A_PRODUCT</code>', z: 'Listed under blogs and commerce', home: 'Test both' },
+    { n: 'Webflow and Wix', b: 'both', need: { OF1: 'Read numbers', OF3: 'Publish and edit pages' }, c: 'Listed: Webflow collection items, Wix site API. Maanas: Wix has no SEO or blog actions', z: 'Listed under blogs and commerce', home: 'Test both. Squarespace has no public write API' },
+    { n: 'HubSpot', b: 'both', need: { OF1: 'Read numbers' }, c: 'Listed: <code>HUBSPOT_CREATE_CONTACT</code>', z: 'Listed under CRM', home: 'Test both' },
+    { n: 'WordPress', b: 'zern', need: { OF1: 'Read numbers', OF3: 'Publish and edit, staging copy first' }, c: 'No toolkit found. Maanas: self hosted WordPress is not in Composio', z: 'Listed under blogs and commerce', home: 'Zernio to test; otherwise an own adapter with application passwords' },
+    { n: 'Search Console', b: 'comp', need: { OF1: 'Read numbers', OF3: 'Read, submit sitemap, inspect index' }, c: 'Listed: <code>GOOGLE_SEARCH_CONSOLE_SEARCH_ANALYTICS_QUERY</code>', z: 'Not listed', home: 'Composio' },
+    { n: 'Keyword data', b: 'comp', need: { OF1: 'Read numbers', OF3: 'Search volume on request' }, c: 'Listed: DataForSEO and Semrush tools', z: 'Not listed', home: 'Composio, a paid service behind it' },
+    { n: 'Typeform or Google Forms', b: 'comp', need: { OF1: 'Read responses' }, c: 'Listed: <code>TYPEFORM_GET_FORM_RESPONSES</code>, <code>GOOGLEFORMS_LIST_RESPONSES</code>', z: 'Not listed', home: 'Composio' },
+    { n: 'Brevo or Mailchimp', b: 'comp', need: { OF1: 'Read numbers' }, c: 'Listed: Mailchimp campaigns, Brevo campaigns', z: 'Not listed', home: 'Composio' },
+    { n: 'Google Sheets', b: 'comp', need: { OF1: 'Read and write rows' }, c: 'Listed: <code>GOOGLESHEETS_SPREADSHEETS_VALUES_APPEND</code>', z: 'Not listed', home: 'Composio' },
+    { n: 'Zoho', b: 'comp', need: { OF1: 'Read numbers' }, c: 'Listed: Zoho CRM records', z: 'Not listed', home: 'Composio' },
+    { n: 'Vercel or Netlify', b: 'comp', need: { OF3: 'Publish site changes' }, c: 'Listed: <code>VERCEL_CREATE_NEW_DEPLOYMENT</code>, Netlify deploy', z: 'Not listed', home: 'Composio' },
+    { n: 'GitHub or GitLab', b: 'comp', need: { OF3: 'Open a change for the owner’s developer' }, c: 'Listed: <code>GITHUB_CREATE_A_PULL_REQUEST</code>, GitLab merge requests', z: 'Not listed', home: 'Composio' },
+    { n: 'PageSpeed', b: 'own', need: { OF1: 'Read numbers', OF3: 'Speed checks on request' }, c: 'No Google PageSpeed toolkit found, only GTmetrix', z: 'Not listed', home: 'Google’s own API; Maanas tested it directly' },
+    { n: 'Meta Ad Library', b: 'own', need: { OF1: 'Read competitor ads' }, c: 'No ad library tool found', z: 'Not listed', home: 'Meta’s own API' },
+    { n: 'Etsy or WooCommerce', b: 'own', need: { OF1: 'Read numbers', OF3: 'Edit products' }, c: 'No toolkit found. Maanas: WooCommerce is not in Composio', z: 'Not listed', home: 'Own adapter' },
+    { n: 'Amazon Seller', b: 'own', need: { OF1: 'Read numbers' }, c: 'No toolkit found', z: 'Not listed', home: 'Own adapter, later' },
+    { n: 'IndiaMART', b: 'own', need: { OF1: 'Read numbers' }, c: 'Not checked', z: 'Not listed', home: 'Open' },
+    { n: 'Apple, Yelp, Bing listings', b: 'own', need: { OF1: 'Read numbers', OF3: 'Edit listings' }, c: 'Yelp read only: search and reviews', z: 'Not listed', home: 'Maanas: Apple is partners only, Bing imports from Google, Yelp has no write access' },
+    { n: 'Indian directories', b: 'own', need: { OF3: 'Verified listings on Justdial and Sulekha' }, c: 'Not listed', z: 'Not listed', home: 'A listings partner such as Yext, Synup or BrightLocal, paid per location' }
+  ];
+  var ORDER = ['comp', 'both', 'zern', 'own'];
+  var state = { fam: 'all', k: 'Instagram' };
+
+  var people = document.getElementById('people');
+  people.innerHTML = FAM.map(function(f){
+    return '<button type="button" class="person' + (f.quiet ? ' quiet' : '') + '" id="p-' + f.id + '" data-f="' + f.id + '" aria-pressed="false"><b>' + f.name + '</b><span>' + f.fam + '</span>' + (f.note ? '<em>' + f.note + '</em>' : '') + '</button>';
+  }).join('');
+  var buckets = document.getElementById('buckets');
+  buckets.innerHTML = ORDER.map(function(b){
+    var ks = K.filter(function(k){ return k.b === b; });
+    return '<div class="bucket" data-b="' + b + '"><h3>' + BUCKET[b].t + ' <small id="cnt-' + b + '"></small></h3><div class="chips">' +
+      ks.map(function(k){ return '<button type="button" class="chip' + (k.m ? ' m' : '') + '" data-k="' + k.n + '" aria-pressed="false">' + k.n + '</button>'; }).join('') + '</div><p class="note">' + BUCKET[b].s + '</p></div>';
+  }).join('');
+  var provs = document.getElementById('providers');
+  provs.innerHTML = [['comp', 'Composio', 'carries it alone or as one choice'], ['zern', 'Zernio', 'carries it alone or as one choice'], ['own', 'Own or partner', 'no provider offers it']].map(function(p){
+    return '<div class="prov" data-p="' + p[0] + '" id="pv-' + p[0] + '"><span>' + p[1] + '<small>' + p[2] + '</small></span><span class="n" id="n-' + p[0] + '">0</span></div>';
+  }).join('');
+
+  function needed(k){ return state.fam === 'all' ? Object.keys(k.need).length > 0 : !!k.need[state.fam]; }
+
+  function countTo(el, to){
+    var from = Number(el.textContent) || 0, t0 = performance.now();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = to; return; }
+    (function step(t){ var p = Math.min(1, (t - t0) / 400); el.textContent = Math.round(from + (to - from) * p); if (p < 1) requestAnimationFrame(step); })(t0);
+  }
+
+  function wires(){
+    var svg = document.getElementById('wires'), board = document.getElementById('board').getBoundingClientRect();
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var color = { comp: 'var(--comp)', zern: 'var(--zern)', both: 'var(--both)', own: 'var(--own)' };
+    var target = { comp: ['comp'], both: ['comp', 'zern'], zern: ['zern'], own: ['own'] };
+    // Everyone would draw a wire for every connector, so it wires only the chosen one.
+    var wired = state.fam === 'all' ? document.querySelectorAll('.chip[aria-pressed="true"]') : document.querySelectorAll('.chip.on');
+    wired.forEach(function(chip){
+      var b = chip.closest('.bucket').dataset.b, r = chip.getBoundingClientRect();
+      target[b].forEach(function(p){
+        var pr = document.getElementById('pv-' + p).getBoundingClientRect();
+        var bk = chip.closest('.bucket').getBoundingClientRect();
+        var x1 = r.left + r.width / 2 - board.left, y1 = bk.bottom - board.top;
+        var x2 = pr.left + pr.width / 2 - board.left + (b === 'both' ? (p === 'comp' ? 30 : -30) : 0), y2 = pr.top - board.top;
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        var my = (y1 + y2) / 2;
+        path.setAttribute('d', 'M' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + my + ', ' + x2 + ' ' + my + ', ' + x2 + ' ' + y2);
+        path.setAttribute('stroke', color[b === 'both' ? p : b]);
+        svg.appendChild(path);
+      });
+    });
+  }
+
+  function detail(){
+    var k = K.filter(function(x){ return x.n === state.k; })[0];
+    var fams = Object.keys(k.need);
+    document.getElementById('detail').innerHTML =
+      '<div class="head"><h2>' + k.n + '</h2><span class="pill ' + k.b + '">' + BUCKET[k.b].t + '</span>' + (k.m ? '<span class="pill zern">Measured in Lighthouse</span>' : '') + '<span class="note">needed by ' + fams.length + ' famil' + (fams.length === 1 ? 'y' : 'ies') + '</span></div>' +
+      '<div class="cols"><div><h4>Who asked, and for what</h4><div class="who">' + fams.map(function(f){ var p = FAM.filter(function(x){ return x.id === f; })[0]; return '<div><b>' + p.name + '</b>, ' + p.fam + '<br>' + k.need[f] + '</div>'; }).join('') + '</div></div>' +
+      '<div><h4>Composio</h4><p>' + k.c + '</p><h4 style="margin-top:8px">Zernio</h4><p>' + k.z + '</p></div>' +
+      '<div><h4>Proposed home</h4><p>' + k.home + '</p><p class="note">Proposed from the evidence; Dhruv and Sujit decide.</p></div></div>';
+  }
+
+  function render(){
+    document.querySelectorAll('.person').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.f === state.fam)); });
+    var n = { comp: 0, zern: 0, own: 0 };
+    ORDER.forEach(function(b){
+      var c = 0;
+      K.filter(function(k){ return k.b === b; }).forEach(function(k){ if (needed(k)) c++; });
+      document.getElementById('cnt-' + b).textContent = c + ' needed';
+    });
+    document.querySelectorAll('.chip[data-k]').forEach(function(ch){
+      var k = K.filter(function(x){ return x.n === ch.dataset.k; })[0], on = needed(k);
+      ch.classList.toggle('on', on); ch.classList.toggle('dim', !on);
+      ch.setAttribute('aria-pressed', String(ch.dataset.k === state.k));
+      if (on){ if (k.b === 'comp' || k.b === 'both') n.comp++; if (k.b === 'zern' || k.b === 'both') n.zern++; if (k.b === 'own') n.own++; }
+    });
+    ['comp', 'zern', 'own'].forEach(function(p){ countTo(document.getElementById('n-' + p), n[p]); });
+    detail();
+    requestAnimationFrame(wires);
+  }
+
+  people.addEventListener('click', function(e){
+    var b = e.target.closest('.person'); if (!b) return;
+    state.fam = b.dataset.f;
+    var first = K.filter(needed)[0]; if (first && !needed(K.filter(function(x){ return x.n === state.k; })[0])) state.k = first.n;
+    render();
+  });
+  buckets.addEventListener('click', function(e){
+    var c = e.target.closest('.chip'); if (!c) return;
+    state.k = c.dataset.k; render();
+  });
+  window.addEventListener('resize', function(){ requestAnimationFrame(wires); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ requestAnimationFrame(wires); });
+  render();
+})();
+</script>

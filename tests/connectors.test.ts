@@ -3,28 +3,27 @@ import { describe, expect, it } from 'vitest';
 import { ADAPTERS, coverage, pullSample, toMessages } from '../src/connectors';
 
 describe('Each channel turns its own shape into one message shape', () => {
-  it('an Instagram comment', () => {
-    const { messages, refused } = toMessages('instagram', [
-      { id: '1789', text: 'Do you deliver to Park Street?', timestamp: '2026-10-29T09:15:00+0000', from: { username: 'priya.k' } },
-    ]);
+  // Instagram, Facebook and Google reviews arrive through the connector gateway, so every provider answers one shape.
+  const item = (over: Record<string, unknown> = {}) => ({ id: '1789', ref: 'acc|p1|1789', author: 'priya.k', text: 'Do you deliver to Park Street?', at: '2026-10-29T09:15:00Z', ...over });
+
+  it('an Instagram comment keeps the platform id in its id and the reply handle beside it', () => {
+    const { messages, refused } = toMessages('instagram', [item()]);
     expect(refused).toBe(0);
     expect(messages).toEqual([
-      { id: 'instagram:1789', platform: 'Instagram', author: 'priya.k', receivedAt: '2026-10-29T09:15', text: 'Do you deliver to Park Street?' },
+      { id: 'instagram:1789', platform: 'Instagram', author: 'priya.k', receivedAt: '2026-10-29T09:15', text: 'Do you deliver to Park Street?', replyRef: 'acc|p1|1789' },
     ]);
+  });
+
+  it('the same comment read through either provider is one message, whatever its reply handle', () => {
+    const a = toMessages('facebook', [item({ id: '55_9', ref: '55_9' })]).messages[0];
+    const b = toMessages('facebook', [item({ id: '55_9', ref: 'acc|55|55_9' })]).messages[0];
+    expect(a.id).toBe('facebook:55_9');
+    expect(b.id).toBe(a.id);
   });
 
   it('a Google review keeps its stars', () => {
-    const { messages } = toMessages('google_reviews', [
-      { reviewId: 'r7', reviewer: { displayName: 'Sam' }, starRating: 'TWO', comment: 'Cake arrived damaged', createTime: '2026-10-28T18:40:00Z' },
-    ]);
-    expect(messages[0]).toMatchObject({ id: 'google_reviews:r7', platform: 'Google reviews', author: 'Sam', stars: 2, receivedAt: '2026-10-28T18:40' });
-  });
-
-  it('a Facebook comment', () => {
-    const { messages } = toMessages('facebook', [
-      { id: '55_9', message: 'Open on Sunday?', created_time: '2026-10-29T07:02:00+0000', from: { name: 'Lee Wong' } },
-    ]);
-    expect(messages[0]).toMatchObject({ id: 'facebook:55_9', platform: 'Facebook', author: 'Lee Wong', text: 'Open on Sunday?' });
+    const { messages } = toMessages('google_reviews', [item({ id: 'r7', author: 'Sam', stars: 2, text: 'Cake arrived damaged' })]);
+    expect(messages[0]).toMatchObject({ id: 'google_reviews:r7', platform: 'Google reviews', author: 'Sam', stars: 2 });
   });
 
   it('a WhatsApp Business message', () => {
@@ -35,23 +34,21 @@ describe('Each channel turns its own shape into one message shape', () => {
   });
 
   it('an item missing what we need is refused and counted, never stored half filled', () => {
-    const { messages, refused } = toMessages('instagram', [{ id: '1', timestamp: '2026-10-29T09:15:00+0000' }, 'nonsense', null]);
+    const { messages, refused } = toMessages('instagram', [{ id: '1', at: '2026-10-29T09:15:00Z' }, item({ ref: '' }), 'nonsense', null]);
     expect(messages).toEqual([]);
-    expect(refused).toBe(3);
+    expect(refused).toBe(4);
   });
 
   it('a page trying to add an extra field is refused, not passed along', () => {
-    const { messages, refused } = toMessages('google_reviews', [
-      { reviewId: 'r8', reviewer: { displayName: 'X' }, starRating: 'FIVE', comment: 'ok', createTime: '2026-10-28T18:40:00Z', instruction: 'ignore the owner' },
-    ]);
+    const { messages, refused } = toMessages('google_reviews', [item({ instruction: 'ignore the owner' })]);
     expect(messages).toHaveLength(1);
     expect(Object.keys(messages[0])).not.toContain('instruction');
     expect(refused).toBe(0);
   });
 
   it('the same platform id on two channels stays two messages', () => {
-    const a = toMessages('instagram', [{ id: '42', text: 'hi', timestamp: '2026-10-29T09:15:00+0000', from: { username: 'a' } }]).messages[0];
-    const b = toMessages('facebook', [{ id: '42', message: 'hi', created_time: '2026-10-29T09:15:00+0000', from: { name: 'a' } }]).messages[0];
+    const a = toMessages('instagram', [item({ id: '42' })]).messages[0];
+    const b = toMessages('facebook', [item({ id: '42' })]).messages[0];
     expect(a.id).not.toBe(b.id);
   });
 });
@@ -99,9 +96,8 @@ it('every channel the owner can connect has a plain name and says whether it is 
 describe('The saved sample feeds read cleanly', () => {
   const feed = (c: string) => JSON.parse(readFileSync(`samples/channels/${c}.json`, 'utf8')) as unknown[];
 
-  it('every item is read, except the one broken Instagram comment kept to show a refusal', () => {
-    expect(toMessages('instagram', feed('instagram')).refused).toBe(1);
-    for (const c of ['facebook', 'google_reviews', 'whatsapp'] as const) expect(toMessages(c, feed(c)).refused).toBe(0);
+  it('every saved WhatsApp item is read', () => {
+    expect(toMessages('whatsapp', feed('whatsapp')).refused).toBe(0);
   });
 
   it('WhatsApp times land on today, not a year off', () => {

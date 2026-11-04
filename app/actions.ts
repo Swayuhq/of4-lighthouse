@@ -4,11 +4,14 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { parseCsv, parseWhatsAppExport, type ParseResult } from '@/src/parse';
 import { checkMessages } from '@/src/message';
-import { connect, connections, load, markBroken, nameBusiness, record, setOwnerNames, startOver, store } from '@/src/store/db';
+import { connect, connections, load, markBroken, nameBusiness, record, replyRefFor, setOwnerNames, startOver, store } from '@/src/store/db';
+import { ownerGateway } from '@/src/gateway/setup';
 import { agentsOn } from '@/src/agents/model';
 import { pull, readNew } from '@/src/pipeline';
 import { ADAPTERS, isChannel } from '@/src/connectors';
+import { RateLimited } from '@/src/gateway/limiter';
 import { writeReply } from '@/src/agents/reply';
+import { draftWaiting } from '@/src/drafting';
 
 function read(name: string, text: string): ParseResult {
   if (/\.txt$/i.test(name)) return parseWhatsAppExport(text);
@@ -45,6 +48,7 @@ export async function connectChannel(channel: string): Promise<{ added: number; 
   await connect(channel);
   try {
     const { added, refused } = await pull(channel, 1000);
+    draftWaiting();
     revalidatePath('/', 'layout');
     return { added, refused };
   } catch {
@@ -55,17 +59,27 @@ export async function connectChannel(channel: string): Promise<{ added: number; 
   }
 }
 
-/** One check of every connected channel. A channel that fails is marked broken, so its count reads unknown. */
+/**
+ * One check of every connected channel. A channel that fails is marked broken, so its count reads unknown.
+ * A broken channel Swayu reads itself is tried again on each check, so one network blip heals on its own.
+ */
 export async function checkChannels(): Promise<{ added: number }> {
   let added = 0;
   for (const c of await connections()) {
-    if (c.status !== 'connected') continue;
+    if (c.status !== 'connected') {
+      if (!ADAPTERS[c.channel].fetch) continue;
+      await connect(c.channel);
+    }
     try {
       added += (await pull(c.channel, 50)).added;
-    } catch {
+    } catch (error) {
+      // A provider that asked us to slow down is not a broken channel. The ledger has the wait; the next check reads it.
+      if (error instanceof RateLimited) continue;
       await markBroken(c.channel, `Swayu could not reach ${ADAPTERS[c.channel].label}. Connect it again.`);
     }
   }
+  // Replies get drafted in the background; the next check shows them.
+  draftWaiting();
   revalidatePath('/', 'layout');
   return { added };
 }
@@ -80,21 +94,21 @@ export async function markAs(id: string, status: 'waiting' | 'answered' | 'spam'
   revalidatePath('/', 'layout');
 }
 
-/** Posts the reply on the channel when it is live, then books it. A reply the platform refuses is never booked as sent. */
+/**
+ * Posts the reply through the connector gateway when the message came from a channel, then books it.
+ * Pressing Send is the owner's approval. A reply the gateway or the platform refuses is never booked as sent.
+ */
 export async function sendReply(id: string, text: string): Promise<{ posted: boolean; problem?: string }> {
   const reply = text.trim();
   const [channel, ...rest] = id.split(':');
-  const adapter = isChannel(channel) ? ADAPTERS[channel] : undefined;
-  if (adapter?.send) {
-    try {
-      await adapter.send(rest.join(':'), reply);
-    } catch {
-      return { posted: false, problem: `${adapter.label} did not take the reply. Try again.` };
-    }
+  if (isChannel(channel)) {
+    const ref = (await replyRefFor(id)) ?? rest.join(':');
+    const out = await ownerGateway().call({ lead: 'replies', channel, action: 'reply', args: { ref, text: reply } });
+    if (!out.ok) return { posted: false, problem: `${ADAPTERS[channel].label} did not take the reply. Try again.` };
   }
   await record(id, 'sent', reply);
   revalidatePath('/', 'layout');
-  return { posted: Boolean(adapter?.send) };
+  return { posted: isChannel(channel) };
 }
 
 /** A draft in the owner's voice for one message, or null so the screen keeps the fixed draft. */

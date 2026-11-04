@@ -50,7 +50,7 @@ export function ChannelList({ channels }: { channels: ChannelView[] }) {
       </ul>
 
       <p className="mt-4 text-[15px] text-navy-soft">
-        Until Meta and Google approve Swayu, each channel reads a sample feed from a test bakery. Connecting, checking and counting run for real.
+        Instagram and Facebook are live test accounts. Google reviews needs a Business Profile, and WhatsApp needs a phone on Meta's test number.
       </p>
 
       <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">

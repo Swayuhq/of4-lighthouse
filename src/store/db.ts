@@ -1,12 +1,12 @@
 // The only module that talks to Postgres. One business for now; every row still carries its tenant id.
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import type { InboxMessage } from '../parse';
 import type { Status } from '../inbox';
 import type { Facts } from '../facts';
 import type { Theme } from '../agents/insights';
-import { business, connection, event, insight, message, messageFacts } from './schema';
+import { business, connection, connectorCall, event, insight, message, messageFacts } from './schema';
 import { ADAPTERS, type Channel } from '../connectors';
 import { toState } from './books';
 
@@ -39,9 +39,22 @@ async function insertMessages(tx: Tx, messages: InboxMessage[], thread: string):
       receivedAt: m.receivedAt,
       body: m.text,
       stars: m.stars ?? null,
+      replyRef: m.replyRef ?? null,
+      link: m.link ?? null,
     })))
     .onConflictDoNothing()
     .returning({ contentId: message.contentId });
+  // A message stored before links existed gets its link the next time it is read. Nothing else about it changes.
+  for (const m of messages.filter(x => x.link)) {
+    await tx.update(message).set({ link: m.link }).where(and(eq(message.tenantId, TENANT), eq(message.contentId, m.id), isNull(message.link)));
+  }
+  // Answered in the platform's own app: answered here too, unless the owner already decided something for it.
+  for (const m of messages.filter(x => x.answeredElsewhere)) {
+    await tx.execute(sql`insert into event (tenant_id, content_id, kind)
+      select ${TENANT}, ${m.id}, 'answered'
+      where exists (select 1 from message where tenant_id = ${TENANT} and content_id = ${m.id})
+        and not exists (select 1 from event where tenant_id = ${TENANT} and content_id = ${m.id} and kind in ('waiting', 'answered', 'spam', 'sent'))`);
+  }
   if (added.length) {
     await tx.insert(event).values(added.map(a => ({ tenantId: TENANT, contentId: a.contentId, kind: 'arrived' })));
   }
@@ -127,6 +140,7 @@ export async function nameBusiness(name: string) {
 export async function startOver() {
   await db.transaction(async tx => {
     await tx.delete(insight).where(eq(insight.tenantId, TENANT));
+    await tx.delete(connectorCall).where(eq(connectorCall.tenantId, TENANT));
     await tx.delete(event).where(eq(event.tenantId, TENANT));
     await tx.delete(messageFacts).where(eq(messageFacts.tenantId, TENANT));
     await tx.delete(message).where(eq(message.tenantId, TENANT));
@@ -167,4 +181,46 @@ export async function saveThemes(themes: Theme[]) {
 export async function loadThemes(): Promise<Theme[]> {
   const [row] = await db.select().from(insight).where(eq(insight.tenantId, TENANT));
   return row?.themes ?? [];
+}
+
+/** Writes one gateway ledger row. The reply text is not copied here; the sent event already holds it. */
+export async function saveCall(row: { lead: string; channel: string; action: string; outcome: string; provider?: string; note?: string; at: string }) {
+  await db.insert(connectorCall).values({
+    tenantId: TENANT, lead: row.lead, channel: row.channel, action: row.action, outcome: row.outcome,
+    provider: row.provider ?? null, note: row.note ?? null, at: new Date(row.at),
+  });
+}
+
+/**
+ * The stored message a lead's reply answers, with what the checker needs. The lead names it by the ref it was given,
+ * which is the stored reply ref, or ends in the platform id whichever provider read it. Null when none matches.
+ */
+export async function messageForRef(channel: string, ref: string): Promise<{ contentId: string; text: string; ownerLines: string[] } | null> {
+  if (!ref) return null;
+  const ids = [`${channel}:${ref}`, `${channel}:${ref.split('|').at(-1)}`];
+  const [hit] = await db.select({ contentId: message.contentId, text: message.body }).from(message)
+    .where(and(eq(message.tenantId, TENANT), like(message.contentId, `${channel}:%`), or(eq(message.replyRef, ref), inArray(message.contentId, ids))))
+    .limit(1);
+  if (!hit) return null;
+  const [b] = await db.select({ owners: business.ownerNames }).from(business).where(eq(business.tenantId, TENANT));
+  const owners = b?.owners ?? [];
+  const lines = owners.length ? await db.select({ body: message.body }).from(message).where(and(eq(message.tenantId, TENANT), inArray(message.author, owners))) : [];
+  return { ...hit, ownerLines: lines.map(l => l.body) };
+}
+
+/** Keeps a lead's checked reply as a draft on its message, for the owner to check and send. */
+export async function holdReply(contentId: string, text: string) {
+  await db.insert(event).values({ tenantId: TENANT, contentId, kind: 'drafted', replyText: text });
+}
+
+/** The newest gateway ledger rows, for the activity page. */
+export async function recentCalls(limit = 300) {
+  return db.select().from(connectorCall).where(eq(connectorCall.tenantId, TENANT)).orderBy(desc(connectorCall.id)).limit(limit);
+}
+
+/** The provider's reply handle for one stored message, or null when it has none. */
+export async function replyRefFor(contentId: string): Promise<string | null> {
+  const rows = await db.select({ ref: message.replyRef }).from(message)
+    .where(and(eq(message.tenantId, TENANT), eq(message.contentId, contentId)));
+  return rows[0]?.ref ?? null;
 }

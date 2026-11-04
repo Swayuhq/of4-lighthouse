@@ -11,6 +11,12 @@ export type InboxMessage = {
   text: string;
   /** Review stars, 1 to 5, when the file gives them. */
   stars?: number;
+  /** What the provider that read it needs to reply. Only live channels have one. */
+  replyRef?: string;
+  /** The message's own page on its platform, when the provider gives one. */
+  link?: string;
+  /** The owner already answered it on the platform itself, outside Lighthouse. */
+  answeredElsewhere?: boolean;
 };
 
 export type ParseResult = {

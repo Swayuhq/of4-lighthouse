@@ -26,6 +26,23 @@ describe('toState', () => {
     expect(state.reply.d).toBe('Thank you Mei');
   });
 
+  it('a lead draft waits beside the message and does not change its status', () => {
+    const state = toState([], rows, [{ id: 1, contentId: 'd', kind: 'drafted', replyText: 'Thank you Mei!' }]);
+    expect(state.status.d).toBe(undefined);
+    expect(state.drafts.d).toBe('Thank you Mei!');
+    expect(view(state).items.find(i => i.id === 'd')?.heldReply).toBe('Thank you Mei!');
+  });
+
+  it('the newest lead draft wins, and anything the owner does afterwards clears it', () => {
+    const state = toState([], rows, [
+      { id: 1, contentId: 'd', kind: 'drafted', replyText: 'First' },
+      { id: 2, contentId: 'd', kind: 'drafted', replyText: 'Second' },
+      { id: 3, contentId: 'c', kind: 'drafted', replyText: 'Sorry Priya' },
+      { id: 4, contentId: 'c', kind: 'sent', replyText: 'Sorry Priya, fixing it today' },
+    ]);
+    expect(state.drafts).toEqual({ d: 'Second' });
+  });
+
   it('a message with only its arrived event keeps Swayu first guess', () => {
     const state = toState([], rows, [{ id: 1, contentId: 'd', kind: 'arrived', replyText: null }]);
     expect(state.status.d).toBe(undefined);
