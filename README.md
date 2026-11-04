@@ -57,7 +57,7 @@ Loading the same file twice adds nothing. Each message is stored once by its con
 
 ## Tech stack
 
-Next.js 16 and React 19 with server actions, Postgres 18 through Drizzle, Zod strict shapes, Gemini through one model door with a daily cap, Composio for Facebook, Meta's Cloud API for WhatsApp, secrets from 1Password at start. Full table, versions and file paths: [`docs/tech-stack.md`](docs/tech-stack.md).
+Next.js 16 and React 19 with server actions, Postgres 18 through Drizzle, Zod strict shapes, Gemini through one model door with a daily cap, Composio and Zernio behind one connector gateway with Cedar rules, Mastra for the lead agent, Meta's Cloud API for WhatsApp, secrets from 1Password at start. Full table, versions and file paths: [`docs/tech-stack.md`](docs/tech-stack.md).
 
 ```mermaid
 flowchart LR
@@ -93,8 +93,45 @@ flowchart LR
     OWNER -- "reply out" --> FB
 ```
 
+## The connector gateway, since 4 November 2026
+
+Every read and reply on a customer channel goes through one door, `src/gateway/`. Order on every call: the Cedar permission check, the owner's approval when the rule asks for it, one provider picked by the route table, a ledger row at each step.
+
+```mermaid
+flowchart LR
+    LEAD["Replies lead<br/>Mastra, Gemini"] --> GW
+    OWNER["Owner presses Send"] --> GW
+    GW["Gateway<br/>Cedar rules"] -- "read" --> ROUTE["Route table<br/>one line per channel"]
+    GW -- "lead reply" --> HELD["Kept as a draft<br/>checker first"]
+    GW -- "owner reply" --> ROUTE
+    ROUTE --> Z["Zernio"]
+    ROUTE --> C["Composio"]
+    ROUTE --> M["Meta, WhatsApp"]
+    GW --> LEDGER[("connector_call<br/>Activity page")]
+    HELD --> INBOX["Inbox card<br/>Ready to send"]
+```
+
+| Part | File | What it does |
+|---|---|---|
+| Rules | `policies/connectors.cedar`, `.cedarschema` | Which lead may read or reply on which channel. A reply needs the owner. A misspelled name stops startup |
+| Door | `src/gateway/gateway.ts` | Checks, asks, routes, writes the ledger. A lead's reply is held, never sent |
+| Routes | `src/gateway/setup.ts` | Facebook read Zernio, reply Composio; Instagram and Google reviews Zernio; WhatsApp Meta |
+| Lead | `src/gateway/leads.ts`, `src/drafting.ts` | After each check, the replies lead drafts one reply per new waiting message, holding reply tools only |
+| Screens | `/inbox`, `/activity` | A ready reply sits on its card with Send; Activity shows every call in plain words |
+
+## Walk it through, about five minutes
+
+1. `pnpm build && pnpm start:op`, then open http://127.0.0.1:4174/inbox. Keep the tab open: it checks every channel every 30 seconds.
+2. The top shows each channel and when it was last checked. Facebook and Instagram are live test accounts read through Zernio.
+3. Today's 3 shows the most urgent messages, each with the reason and a reply marked Ready to send. The replies lead wrote it, the checker passed it, and nothing has been sent.
+4. Press Edit to change a reply, or Send to post it. Send is the owner's approval: the gateway records it, then posts through Composio on Facebook or Zernio on Instagram.
+5. Open Activity. Each read, each draft kept, each reply posted, and each call the rules stopped, in one sentence.
+6. To see the rules hold: `pnpm exec vitest run tests/leads.test.ts tests/setup.test.ts tests/gateway.test.ts`. The ads lead is handed no reply tool at all; a reply forced through the gateway is refused and recorded; the owner's door does not widen the rules. These tests need no model, so a busy Gemini cannot stop them.
+
+When Gemini is busy (it answered 503 several times on 4 November), new messages still arrive and count, and Reply opens the plain draft instead of a ready one. The drafting retries a minute later.
+
 ## Status
 
-A prototype, stopped on 30 October 2026 after Dhruv agreed the OF4 direction. Facebook is live through Composio and WhatsApp through Meta's webhook on a test number; file imports still work. WhatsApp end to end from a real phone was never tested. The story is in [`docs/prototype-journey.md`](docs/prototype-journey.md).
+A prototype. Stopped on 30 October 2026 after Dhruv agreed the OF4 direction, then picked up on 4 November 2026 as the connector layer comparison Dhruv asked for: Composio and Zernio both behind one gateway, permissions at the connector level, the lead loop on Mastra, tested on real test accounts. Facebook and Instagram are live through the gateway, WhatsApp through Meta's webhook on a test number; file imports still work. Not yet proven: a reply through Zernio on any channel, Google reviews with a real profile, WhatsApp from a real phone. The story is in [`docs/prototype-journey.md`](docs/prototype-journey.md).
 
 Part of Swayu outcome family OF4, customer insights and brand monitoring. Owner: Sujit.

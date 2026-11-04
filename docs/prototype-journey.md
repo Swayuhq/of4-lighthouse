@@ -4,7 +4,7 @@
 
 ## Why it exists
 
-Dhruv asked for a clear win for the OF4 outcome family: one working prototype on one or two platforms, in its own repository, due Wednesday 28 October. Lighthouse is that win. Dhruv saw it and agreed with the direction. The prototype now stops here. It is a reference for the real build, not a product we keep iterating on.
+Dhruv asked for a clear win for the OF4 outcome family: one working prototype on one or two platforms, in its own repository, due Wednesday 28 October. Lighthouse is that win. Dhruv saw it and agreed with the direction. It stopped there on 30 October, then on 4 November it became the test bed for the shared connector layer (section 4 November below).
 
 ## The idea in one line
 
@@ -52,6 +52,46 @@ flowchart LR
 | 29 Oct | 8dcdcbf | The owner walks from the landing page to connecting channels to the inbox |
 | 30 Oct | 4ab4ab8 | Facebook is live: real comments arrive and a reply posts back to the Page |
 | 30 Oct | 802665c | WhatsApp is wired to receive and answer live through Meta's webhook |
+
+## 4 November: the shared connector layer
+
+Dhruv and Sujit, call of 4 November: Composio and Zernio are both implemented, permissions start at the connector level, the lead loop runs on Mastra as in swayu-app, and everything is tested hands on with real test accounts. Lighthouse is where that was built.
+
+```mermaid
+flowchart LR
+    A["Gateway<br/>permission check, routes"] --> B["Composio and Zernio<br/>one item shape"]
+    B --> C["Cedar rules<br/>schema checked"]
+    C --> D["Replies lead on Mastra<br/>real model"]
+    D --> E["Held reply becomes<br/>a draft in the inbox"]
+    E --> F["Drafts written on their own,<br/>checked, owner presses Send"]
+    F --> G["Activity page<br/>every call in plain words"]
+```
+
+| Commit | What changed for the owner |
+|---|---|
+| 699881f, 4936a67 | One gateway in front of every channel, with Composio and Zernio behind it |
+| a590be5, 1cd5bd7, 7ad5466 | Each lead gets only the tools its rules allow; the rules are Cedar, checked against a schema at startup |
+| 74e458b, 7af5fb1, 35a4f8f, 230b49b | Both providers read the same real comments; the Page's own comments are never counted as customers |
+| 05b491f | The inbox reads and replies through the gateway; pressing Send is the owner's approval |
+| 954310d, b195a4b | The replies lead runs on the real model and can use its tools |
+| 40fa38c, 63aa942 | A reply the lead writes is checked and kept on its message as a draft; new messages get one on their own |
+| 8d2388a, 18addb4 | The ready reply sits on its card with Send; Activity lists every call in one sentence each |
+| cc46bfd, b1e7915, 4e11938 | The inbox opens again after Cedar; a busy model never costs a draft; replies speak as the owner |
+
+### Measured on the test accounts, 4 November
+
+| Check | Result |
+|---|---|
+| Facebook read, same Page, both providers | Both read the same comments. Zernio named all 12 authors; Composio named 8 of 12 |
+| Instagram read | Both read all 7 comments, every author named |
+| Facebook reply through Composio | 5 of 5 posted |
+| Clean start, live | 12 Facebook and 7 Instagram messages in through Zernio, 0 missed; all 17 waiting messages got a draft in the owner's voice |
+| Checker on lead drafts | Stopped one draft that offered a refund the owner never offers |
+| Cost | About 0.007 dollars for a full drafting pass with the reader |
+| Tests | 157 of 157 pass, typecheck clean, each new guard broken once to see its test fail |
+| Not proven | A reply through Zernio on any channel; Instagram replies on either provider; Google reviews without a real profile; WhatsApp from a real phone |
+
+Gemini's free tier allows 15 calls a minute and answered 503 "high demand" several times on 4 November. The product keeps working when it does: messages still arrive and count, and drafting retries a minute later.
 
 ## What it is built with
 
