@@ -58,11 +58,17 @@ export async function connectChannel(channel: string): Promise<{ added: number; 
   }
 }
 
-/** One check of every connected channel. A channel that fails is marked broken, so its count reads unknown. */
+/**
+ * One check of every connected channel. A channel that fails is marked broken, so its count reads unknown.
+ * A broken channel Swayu reads itself is tried again on each check, so one network blip heals on its own.
+ */
 export async function checkChannels(): Promise<{ added: number }> {
   let added = 0;
   for (const c of await connections()) {
-    if (c.status !== 'connected') continue;
+    if (c.status !== 'connected') {
+      if (!ADAPTERS[c.channel].fetch) continue;
+      await connect(c.channel);
+    }
     try {
       added += (await pull(c.channel, 50)).added;
     } catch {
