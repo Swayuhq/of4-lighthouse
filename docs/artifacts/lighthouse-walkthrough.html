@@ -1,0 +1,268 @@
+<title>Lighthouse Connector Walkthrough</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Atkinson+Hyperlegible+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one wide column of about 1180px, because the comparison table and the loop diagram are wider than a portrait column. Read top to bottom: the loop, the walk, the providers, the gaps. */
+:root{
+  --bg:#f3f7f9; --surface:#ffffff; --ink:#13294b; --soft:#4a5d7a; --line:#dfe7ec;
+  --lamp:#f2b705; --lamp-soft:#fff4cc; --kelp:#2f7d5b; --kelp-soft:#e2f1ea; --alarm:#b42318; --alarm-soft:#fbe7e5;
+  --body:"Atkinson Hyperlegible",system-ui,sans-serif;
+  --mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1828; --surface:#14233a; --ink:#e8eef6; --soft:#a3b3c8; --line:#253752;
+  --lamp:#f2b705; --lamp-soft:#3a3010; --kelp:#5cc196; --kelp-soft:#16362a; --alarm:#f08b80; --alarm-soft:#3d1c1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1828; --surface:#14233a; --ink:#e8eef6; --soft:#a3b3c8; --line:#253752;
+  --lamp:#f2b705; --lamp-soft:#3a3010; --kelp:#5cc196; --kelp-soft:#16362a; --alarm:#f08b80; --alarm-soft:#3d1c1a; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:56px}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:clamp(2rem,4.5vw,3.1rem);letter-spacing:-.015em}
+h2{font-size:1.6rem}
+h3{font-size:1.05rem}
+p{margin:0;max-width:68ch}
+a{color:inherit;text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:3px solid var(--lamp);outline-offset:2px}
+section{display:grid;gap:18px;min-width:0}
+.lede{color:var(--soft);font-size:1.15rem;max-width:62ch}
+.beam{display:flex;align-items:center;gap:14px}
+.beam svg{flex:none}
+.tally{font-family:var(--mono);font-size:1rem;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:inline-flex;flex-wrap:wrap;gap:6px 18px;width:fit-content;max-width:100%}
+.tally b{font-weight:600}
+.k{color:var(--kelp)} .l{color:#9a7300} .z{color:var(--soft)}
+:root[data-theme="dark"] .l{color:var(--lamp)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .l{color:var(--lamp)}}
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.fig pre.mermaid{margin:0;background:transparent}
+.cap{font-size:.9rem;color:var(--soft)}
+ol.walk{list-style:none;margin:0;padding:0;display:grid;gap:44px;counter-reset:s}
+ol.walk>li{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:28px;align-items:start;counter-increment:s}
+ol.walk>li .say{display:grid;gap:10px;padding-top:6px}
+ol.walk>li .say h3::before{content:counter(s);display:inline-grid;place-items:center;width:30px;height:30px;margin-right:10px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:.95rem}
+.shot{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.shot img{display:block;width:100%;height:auto}
+.shot.tall{max-height:560px;overflow-y:auto}
+.shot figcaption{font-size:.85rem;color:var(--soft);padding:8px 12px;border-top:1px solid var(--line)}
+pre.code{margin:0;font-family:var(--mono);font-size:.82rem;line-height:1.5;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.two>div{min-width:0}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:10px;align-content:start}
+.box ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.box code,.tbl code{font-family:var(--mono);font-size:.85em}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:.95rem;min-width:860px}
+th,td{text-align:left;vertical-align:top;padding:11px 14px;border-bottom:1px solid var(--line)}
+thead th{font-size:.9rem;color:var(--soft);font-weight:700}
+tbody th{font-weight:700;white-space:nowrap}
+tr:last-child td,tr:last-child th{border-bottom:0}
+.m{display:inline-block;font-weight:700;font-size:.82rem;padding:2px 9px;border-radius:999px;margin-right:6px;white-space:nowrap}
+.yes{background:var(--kelp-soft);color:var(--kelp)}
+.part{background:var(--lamp-soft);color:var(--ink)}
+.no{background:var(--alarm-soft);color:var(--alarm)}
+.open{background:transparent;border:1px dashed var(--soft);color:var(--soft)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:.9rem;color:var(--soft)}
+@media (max-width:820px){ol.walk>li{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="wrap">
+
+<header style="display:grid;gap:16px">
+  <div class="beam">
+    <svg width="34" height="40" viewBox="0 0 26 30" aria-hidden="true"><path d="M9 10h8l2 18H7z" fill="currentColor"/><rect x="8" y="4" width="10" height="6" rx="1.5" fill="#F2B705"/><path d="M18 7 26 3v8z" fill="#F2B705" opacity=".45"/><path d="M8 7 0 3v8z" fill="#F2B705" opacity=".45"/><rect x="5" y="27" width="16" height="3" rx="1" fill="currentColor"/></svg>
+    <h1>Lighthouse Connector Walkthrough</h1>
+  </div>
+  <p class="lede">One inbox for a small business, reading and replying on Instagram and Facebook through Composio and Zernio behind one gateway. Everything below ran on real test accounts: the Instagram account priya_test_at and the Facebook Page Sujit Test Cafe, set up as Priya's Cake Shop.</p>
+  <div class="tally" aria-label="The inbox count at the end of the run"><span><b>19</b> arrived</span><span class="k"><b>8</b> answered</span><span class="l"><b>9</b> waiting</span><span class="z"><b>2</b> spam</span><span class="k"><b>0</b> missed</span></div>
+</header>
+
+<section>
+  <h2>The loop</h2>
+  <p>A customer comments. A provider reads it through the gateway. The replies lead drafts an answer, and the gateway keeps that draft for the owner. The owner presses Send, and the gateway posts it through the provider set for that channel. Every call writes one ledger row.</p>
+  <div class="fig"><pre class="mermaid">
+flowchart LR
+  C["Customer comments<br/>Instagram, Facebook"] --> P1["Zernio reads<br/>every 30 seconds"]
+  P1 --> G1["Gateway<br/>Cedar rules"]
+  G1 --> I["Inbox<br/>stored once, counted"]
+  I --> L["Replies lead<br/>Mastra, Gemini<br/>reply tools only"]
+  L --> G2["Gateway<br/>reply needs the owner"]
+  G2 --> K["Checker<br/>no invented number,<br/>day or promise"]
+  K --> D["Draft on the card<br/>Ready to send"]
+  D --> O["Owner presses Send"]
+  O --> G3["Gateway<br/>owner approved"]
+  G3 --> R{"Route table"}
+  R -- "Instagram" --> Z["Zernio posts"]
+  R -- "Facebook" --> CM["Composio posts"]
+  Z --> C
+  CM --> C
+  G1 & G2 & G3 --> LG[("Ledger<br/>Activity page")]
+  </pre></div>
+  <p class="cap">A lead never holds a send. Its reply always stops at the gateway and becomes a draft. Only the owner's Send passes the approval rule.</p>
+</section>
+
+<section>
+  <h2>Walk it through</h2>
+  <ol class="walk">
+    <li>
+      <div class="say">
+        <h3>Replies are ready when the owner opens the inbox</h3>
+        <p>Each waiting message shows why it is near the top, a link to the comment on its platform, and a reply already written in the owner's voice. The replies lead wrote 17 drafts on its own after the channels were read. The checker stopped one that offered a refund the owner never offers.</p>
+      </div>
+      <figure class="shot"><img alt="Lighthouse inbox: the count line, and three urgent Facebook comments, each with a reply marked Ready to send and a Send button" src="{{img:05}}"><figcaption>Inbox, Today's 3</figcaption></figure>
+    </li>
+    <li>
+      <div class="say">
+        <h3>The owner edits and sends</h3>
+        <p>The owner edited one Instagram draft and pressed Send. The gateway recorded the approval, then posted through Zernio two seconds later. Instagram itself returns the reply, from the business account, with the owner's edit in it.</p>
+      </div>
+      <pre class="code">{{json:03}}</pre>
+    </li>
+    <li>
+      <div class="say">
+        <h3>The reply is on Instagram</h3>
+        <p>The comment “I want ,to give an order for 12 cackes ??” now shows one reply under it. The post is <a href="https://www.instagram.com/p/DfUFz9VR2Uw/">instagram.com/p/DfUFz9VR2Uw</a>.</p>
+      </div>
+      <figure class="shot"><img alt="Instagram post by priya_test_at with customer comments; the comment about 12 cakes shows View all 1 replies" src="{{img:01}}"><figcaption>Instagram, the post with the answered comment</figcaption></figure>
+    </li>
+    <li>
+      <div class="say">
+        <h3>Answered, with the way back to the platform</h3>
+        <p>The Answered tab shows the sent reply and “See your reply on Instagram”. Seven Facebook comments the Page had already answered on Facebook itself also count as answered, because Zernio returns each comment's replies and marks the owner's.</p>
+      </div>
+      <figure class="shot tall"><img alt="The whole inbox page, ending with the Answered tab listing Facebook comments and the Instagram reply with its link" src="{{img:06}}"><figcaption>Inbox, whole page with the Answered tab. Scroll inside the frame.</figcaption></figure>
+    </li>
+    <li>
+      <div class="say">
+        <h3>Each link opens the exact comment</h3>
+        <p>The link is built from the post address the provider returns, and only Instagram's or Facebook's own address is ever accepted as a link. This one opens the Facebook comment and its earlier answer from the Page.</p>
+      </div>
+      <figure class="shot"><img alt="Facebook post by Sujit Test Cafe, opened at the comment I would like to buy the matcha, with the Page's reply under it" src="{{img:04}}"><figcaption>Facebook, opened from a Lighthouse link</figcaption></figure>
+    </li>
+    <li>
+      <div class="say">
+        <h3>Every call, in one sentence</h3>
+        <p>The Activity page reads the ledger: each read and the provider that served it, each draft kept, each reply posted, and each call the rules stopped, with the reason. The checks every 30 seconds fold into one line each.</p>
+      </div>
+      <figure class="shot"><img alt="Activity page listing reads through Zernio, replies kept for the owner, and one stopped reply" src="{{img:07}}"><figcaption>Activity</figcaption></figure>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <h2>How each provider plugs in</h2>
+  <p>Both providers sit behind one function shape: a channel, an action, and arguments in; one item shape out. Every item carries the platform's own id, so moving a channel from one provider to the other never counts a message twice.</p>
+  <div class="two">
+    <div class="box">
+      <h3>Composio</h3>
+      <ul>
+        <li>One MCP endpoint. Each call runs a named tool, such as the Facebook comment reader, against the owner's login held in Composio.</li>
+        <li>Composio brings its own Meta app, which Meta has already reviewed. Lighthouse needs no Meta review of its own for this path.</li>
+        <li>Answers come back as Meta's own fields. The Page's own comments carry only the Page's name, so Lighthouse drops them by name.</li>
+        <li>Wired in Lighthouse: Facebook read and reply, Instagram read.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>Zernio</h3>
+      <ul>
+        <li>A plain REST API with one key: accounts, then posts with comments, then the comments of each post, and reviews.</li>
+        <li>Each comment comes with its replies and an owner flag, and each post with its address on the platform.</li>
+        <li>A reply carries a retry key, so a retry after a lost answer cannot post twice.</li>
+        <li>Wired in Lighthouse: Facebook and Instagram read and reply, Google reviews read and reply.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="fig"><pre class="mermaid">
+flowchart LR
+  G["Gateway call<br/>lead, channel, action"] --> R{"Route table<br/>one line per channel"}
+  R -- "facebook read" --> Z["Zernio"]
+  R -- "facebook reply" --> C["Composio"]
+  R -- "instagram read, reply" --> Z
+  R -- "google_reviews read, reply" --> Z
+  R -- "whatsapp reply" --> M["Meta, own app"]
+  Z & C & M --> S["One item shape<br/>platform id, reply ref,<br/>author, text, link"]
+  </pre></div>
+  <p class="cap">The route table as it runs today. Changing a provider for one channel is one line. The final choice per channel is open.</p>
+</section>
+
+<section>
+  <h2>Side by side, on the same accounts</h2>
+  <div class="legend"><span><span class="m yes">Measured</span>worked on the test accounts</span><span><span class="m part">Partly</span>worked with a gap</span><span><span class="m no">Missing</span>not offered</span><span><span class="m open">Untested</span>listed, not run</span></div>
+  <div class="tbl"><table>
+    <thead><tr><th scope="col">What the inbox needs</th><th scope="col">Composio</th><th scope="col">Zernio</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Read Facebook comments</th><td><span class="m part">Partly</span>12 of 12 comments, 8 of 12 authors named. Meta withheld 4 names</td><td><span class="m yes">Measured</span>12 of 12 comments, all 12 named</td></tr>
+      <tr><th scope="row">Read Instagram comments</th><td><span class="m yes">Measured</span>7 of 7, all named</td><td><span class="m yes">Measured</span>7 of 7, all named</td></tr>
+      <tr><th scope="row">Reply on Facebook</th><td><span class="m yes">Measured</span>5 of 5 posted</td><td><span class="m open">Untested</span></td></tr>
+      <tr><th scope="row">Reply on Instagram</th><td><span class="m open">Untested</span>not wired in Lighthouse</td><td><span class="m yes">Measured</span>1 of 1 posted, read back from Instagram</td></tr>
+      <tr><th scope="row">See replies the owner made in the platform's own app</th><td><span class="m no">Missing</span>in the read Lighthouse uses</td><td><span class="m yes">Measured</span>replies with an owner flag; 7 comments counted as answered</td></tr>
+      <tr><th scope="row">Link to the comment on the platform</th><td><span class="m open">Untested</span>not in the read Lighthouse uses</td><td><span class="m yes">Measured</span>post address returned; links open on both platforms</td></tr>
+      <tr><th scope="row">Google reviews</th><td><span class="m no">Missing</span>no toolkit</td><td><span class="m open">Untested</span>endpoints wired; no test Business Profile, so the read fails closed</td></tr>
+      <tr><th scope="row">WhatsApp messages in</th><td><span class="m no">Missing</span>send only</td><td><span class="m open">Untested</span>listed by webhook. Lighthouse uses its own Meta app</td></tr>
+      <tr><th scope="row">Email, Gmail and Outlook</th><td><span class="m open">Untested</span>covered in the catalogue</td><td><span class="m no">Missing</span></td></tr>
+      <tr><th scope="row">Ads, Meta and Google</th><td><span class="m open">Untested</span>Meta Ads and Google Ads tools listed: campaigns, ad sets, ads, insights</td><td><span class="m open">Untested</span>about 200 ad endpoints listed: Meta, Google, TikTok, boost, rules, audiences</td></tr>
+      <tr><th scope="row">Safe retry on a reply</th><td><span class="m open">Untested</span>no retry key found in the tool call</td><td><span class="m yes">Measured</span>retry key sent on every reply</td></tr>
+      <tr><th scope="row">Whose name the owner sees when connecting</th><td>Composio's reviewed Meta app</td><td>Zernio, including on Google's consent screen</td></tr>
+      <tr><th scope="row">Speed of one read</th><td>1 to 5 seconds</td><td>1 to 5 seconds. Single runs, so speed does not separate them</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Measured on 4 November 2026, one test business, the same accounts connected in both. Ads and email rows come from each provider's own catalogue and docs, not from a run.</p>
+</section>
+
+<section>
+  <h2>Where each one falls behind</h2>
+  <div class="two">
+    <div class="box">
+      <h3>Composio</h3>
+      <ul>
+        <li>Meta gives it fewer author names on Facebook: 8 of 12, so a third of customers would read as “Someone”.</li>
+        <li>The read used here returns no replies and no owner flag, so an answer typed in the Facebook app looks unanswered and the count drifts.</li>
+        <li>No Google reviews, and WhatsApp is send only, so two of the four OF4 channels need another provider anyway.</li>
+        <li>Instagram replies are not yet wired or tested.</li>
+      </ul>
+      <p class="cap">Where it leads: an already reviewed Meta app, 5 of 5 Facebook replies, and email in the same catalogue.</p>
+    </div>
+    <div class="box">
+      <h3>Zernio</h3>
+      <ul>
+        <li>Facebook replies are untested, and Google reviews are untested until a Business Profile is connected.</li>
+        <li>The owner sees Zernio's name on Google's consent screen.</li>
+        <li>The free plan stops at two connected accounts; a card was added to lift it.</li>
+        <li>No email channel.</li>
+      </ul>
+      <p class="cap">Where it leads: every name, the owner's own replies, links to each comment, one REST shape for comments and reviews, and a retry key.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Open, to settle together</h2>
+  <div class="tbl"><table>
+    <thead><tr><th scope="col">Question</th><th scope="col">How to close it</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Route per channel</th><td>Today's measurements point to Zernio for reading Facebook and Instagram and for Google reviews, and either for Facebook replies. Two ways to settle it: decide on these results, or first run Zernio's Facebook reply and Composio's Instagram reply on the same accounts.</td></tr>
+      <tr><th scope="row">Google reviews</th><td>Connect one test Business Profile in Zernio and run read and reply. Or wait for Swayu's own Google project approval, which keeps Swayu's name on the consent screen.</td></tr>
+      <tr><th scope="row">Polling or push</th><td>Lighthouse checks every 30 seconds while the inbox is open. Both providers list webhooks; a webhook per channel removes the polling cost and the open tab.</td></tr>
+      <tr><th scope="row">Ads for OF5</th><td>Both catalogues list ad tools. One read only insights call on each, on a test ad account, turns “listed” into “measured”.</td></tr>
+      <tr><th scope="row">Permissions beyond connectors</th><td>Cedar rules decide per lead, channel and action today. Whether lead level rules move into the agent harness after the refactor stays open.</td></tr>
+      <tr><th scope="row">The model</th><td>Gemini's free tier allows 15 calls a minute and answered “high demand” several times. Drafting already waits a minute and retries; a paid key or a second model removes the wait.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Proof</h2>
+  <div class="two">
+    <div class="box">
+      <h3>Tests</h3>
+      <p>164 of 164 pass and the typecheck is clean. Each new guard was broken once to see its test fail: the held reply, the checker on lead drafts, the release after a failed drafting run, the link host check, and the answered on the platform flag.</p>
+    </div>
+    <div class="box">
+      <h3>Evidence</h3>
+      <p>Screenshots and the Instagram read back sit together in the Research drive, Evidence, folder “2026-11-04 Sujit OF4 Lighthouse end to end”. The code is the Lighthouse branch sujit/t12-connector-gateway.</p>
+    </div>
+  </div>
+</section>
+
+</div>
