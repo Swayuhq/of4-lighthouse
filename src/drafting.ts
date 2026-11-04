@@ -28,12 +28,15 @@ export function draftTask(asked: Asked[]): string {
 
 // One run at a time in this server, and each message is tried once, so a refused draft never loops on the 30 second check.
 const SLOT = Symbol.for('lighthouse.drafting');
-const shared = globalThis as { [SLOT]?: { running: boolean; tried: Set<string> } };
-const memory = (shared[SLOT] ??= { running: false, tried: new Set() });
+const shared = globalThis as { [SLOT]?: { running: boolean; tried: Set<string>; pauseUntil: number } };
+const memory = (shared[SLOT] ??= { running: false, tried: new Set(), pauseUntil: 0 });
+
+/** After a failed run, how long to wait before trying again. Gemini's free tier allows 15 calls a minute. */
+const PAUSE_MS = 60_000;
 
 /** Starts a drafting run in the background when there is something to draft. Never throws and never blocks the caller. */
 export function draftWaiting(): void {
-  if (memory.running) return;
+  if (memory.running || Date.now() < memory.pauseUntil) return;
   memory.running = true;
   draftNow().catch(error => console.error(`[drafting] ${error instanceof Error ? error.message : error}`)).finally(() => { memory.running = false; });
 }
@@ -42,10 +45,22 @@ export function draftWaiting(): void {
 export async function draftNow() {
   const { agentsOn } = await import('./agents/model');
   if (!agentsOn()) return;
-  const { load, replyRefFor } = await import('./store/db');
+  const { load } = await import('./store/db');
   const todo = toDraft(view((await load()).state).items, memory.tried);
   if (!todo.length) return;
   for (const i of todo) memory.tried.add(i.id);
+  try {
+    await draftThese(todo);
+  } catch (error) {
+    // A busy or failing model is not the message's fault: release them so a later check tries again, after a pause.
+    for (const i of todo) memory.tried.delete(i.id);
+    memory.pauseUntil = Date.now() + PAUSE_MS;
+    throw error;
+  }
+}
+
+async function draftThese(todo: Item[]) {
+  const { replyRefFor } = await import('./store/db');
   const asked = await Promise.all(todo.map(async i => {
     const [channel, ...rest] = i.id.split(':');
     return { ref: (await replyRefFor(i.id)) ?? rest.join(':'), channel, author: i.author, text: i.text };
