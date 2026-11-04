@@ -4,7 +4,8 @@ import { allowedTools, leadTools } from '../src/gateway/leads';
 import { readFileSync } from 'node:fs';
 import { loadPolicies } from '../src/gateway/policy';
 
-const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'));
+const SCHEMA = readFileSync('policies/connectors.cedarschema', 'utf8');
+const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'), SCHEMA);
 
 describe('Each lead is handed only the tools its rules allow', () => {
   it('the replies lead can read and reply', () => {

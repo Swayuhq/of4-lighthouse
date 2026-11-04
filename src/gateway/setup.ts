@@ -1,9 +1,7 @@
 // The one gateway the app and the lead agents share: the Cedar rules, the route table and the ledger.
 // Two doors with the same rules. The owner's Send button is the owner's approval. A lead agent's reply waits for the owner.
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { createGateway, type CallRequest, type GatewayDeps, type LedgerRow } from './gateway';
-import { loadPolicies } from './policy';
+import { readPolicies } from './policy';
 import { composio, own, zernioProvider } from './providers';
 
 /**
@@ -22,7 +20,7 @@ export const ROUTES: GatewayDeps['routes'] = {
 };
 
 let policies: GatewayDeps['policies'] | undefined;
-const rules = () => (policies ??= loadPolicies(readFileSync(join(process.cwd(), 'policies', 'connectors.cedar'), 'utf8')));
+const rules = () => (policies ??= readPolicies());
 
 // Imported when the first row is written, because the store imports the channel list that imports this file.
 async function record(row: LedgerRow) {

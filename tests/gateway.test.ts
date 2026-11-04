@@ -3,7 +3,8 @@ import { createGateway, type GatewayDeps, type LedgerRow } from '../src/gateway/
 import { readFileSync } from 'node:fs';
 import { decide, loadPolicies } from '../src/gateway/policy';
 
-const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'));
+const SCHEMA = readFileSync('policies/connectors.cedarschema', 'utf8');
+const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'), SCHEMA);
 
 function setup(overrides: Partial<GatewayDeps> = {}) {
   const ledger: LedgerRow[] = [];
@@ -34,12 +35,19 @@ describe('The permission check decides before any provider is called', () => {
   });
 
   it('a forbid beats a permit, even one added later by mistake', () => {
-    const loose = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8') + '\npermit (principal == Lead::"ads", action == Action::"reply", resource == Channel::"facebook");');
+    const loose = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8') + '\npermit (principal == Lead::"ads", action == Action::"reply", resource == Channel::"facebook");', SCHEMA);
     expect(decide(loose, 'ads', 'facebook', 'reply')).toBe('block');
   });
 
   it('a policy file Cedar cannot read stops the app instead of letting calls through', () => {
-    expect(() => loadPolicies('permit (principal == Lead::"x", action')).toThrow('The connector policy file is invalid');
+    expect(() => loadPolicies('permit (principal == Lead::"x", action', SCHEMA)).toThrow('The connector policy file is invalid');
+  });
+
+  it('a misspelled lead, channel or action stops startup instead of silently blocking', () => {
+    const real = readFileSync('policies/connectors.cedar', 'utf8');
+    expect(() => loadPolicies(real.replace('Lead::"ads"', 'Lead::"adz"'), SCHEMA)).toThrow('"adz"');
+    expect(() => loadPolicies(real.replace('Channel::"instagram"', 'Channel::"instagarm"'), SCHEMA)).toThrow('"instagarm"');
+    expect(() => loadPolicies(real.replace('Action::"reply"', 'Action::"replly"'), SCHEMA)).toThrow('replly');
   });
 
   it('a blocked call never reaches a provider and is recorded as refused', async () => {
