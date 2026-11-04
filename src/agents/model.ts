@@ -110,3 +110,27 @@ export async function ask<T>(a: Ask<T>): Promise<T | null> {
     clearTimeout(timer);
   }
 }
+
+/**
+ * The same capped path for agents run by Mastra. Every request Mastra makes goes through this fetch,
+ * which reserves the largest possible cost first and books the real cost after. A response without
+ * usage keeps its reserved maximum, so spend is over counted, never under counted.
+ */
+export function cappedFetch(agent: string, model: Model, maxOutputTokens: number): typeof fetch {
+  return async (input, init) => {
+    if (!agentsOn()) throw new Error('The agents are switched off: no Gemini key or no daily allowance.');
+    const bodyText = typeof init?.body === 'string' ? init.body : '';
+    const id = await reserve(agent, model, usd(model, Math.ceil(bodyText.length / 3), maxOutputTokens));
+    if (id === null) throw new Error('The daily spending cap for the agents is reached.');
+    try {
+      const res = await fetch(input, { ...init, headers: { ...(init?.headers as Record<string, string>), authorization: `Bearer ${KEY}` } });
+      const u = await res.clone().json().then(b => b?.usage, () => undefined);
+      const used = u ? usd(model, u.prompt_tokens ?? 0, Math.max((u.total_tokens ?? 0) - (u.prompt_tokens ?? 0), u.completion_tokens ?? 0)) : null;
+      await book(id, res.ok ? 'ok' : `refused ${res.status}`, used);
+      return res;
+    } catch (e) {
+      await book(id, init?.signal?.aborted ? 'timed out' : 'failed', null);
+      throw e;
+    }
+  };
+}
