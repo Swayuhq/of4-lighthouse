@@ -23,7 +23,7 @@ describe('Each lead is handed only the tools its rules allow', () => {
     const askOwner = vi.fn(async () => false);
     const provider = vi.fn(async () => ({ id: 'x' }));
     const gateway = createGateway({
-      policies: POLICIES, routes: { 'facebook:reply': 'composio' }, providers: { composio: provider, zernio: provider },
+      policies: POLICIES, routes: { 'facebook:reply': 'composio' }, providers: { composio: provider, zernio: provider, own: provider },
       askOwner, record: async () => {},
     });
     const tools = leadTools(POLICIES, 'replies', gateway);

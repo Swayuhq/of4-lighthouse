@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NotOffered, zernioProvider } from '../src/gateway/providers';
+import { composio, NotOffered, own, zernioProvider } from '../src/gateway/providers';
 
 type Call = { url: string; init: RequestInit };
 let calls: Call[];
@@ -32,7 +32,7 @@ describe('Zernio comments read the same shape as Composio', () => {
       ] },
     });
     const items = await zernioProvider('facebook', 'read', {});
-    expect(items).toEqual([{ ref: 'acc1|p1|c1', author: 'Lee', text: 'Open on Sunday?', at: '2026-11-04T08:00:00Z' }]);
+    expect(items).toEqual([{ id: 'c1', ref: 'acc1|p1|c1', author: 'Lee', text: 'Open on Sunday?', at: '2026-11-04T08:00:00Z' }]);
     expect(calls.some(c => c.url.includes('/inbox/comments/p2'))).toBe(false);
     expect(calls.every(c => (c.init.headers as Record<string, string>).authorization === 'Bearer test-key')).toBe(true);
   });
@@ -72,6 +72,7 @@ describe('Zernio comments read the same shape as Composio', () => {
 describe('Zernio Google reviews', () => {
   it('reads unanswered Google reviews with stars, and replies to one', async () => {
     answer({
+      '/accounts': { accounts: [{ _id: 'g1', platform: 'googlebusiness' }] },
       '/inbox/reviews?': { data: [
         { id: 'accounts/1/locations/2/reviews/3', platform: 'googlebusiness', accountId: 'g1', reviewer: { name: 'Sam' }, rating: 2, text: 'Cake arrived damaged', created: '2026-11-03T10:00:00Z' },
         { id: 'fbr1', platform: 'facebook', accountId: 'f1', reviewer: { name: 'Ana' }, rating: 5, text: 'Lovely', created: '2026-11-03T11:00:00Z' },
@@ -79,9 +80,40 @@ describe('Zernio Google reviews', () => {
       '/inbox/reviews/accounts': { status: 'ok', reply: { id: 'rep1' } },
     });
     const items = await zernioProvider('google_reviews', 'read', {});
-    expect(items).toEqual([{ ref: 'g1|accounts/1/locations/2/reviews/3', author: 'Sam', text: 'Cake arrived damaged', at: '2026-11-03T10:00:00Z', stars: 2 }]);
+    expect(items).toEqual([{ id: 'accounts/1/locations/2/reviews/3', ref: 'g1|accounts/1/locations/2/reviews/3', author: 'Sam', text: 'Cake arrived damaged', at: '2026-11-03T10:00:00Z', stars: 2 }]);
     const out = await zernioProvider('google_reviews', 'reply', { ref: 'g1|accounts/1/locations/2/reviews/3', text: 'Sorry, Sam.' });
     expect(out).toEqual({ id: 'rep1' });
     expect(calls.at(-1)!.url).toContain('/inbox/reviews/accounts%2F1%2Flocations%2F2%2Freviews%2F3/reply');
+  });
+});
+
+describe('Unknown is never zero, and a reply finds its comment through any provider', () => {
+  it('Google reviews with no Google profile connected fail instead of reading as zero reviews', async () => {
+    answer({ '/accounts': { accounts: [{ _id: 'acc1', platform: 'facebook' }] }, '/inbox/reviews?': { data: [] } });
+    await expect(zernioProvider('google_reviews', 'read', {})).rejects.toThrow('no googlebusiness account is connected');
+    expect(calls.some(c => c.url.includes('/inbox/reviews'))).toBe(false);
+  });
+
+  it('Zernio refuses a comment another provider read, rather than posting somewhere wrong', async () => {
+    answer({});
+    await expect(zernioProvider('facebook', 'reply', { ref: '140_11', text: 'Hi' })).rejects.toThrow('read through another provider');
+    expect(calls).toHaveLength(0);
+  });
+
+  it('Composio answers a Facebook comment Zernio read, using Meta\'s own comment id', async () => {
+    process.env.SWAYU_COMPOSIO_API_KEY = 'test-key';
+    const sent: Record<string, unknown>[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      sent.push(JSON.parse(String(init.body)).params.arguments.tools[0].arguments);
+      const inner = { successful: true, data: { results: [{ response: { successful: true, data: { id: '11_99' } }, error: null }] } };
+      return new Response(`data: ${JSON.stringify({ result: { content: [{ type: 'text', text: JSON.stringify(inner) }] } })}\n`);
+    }));
+    expect(await composio('facebook', 'reply', { ref: 'acc1|140_1|1_11', text: 'Thanks!' })).toEqual({ id: '11_99' });
+    expect(sent).toEqual([{ object_id: '11', message: 'Thanks!' }]);
+  });
+
+  it('WhatsApp is read by webhook only, so the own provider offers replies alone', async () => {
+    await expect(own('whatsapp', 'read', {})).rejects.toBeInstanceOf(NotOffered);
+    await expect(own('facebook', 'reply', { ref: 'x', text: 'y' })).rejects.toBeInstanceOf(NotOffered);
   });
 });

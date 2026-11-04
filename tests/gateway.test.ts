@@ -12,7 +12,7 @@ function setup(overrides: Partial<GatewayDeps> = {}) {
   const deps: GatewayDeps = {
     policies: POLICIES,
     routes: { 'facebook:read': 'composio', 'facebook:reply': 'composio' },
-    providers: { composio, zernio },
+    providers: { composio, zernio, own: vi.fn() },
     askOwner: vi.fn(async () => true),
     record: async row => { ledger.push(row); },
     ...overrides,
@@ -98,7 +98,7 @@ describe('Failures are recorded in plain words, never hidden', () => {
   });
 
   it('a provider error is recorded as failed with the provider named', async () => {
-    const { gateway, ledger } = setup({ providers: { composio: async () => { throw new Error('rate limited'); }, zernio: async () => ({}) } });
+    const { gateway, ledger } = setup({ providers: { composio: async () => { throw new Error('rate limited'); }, zernio: async () => ({}), own: vi.fn() } });
     const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
     expect(out).toEqual({ ok: false, reason: 'Composio could not read Facebook: rate limited' });
     expect(ledger[0]).toMatchObject({ outcome: 'failed', provider: 'composio' });

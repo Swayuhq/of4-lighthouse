@@ -2,7 +2,7 @@
 // Order on every call: permission check, owner approval when asked, route to one provider, ledger row at each step.
 import { decide, type Policies } from './policy';
 
-export type ProviderName = 'composio' | 'zernio';
+export type ProviderName = 'composio' | 'zernio' | 'own';
 export type Provider = (channel: string, action: string, args: Record<string, unknown>) => Promise<unknown>;
 export type CallRequest = { lead: string; channel: string; action: string; args: Record<string, unknown> };
 export type CallResult = { ok: true; provider: ProviderName; result: unknown } | { ok: false; reason: string };
@@ -18,7 +18,7 @@ export type GatewayDeps = {
 };
 
 const LABEL: Record<string, string> = { facebook: 'Facebook', instagram: 'Instagram', whatsapp: 'WhatsApp', google_reviews: 'Google reviews' };
-const PROVIDER_LABEL: Record<ProviderName, string> = { composio: 'Composio', zernio: 'Zernio' };
+const PROVIDER_LABEL: Record<ProviderName, string> = { composio: 'Composio', zernio: 'Zernio', own: 'Swayu' };
 const VERB: Record<string, string> = { read: 'read', reply: 'reply on' };
 const ING: Record<string, string> = { read: 'reading', reply: 'replying on' };
 const label = (channel: string) => LABEL[channel] ?? channel;
