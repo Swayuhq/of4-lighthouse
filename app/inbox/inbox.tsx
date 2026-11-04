@@ -65,7 +65,8 @@ export function Inbox({ data }: { data: InboxData }) {
   }, [toast]);
 
   // Connecting was the switch. While this page is open it checks every connected channel; a server job replaces this when Lighthouse goes live.
-  const live = data.channels.some(c => c.status === 'connected');
+  // A broken channel counts too: the check is what tries it again.
+  const live = data.channels.some(c => c.status === 'connected' || c.status === 'broken');
   useEffect(() => {
     if (!live) return;
     const timer = setInterval(async () => {
