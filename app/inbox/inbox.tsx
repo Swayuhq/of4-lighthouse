@@ -106,7 +106,8 @@ export function Inbox({ data }: { data: InboxData }) {
     <div className="mx-auto max-w-[44rem] px-4 pb-32 pt-6 sm:px-6">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <Wordmark business={data.business} />
-        <Link href="/connect" className="ml-auto rounded-lg border border-shore bg-white px-4 py-2 text-sm font-bold">Channels</Link>
+        <Link href="/activity" className="ml-auto px-3 py-2 text-sm font-bold text-navy-soft">Activity</Link>
+        <Link href="/connect" className="rounded-lg border border-shore bg-white px-4 py-2 text-sm font-bold">Channels</Link>
       </header>
 
       <OnWatch channels={data.channels} />
@@ -276,6 +277,13 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
 
       {item.reply && <p className="mt-3 border-l-2 border-kelp pl-3 text-[15px] text-kelp">Your reply: {item.reply}</p>}
 
+      {waiting && item.heldReply && !writing && (
+        <div className="mt-4 rounded-lg border border-shore bg-mist p-3">
+          <p className="text-[15px] font-bold">Ready to send</p>
+          <p className="mt-1 whitespace-pre-line">{item.heldReply}</p>
+        </div>
+      )}
+
       {writing ? (
         <div className="mt-4">
           <label className="text-[15px] font-bold" htmlFor={`reply-${item.id}`}>{drafting ? 'Writing it the way you write…' : 'Your reply, written the way you write'}</label>
@@ -293,7 +301,8 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
         </div>
       ) : (
         <div className="mt-4 flex flex-wrap gap-1.5 sm:gap-2">
-          {waiting && <button disabled={busy} onClick={startReply} className="rounded-lg bg-navy px-3.5 py-2 font-bold text-white sm:px-4">{item.heldReply ? 'Check reply' : 'Reply'}</button>}
+          {waiting && item.heldReply && <button disabled={busy} onClick={() => onSend(item, item.heldReply!)} className="rounded-lg bg-navy px-3.5 py-2 font-bold text-white sm:px-4">Send</button>}
+          {waiting && <button disabled={busy} onClick={startReply} className={item.heldReply ? 'rounded-lg border border-shore bg-white px-3.5 py-2 sm:px-4' : 'rounded-lg bg-navy px-3.5 py-2 font-bold text-white sm:px-4'}>{item.heldReply ? 'Edit' : 'Reply'}</button>}
           {waiting && <button disabled={busy} onClick={() => onAct(item, 'answered')} className="rounded-lg border border-shore bg-white px-3.5 py-2 sm:px-4">Mark answered</button>}
           {waiting && <button disabled={busy} onClick={() => onAct(item, 'spam')} className="rounded-lg px-2.5 py-2 text-navy-soft sm:px-3">Spam</button>}
           {!waiting && <button disabled={busy} onClick={() => onAct(item, 'waiting')} className="rounded-lg border border-shore bg-white px-4 py-2">{item.status === 'spam' ? 'Not spam' : 'Back to waiting'}</button>}

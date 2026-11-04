@@ -1,5 +1,5 @@
 // The only module that talks to Postgres. One business for now; every row still carries its tenant id.
-import { and, asc, eq, inArray, isNull, like, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, like, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import type { InboxMessage } from '../parse';
@@ -128,6 +128,7 @@ export async function nameBusiness(name: string) {
 export async function startOver() {
   await db.transaction(async tx => {
     await tx.delete(insight).where(eq(insight.tenantId, TENANT));
+    await tx.delete(connectorCall).where(eq(connectorCall.tenantId, TENANT));
     await tx.delete(event).where(eq(event.tenantId, TENANT));
     await tx.delete(messageFacts).where(eq(messageFacts.tenantId, TENANT));
     await tx.delete(message).where(eq(message.tenantId, TENANT));
@@ -198,6 +199,11 @@ export async function messageForRef(channel: string, ref: string): Promise<{ con
 /** Keeps a lead's checked reply as a draft on its message, for the owner to check and send. */
 export async function holdReply(contentId: string, text: string) {
   await db.insert(event).values({ tenantId: TENANT, contentId, kind: 'drafted', replyText: text });
+}
+
+/** The newest gateway ledger rows, for the activity page. */
+export async function recentCalls(limit = 300) {
+  return db.select().from(connectorCall).where(eq(connectorCall.tenantId, TENANT)).orderBy(desc(connectorCall.id)).limit(limit);
 }
 
 /** The provider's reply handle for one stored message, or null when it has none. */
