@@ -40,6 +40,18 @@ describe('Reading Facebook comments through Composio', () => {
     expect(calls.find(c => c.slug === 'FACEBOOK_GET_PAGE_POSTS')?.args.page_id).toBe('140');
   });
 
+  it('leaves out comments the Page wrote itself, so the cafe is never answered as a customer', async () => {
+    const own = { id: '1_12', message: 'Thanks all', created_time: '2026-10-30T08:21:37+0000', from: { id: '140', name: 'Test Cafe' } };
+    const nameless = { id: '1_13', message: 'wow', created_time: '2026-10-30T08:21:37+0000' };
+    fake(c => {
+      if (c.slug === 'FACEBOOK_LIST_MANAGED_PAGES') return answer({ data: [{ id: '140', name: 'Test Cafe' }] });
+      if (c.slug === 'FACEBOOK_GET_PAGE_POSTS') return answer({ data: [{ id: '140_1' }] });
+      return answer({ data: [comment('1_11', 'Lovely cake'), own, nameless] });
+    });
+    // A comment Meta sends with no author is kept: Meta hides some customers' names, and they still need an answer.
+    expect(await facebookComments()).toEqual([comment('1_11', 'Lovely cake'), nameless]);
+  });
+
   it('a Page with no posts brings nothing and is not an error', async () => {
     fake(c => answer({ data: c.slug === 'FACEBOOK_LIST_MANAGED_PAGES' ? [{ id: '140', name: 'Test Cafe' }] : [] }));
     expect(await facebookComments()).toEqual([]);

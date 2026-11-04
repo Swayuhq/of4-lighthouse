@@ -28,14 +28,15 @@ async function run(slug: string, args: Record<string, unknown>): Promise<Answer>
   return first.response.data ?? {};
 }
 
-/** Every top level comment on the newest posts of the first Page the login manages, exactly as Meta writes them. */
+/** Every top level customer comment on the newest posts of the first Page the login manages, as Meta writes them. */
 export async function facebookComments(): Promise<unknown[]> {
   const pages = (await run('FACEBOOK_LIST_MANAGED_PAGES', {})).data as { id: string }[] | undefined;
   const page = pages?.[0];
   if (!page) throw new Error('No Facebook Page is managed by this login. Connect a Page you run.');
   const posts = ((await run('FACEBOOK_GET_PAGE_POSTS', { page_id: page.id, limit: POSTS, fields: 'id' })).data ?? []) as { id: string }[];
   const lists = await Promise.all(posts.map(p => run('FACEBOOK_GET_COMMENTS', { object_id: p.id, limit: 100, fields: 'id,message,from,created_time' })));
-  return lists.flatMap(l => l.data ?? []);
+  // The Page's own comments are not customer comments. Zernio flags them as the owner's; Meta through Composio only names the Page as author.
+  return lists.flatMap(l => (l.data ?? []) as { from?: { id?: string } }[]).filter(c => c.from?.id !== page.id);
 }
 
 /** Posts a reply under one comment and returns the reply's id. Throws unless Facebook confirms it. */
