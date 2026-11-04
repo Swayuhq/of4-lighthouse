@@ -41,6 +41,8 @@ export function createLimiter({ name, perMinute, maxWaitMs, now = Date.now, slee
 
   /** The provider answered 429. Nobody asks it again until the wait is over. */
   function pause(seconds: number) {
+    // One line per 429 in the server log, so a wait that was waited out still shows up when counting them.
+    console.warn(`[limiter] ${name} answered 429, wait ${seconds} seconds`);
     pausedUntil = Math.max(pausedUntil, now() + seconds * 1000);
   }
 
