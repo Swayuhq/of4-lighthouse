@@ -3,7 +3,7 @@
 // GET /accounts, GET /inbox/comments, GET /inbox/comments/{postId}, POST /inbox/comments/{postId},
 // GET /inbox/reviews, POST /inbox/reviews/{reviewId}/reply. Keys are read on each call and never logged.
 import { randomUUID } from 'node:crypto';
-import { facebookComments, facebookReply } from '../composio';
+import { facebookComments, facebookReply, instagramComments } from '../composio';
 import type { Provider } from './gateway';
 
 /** One comment or review, whichever provider read it. `ref` is what that provider needs to reply. */
@@ -24,6 +24,9 @@ export const composio: Provider = async (channel, action, args) => {
   if (channel === 'facebook' && action === 'read') {
     const raw = (await facebookComments()) as FacebookComment[];
     return raw.map(c => ({ ref: c.id, author: c.from?.name ?? 'Someone', text: c.message ?? '', at: c.created_time ?? '' })) satisfies Item[];
+  }
+  if (channel === 'instagram' && action === 'read') {
+    return (await instagramComments()).map(c => ({ ref: c.id, author: c.username ?? c.from?.username ?? 'Someone', text: c.text ?? '', at: c.timestamp ?? '' })) satisfies Item[];
   }
   if (channel === 'facebook' && action === 'reply') {
     return { id: await facebookReply(String(args.ref), String(args.text)) } satisfies Sent;
