@@ -28,7 +28,7 @@ export const composio: Provider = async (channel, action, args) => {
   if (channel === 'facebook' && action === 'reply') {
     return { id: await facebookReply(String(args.ref), String(args.text)) } satisfies Sent;
   }
-  throw new NotOffered(`not offered for ${channel} ${action}`);
+  throw new NotOffered(`not wired for ${channel} ${action} in Lighthouse yet`);
 };
 
 // ---------- Zernio ----------
