@@ -6,7 +6,7 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { cappedFetch, type Model } from '../agents/model';
 import type { createGateway } from './gateway';
-import type { Rule } from './policy';
+import { CATALOG, decide, type Policies } from './policy';
 
 type Gateway = ReturnType<typeof createGateway>;
 
@@ -25,15 +25,15 @@ const DESCRIBE: Record<string, string> = {
   reply: 'Reply to one customer comment or review on',
 };
 
-/** Tool names for one lead: one per allowed or ask rule, none for a blocked one. */
-export function allowedTools(rules: readonly Rule[], lead: string): { channel: string; action: string; name: string }[] {
-  return rules
-    .filter(r => r.lead === lead && r.decision !== 'block')
-    .map(r => ({ channel: r.channel, action: r.action, name: `${r.channel}_${r.action}` }));
+/** Tool names for one lead: one per channel and action Cedar does not block. */
+export function allowedTools(policies: Policies, lead: string): { channel: string; action: string; name: string }[] {
+  return CATALOG
+    .filter(({ channel, action }) => decide(policies, lead, channel, action) !== 'block')
+    .map(({ channel, action }) => ({ channel, action, name: `${channel}_${action}` }));
 }
 
-export function leadTools(rules: readonly Rule[], lead: string, gateway: Gateway) {
-  return Object.fromEntries(allowedTools(rules, lead).map(({ channel, action, name }) => [name, createTool({
+export function leadTools(policies: Policies, lead: string, gateway: Gateway) {
+  return Object.fromEntries(allowedTools(policies, lead).map(({ channel, action, name }) => [name, createTool({
     id: name,
     description: `${DESCRIBE[action] ?? action} ${channel.replace('_', ' ')}.`,
     inputSchema: action === 'reply' ? REPLY_INPUT : READ_INPUT,
@@ -46,13 +46,13 @@ export const LEAD_INSTRUCTIONS: Record<string, string> = {
   ads: 'You run ads for a small business. Read what customers say about the business to plan the next ad. You do not reply to customers.',
 };
 
-export function createLead(rules: readonly Rule[], lead: string, gateway: Gateway): Agent {
+export function createLead(policies: Policies, lead: string, gateway: Gateway): Agent {
   const provider = createOpenAI({ baseURL: GEMINI, apiKey: 'set-by-capped-fetch', fetch: cappedFetch(`${lead} lead`, MODEL, MAX_OUTPUT) });
   return new Agent({
     id: `${lead}-lead`,
     name: `${lead} lead`,
     instructions: LEAD_INSTRUCTIONS[lead] ?? 'Use your tools to help the business owner.',
     model: provider.chat(MODEL),
-    tools: leadTools(rules, lead, gateway),
+    tools: leadTools(policies, lead, gateway),
   });
 }

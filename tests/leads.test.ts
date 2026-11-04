@@ -1,36 +1,32 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGateway } from '../src/gateway/gateway';
 import { allowedTools, leadTools } from '../src/gateway/leads';
-import type { Rule } from '../src/gateway/policy';
+import { readFileSync } from 'node:fs';
+import { loadPolicies } from '../src/gateway/policy';
 
-const RULES: Rule[] = [
-  { lead: 'replies', channel: 'facebook', action: 'read', decision: 'allow' },
-  { lead: 'replies', channel: 'facebook', action: 'reply', decision: 'ask' },
-  { lead: 'ads', channel: 'facebook', action: 'read', decision: 'allow' },
-  { lead: 'ads', channel: 'facebook', action: 'reply', decision: 'block' },
-];
+const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'));
 
 describe('Each lead is handed only the tools its rules allow', () => {
   it('the replies lead can read and reply', () => {
-    expect(allowedTools(RULES, 'replies').map(t => t.name)).toEqual(['facebook_read', 'facebook_reply']);
+    expect(allowedTools(POLICIES, 'replies').map(t => t.name)).toEqual(['facebook_read', 'facebook_reply', 'instagram_read', 'instagram_reply', 'google_reviews_read', 'google_reviews_reply', 'whatsapp_read', 'whatsapp_reply']);
   });
 
   it('the ads lead can read but has no reply tool at all', () => {
-    expect(allowedTools(RULES, 'ads').map(t => t.name)).toEqual(['facebook_read']);
+    expect(allowedTools(POLICIES, 'ads').map(t => t.name)).toEqual(['facebook_read', 'instagram_read']);
   });
 
   it('a lead with no rules has no tools', () => {
-    expect(allowedTools(RULES, 'seo')).toEqual([]);
+    expect(allowedTools(POLICIES, 'seo')).toEqual([]);
   });
 
   it('a tool call goes through the gateway, so the owner is still asked', async () => {
     const askOwner = vi.fn(async () => false);
     const provider = vi.fn(async () => ({ id: 'x' }));
     const gateway = createGateway({
-      rules: RULES, routes: { 'facebook:reply': 'composio' }, providers: { composio: provider, zernio: provider },
+      policies: POLICIES, routes: { 'facebook:reply': 'composio' }, providers: { composio: provider, zernio: provider },
       askOwner, record: async () => {},
     });
-    const tools = leadTools(RULES, 'replies', gateway);
+    const tools = leadTools(POLICIES, 'replies', gateway);
     const execute = tools.facebook_reply.execute as (input: unknown, context: unknown) => Promise<unknown>;
     const out = await execute({ ref: 'c1', text: 'Thanks!' }, {});
     expect(askOwner).toHaveBeenCalledOnce();

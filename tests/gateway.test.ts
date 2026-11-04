@@ -1,20 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGateway, type GatewayDeps, type LedgerRow } from '../src/gateway/gateway';
-import { decide, type Rule } from '../src/gateway/policy';
+import { readFileSync } from 'node:fs';
+import { decide, loadPolicies } from '../src/gateway/policy';
 
-const RULES: Rule[] = [
-  { lead: 'replies', channel: 'facebook', action: 'read', decision: 'allow' },
-  { lead: 'replies', channel: 'facebook', action: 'reply', decision: 'ask' },
-  { lead: 'ads', channel: 'facebook', action: 'read', decision: 'allow' },
-  { lead: 'ads', channel: 'facebook', action: 'reply', decision: 'block' },
-];
+const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'));
 
 function setup(overrides: Partial<GatewayDeps> = {}) {
   const ledger: LedgerRow[] = [];
   const composio = vi.fn(async () => ({ id: 'fb_reply_1' }));
   const zernio = vi.fn(async () => ({ id: 'zn_reply_1' }));
   const deps: GatewayDeps = {
-    rules: RULES,
+    policies: POLICIES,
     routes: { 'facebook:read': 'composio', 'facebook:reply': 'composio' },
     providers: { composio, zernio },
     askOwner: vi.fn(async () => true),
@@ -25,9 +21,25 @@ function setup(overrides: Partial<GatewayDeps> = {}) {
 }
 
 describe('The permission check decides before any provider is called', () => {
-  it('nothing written in the rules is blocked', () => {
-    expect(decide(RULES, 'replies', 'instagram', 'reply')).toBe('block');
-    expect(decide(RULES, 'nobody', 'facebook', 'read')).toBe('block');
+  it('the policy file gives each lead what was agreed', () => {
+    expect(decide(POLICIES, 'replies', 'facebook', 'read')).toBe('allow');
+    expect(decide(POLICIES, 'replies', 'google_reviews', 'reply')).toBe('ask');
+    expect(decide(POLICIES, 'ads', 'instagram', 'read')).toBe('allow');
+  });
+
+  it('anything not permitted is blocked: an unknown lead, a channel the ads lead lacks, an unknown action', () => {
+    expect(decide(POLICIES, 'nobody', 'facebook', 'read')).toBe('block');
+    expect(decide(POLICIES, 'ads', 'whatsapp', 'read')).toBe('block');
+    expect(decide(POLICIES, 'replies', 'facebook', 'delete')).toBe('block');
+  });
+
+  it('a forbid beats a permit, even one added later by mistake', () => {
+    const loose = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8') + '\npermit (principal == Lead::"ads", action == Action::"reply", resource == Channel::"facebook");');
+    expect(decide(loose, 'ads', 'facebook', 'reply')).toBe('block');
+  });
+
+  it('a policy file Cedar cannot read stops the app instead of letting calls through', () => {
+    expect(() => loadPolicies('permit (principal == Lead::"x", action')).toThrow('The connector policy file is invalid');
   });
 
   it('a blocked call never reaches a provider and is recorded as refused', async () => {

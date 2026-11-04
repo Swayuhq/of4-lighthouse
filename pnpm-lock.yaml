@@ -14,6 +14,9 @@ importers:
       '@ai-sdk/provider':
         specifier: 4.0.26
         version: 4.0.26
+      '@cedar-policy/cedar-wasm':
+        specifier: 4.14.0
+        version: 4.14.0
       '@mastra/core':
         specifier: 1.75.0
         version: 1.75.0(zod@4.6.7)
@@ -137,6 +140,9 @@ packages:
   '@alloc/quick-lru@5.3.0':
     resolution: {integrity: sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA==}
     engines: {node: '>=10'}
+
+  '@cedar-policy/cedar-wasm@4.14.0':
+    resolution: {integrity: sha512-TPyz3zMl5r7W5iSHq51IgG+NTILGoXB0VPrEcXnzCEpPUqL/7b+AtMPVVHB/UoJWuXA8YORjLuWxKHUW33ePAA==}
 
   '@chat-adapter/catalog@4.44.0':
     resolution: {integrity: sha512-UtpW5mMgIjYBRDIgxJKh+tfnlFe0GjLsFG5MPPUDA5b/PggSOAt00TFr0xF6UIXXh1SaK3V1u3FiXyM2sdnaJQ==}
@@ -1946,6 +1952,8 @@ snapshots:
       json-schema: 0.4.0
 
   '@alloc/quick-lru@5.3.0': {}
+
+  '@cedar-policy/cedar-wasm@4.14.0': {}
 
   '@chat-adapter/catalog@4.44.0': {}
 

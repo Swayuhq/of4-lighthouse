@@ -1,6 +1,6 @@
 // The one door between a lead agent and every connector provider.
 // Order on every call: permission check, owner approval when asked, route to one provider, ledger row at each step.
-import { decide, type Rule } from './policy';
+import { decide, type Policies } from './policy';
 
 export type ProviderName = 'composio' | 'zernio';
 export type Provider = (channel: string, action: string, args: Record<string, unknown>) => Promise<unknown>;
@@ -9,7 +9,7 @@ export type CallResult = { ok: true; provider: ProviderName; result: unknown } |
 export type LedgerRow = CallRequest & { outcome: 'refused' | 'approved' | 'declined' | 'done' | 'failed'; provider?: ProviderName; note?: string; at: string };
 
 export type GatewayDeps = {
-  rules: readonly Rule[];
+  policies: Policies;
   /** Key is "channel:action". One line moves a channel to another provider. */
   routes: Partial<Record<string, ProviderName>>;
   providers: Record<ProviderName, Provider>;
@@ -30,7 +30,7 @@ export function createGateway(deps: GatewayDeps) {
 
   async function call(request: CallRequest): Promise<CallResult> {
     const { lead, channel, action } = request;
-    const decision = decide(deps.rules, lead, channel, action);
+    const decision = decide(deps.policies, lead, channel, action);
 
     if (decision === 'block') {
       const reason = `The ${lead} lead may not ${VERB[action] ?? action} ${label(channel)}.`;
