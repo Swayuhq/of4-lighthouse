@@ -49,6 +49,11 @@ export function Inbox({ data }: { data: InboxData }) {
   const [toast, setToast] = useState<Toast | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<Status>('waiting');
+  // ?tab=answered opens on that tab, so a link can show the owner's sent replies.
+  useEffect(() => {
+    const asked = new URLSearchParams(window.location.search).get('tab');
+    if (asked === 'answered' || asked === 'spam') setTab(asked);
+  }, []);
   const known = useRef<Set<string>>(new Set(data.items.map(i => i.id)));
 
   // A message the owner has not seen on this screen yet gets the beam once.
