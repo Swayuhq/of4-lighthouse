@@ -86,6 +86,9 @@ create table if not exists connector_call (
   at timestamptz not null default now()
 );
 
+-- Where each message lives on its platform, for the inbox link. Added 4 Nov 2026.
+alter table message add column if not exists link text;
+
 -- A lead's reply kept for the owner, and the gateway outcome for it. Added 4 Nov 2026.
 alter table event drop constraint if exists event_kind_check;
 alter table event add constraint event_kind_check check (kind in ('arrived', 'waiting', 'answered', 'spam', 'sent', 'drafted'));

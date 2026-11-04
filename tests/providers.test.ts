@@ -37,6 +37,20 @@ describe('Zernio comments read the same shape as Composio', () => {
     expect(calls.every(c => (c.init.headers as Record<string, string>).authorization === 'Bearer test-key')).toBe(true);
   });
 
+  it('a comment the owner already answered on the platform says so, so it is not counted as waiting', async () => {
+    answer({
+      '/accounts': { accounts: [{ _id: 'acc1', platform: 'instagram' }] },
+      '/inbox/comments?': { data: [{ id: 'p1', platform: 'instagram', commentCount: 2, permalink: 'https://www.instagram.com/p/X/' }] },
+      '/inbox/comments/p1': { comments: [
+        { id: 'c1', message: 'Open Sunday?', createdTime: '2026-11-04T08:00:00Z', from: { username: 'lee' }, replies: [{ id: 'r1', from: { username: 'shop', isOwner: true } }] },
+        { id: 'c2', message: 'Price?', createdTime: '2026-11-04T08:01:00Z', from: { username: 'mei' }, replies: [{ id: 'r2', from: { username: 'ann' } }] },
+      ] },
+    });
+    const items = await zernioProvider('instagram', 'read', {}) as { id: string; answered?: boolean; link?: string }[];
+    expect(items.map(i => [i.id, i.answered ?? false])).toEqual([['c1', true], ['c2', false]]);
+    expect(items[0].link).toBe('https://www.instagram.com/p/X/c/c1/');
+  });
+
   it('a reply carries the account, the comment and a retry key', async () => {
     answer({ '/inbox/comments/p1': { success: true, data: { commentId: 'r9' } } });
     const out = await zernioProvider('facebook', 'reply', { ref: 'acc1|p1|c1', text: 'Thank you!', idempotencyKey: 'k1' });

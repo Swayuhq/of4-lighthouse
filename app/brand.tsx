@@ -21,8 +21,8 @@ export function Wordmark({ business, tone = 'day' }: { business?: string | null;
 
 const INITIALS: Record<Channel, string> = { instagram: 'IG', facebook: 'FB', whatsapp: 'WA', google_reviews: 'G' };
 
-export function ChannelBadge({ channel, size = 'md' }: { channel: Channel; size?: 'md' | 'lg' }) {
-  const box = size === 'lg' ? 'h-12 w-12 text-base' : 'h-9 w-9 text-sm';
+export function ChannelBadge({ channel, size = 'md' }: { channel: Channel; size?: 'sm' | 'md' | 'lg' }) {
+  const box = size === 'lg' ? 'h-12 w-12 text-base' : size === 'sm' ? 'h-7 w-7 rounded-lg text-[11px]' : 'h-9 w-9 text-sm';
   return (
     <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-xl bg-navy font-bold text-white ring-1 ring-white/25 ${box}`}>
       {INITIALS[channel]}

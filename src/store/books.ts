@@ -11,6 +11,7 @@ export type MessageRow = {
   receivedAt: string;
   body: string;
   stars: number | null;
+  link?: string | null;
 };
 
 export type EventRow = { id: number; contentId: string; kind: string; replyText: string | null };
@@ -27,6 +28,7 @@ export function toState(ownerNames: string[], messages: MessageRow[], events: Ev
       receivedAt: m.receivedAt,
       text: m.body,
       ...(m.stars === null ? {} : { stars: m.stars }),
+      ...(m.link ? { link: m.link } : {}),
     });
     state.thread[m.contentId] = m.thread;
   }

@@ -38,7 +38,7 @@ const WhatsApp = z.object({
 });
 
 /** The one shape every provider behind the gateway answers. `id` is the platform's own id; `ref` is the reply handle. */
-const GatewayItem = z.object({ id: z.string().min(1), ref: z.string().min(1), author: z.string().min(1), text: z.string(), at: z.string(), stars: z.number().int().min(1).max(5).optional() });
+const GatewayItem = z.object({ id: z.string().min(1), ref: z.string().min(1), author: z.string().min(1), text: z.string(), at: z.string(), stars: z.number().int().min(1).max(5).optional(), link: z.string().optional(), answered: z.boolean().optional() });
 
 /** Reads one channel through the gateway as the replies lead. A refusal or a provider failure throws, so the channel shows broken. */
 function throughGateway(channel: Channel) {
@@ -49,7 +49,7 @@ function throughGateway(channel: Channel) {
   };
 }
 
-function reader<T>(shape: z.ZodType<T>, pick: (item: T) => { platformId: string; author: string; at: string; text: string; stars?: number; replyRef?: string }) {
+function reader<T>(shape: z.ZodType<T>, pick: (item: T) => { platformId: string; author: string; at: string; text: string; stars?: number; replyRef?: string; link?: string; answeredElsewhere?: boolean }) {
   return (raw: unknown) => {
     const parsed = shape.safeParse(raw);
     if (!parsed.success) return null;
@@ -59,7 +59,7 @@ function reader<T>(shape: z.ZodType<T>, pick: (item: T) => { platformId: string;
   };
 }
 
-const fromGateway = reader(GatewayItem, i => ({ platformId: i.id, replyRef: i.ref, author: i.author, at: i.at, text: i.text, stars: i.stars }));
+const fromGateway = reader(GatewayItem, i => ({ platformId: i.id, replyRef: i.ref, author: i.author, at: i.at, text: i.text, stars: i.stars, link: i.link, ...(i.answered ? { answeredElsewhere: true } : {}) }));
 
 export const ADAPTERS: Record<Channel, Adapter> = {
   whatsapp: {

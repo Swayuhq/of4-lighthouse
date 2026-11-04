@@ -11,6 +11,10 @@ export const MessageShape = z
     text: z.string().max(4000),
     stars: z.number().int().min(1).max(5).optional(),
     replyRef: z.string().min(1).max(1000).optional(),
+    /** Where the message lives on its platform. Only Instagram's or Facebook's own https address. */
+    /** The owner already answered it on the platform itself. */
+    answeredElsewhere: z.boolean().optional(),
+    link: z.string().max(1000).regex(/^https:\/\/www\.(instagram|facebook)\.com\//).optional(),
   })
   .strict();
 

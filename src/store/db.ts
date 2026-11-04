@@ -1,5 +1,5 @@
 // The only module that talks to Postgres. One business for now; every row still carries its tenant id.
-import { and, asc, desc, eq, inArray, isNull, like, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import type { InboxMessage } from '../parse';
@@ -40,9 +40,21 @@ async function insertMessages(tx: Tx, messages: InboxMessage[], thread: string):
       body: m.text,
       stars: m.stars ?? null,
       replyRef: m.replyRef ?? null,
+      link: m.link ?? null,
     })))
     .onConflictDoNothing()
     .returning({ contentId: message.contentId });
+  // A message stored before links existed gets its link the next time it is read. Nothing else about it changes.
+  for (const m of messages.filter(x => x.link)) {
+    await tx.update(message).set({ link: m.link }).where(and(eq(message.tenantId, TENANT), eq(message.contentId, m.id), isNull(message.link)));
+  }
+  // Answered in the platform's own app: answered here too, unless the owner already decided something for it.
+  for (const m of messages.filter(x => x.answeredElsewhere)) {
+    await tx.execute(sql`insert into event (tenant_id, content_id, kind)
+      select ${TENANT}, ${m.id}, 'answered'
+      where exists (select 1 from message where tenant_id = ${TENANT} and content_id = ${m.id})
+        and not exists (select 1 from event where tenant_id = ${TENANT} and content_id = ${m.id} and kind in ('waiting', 'answered', 'spam', 'sent'))`);
+  }
   if (added.length) {
     await tx.insert(event).values(added.map(a => ({ tenantId: TENANT, contentId: a.contentId, kind: 'arrived' })));
   }

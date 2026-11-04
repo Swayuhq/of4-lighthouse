@@ -27,6 +27,7 @@ export const message = pgTable(
     stars: integer('stars'),
     /** What the provider that read it needs to reply. */
     replyRef: text('reply_ref'),
+    link: text('link'),
   },
   t => [primaryKey({ columns: [t.tenantId, t.contentId] })],
 );

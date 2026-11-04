@@ -11,7 +11,7 @@ import type { Provider } from './gateway';
  * One comment or review, whichever provider read it. `id` is the platform's own id, the same through every provider,
  * so moving a channel to another provider never counts a message twice. `ref` is what the reading provider needs to reply.
  */
-export type Item = { id: string; ref: string; author: string; text: string; at: string; stars?: number };
+export type Item = { id: string; ref: string; author: string; text: string; at: string; stars?: number; link?: string; answered?: boolean };
 export type Sent = { id: string };
 
 const ZERNIO = 'https://zernio.com/api/v1';
@@ -65,8 +65,18 @@ async function accountId(platform: string): Promise<string> {
   return id;
 }
 
-type Post = { id: string; platform: string; isAd?: boolean; commentCount?: number };
-type ZComment = { id: string; message?: string; createdTime?: string; from?: { name?: string; username?: string; isOwner?: boolean } };
+type Post = { id: string; platform: string; isAd?: boolean; commentCount?: number; permalink?: string };
+
+const HOME: Record<string, string> = { instagram: 'https://www.instagram.com/', facebook: 'https://www.facebook.com/' };
+
+/** The comment's own page on the platform, or undefined. Only that platform's own https address is ever linked. */
+export function commentLink(platform: string, permalink: string | undefined, commentId: string): string | undefined {
+  const home = HOME[platform];
+  if (!home || !permalink?.startsWith(home)) return undefined;
+  if (platform === 'instagram') return `${permalink.endsWith('/') ? permalink : permalink + '/'}c/${commentId}/`;
+  return `${permalink}${permalink.includes('?') ? '&' : '?'}comment_id=${commentId.split('_').at(-1)}`;
+}
+type ZComment = { id: string; message?: string; createdTime?: string; from?: { name?: string; username?: string; isOwner?: boolean }; replies?: { from?: { isOwner?: boolean } }[] };
 type ZReview = { id: string; platform: string; accountId: string; reviewer?: { name?: string }; rating?: number; text?: string; created?: string; hasReply?: boolean };
 
 const ZERNIO_PLATFORM: Record<string, string> = { facebook: 'facebook', instagram: 'instagram' };
@@ -80,6 +90,9 @@ async function zernioComments(platform: string): Promise<Item[]> {
     // The owner's own replies are not customer comments.
     return comments.filter(c => !c.from?.isOwner).map(c => ({
       id: c.id, ref: `${account}|${p.id}|${c.id}`, author: c.from?.name ?? c.from?.username ?? 'Someone', text: c.message ?? '', at: c.createdTime ?? '',
+      link: commentLink(platform, p.permalink, c.id),
+      // The owner may have answered in the platform's own app. That counts as answered here too.
+      ...((c.replies ?? []).some(r => r.from?.isOwner) ? { answered: true } : {}),
     }));
   }));
   return lists.flat();

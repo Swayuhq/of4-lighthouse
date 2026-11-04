@@ -7,6 +7,10 @@ import type { Theme } from '@/src/agents/insights';
 import { checkChannels, chooseOwner, clearAll, draftFor, markAs, sendReply } from '../actions';
 import { Ago } from '../ago';
 import { ChannelBadge, Wordmark } from '../brand';
+import type { Channel } from '@/src/connectors';
+
+// The browser never loads the connectors module, which holds the gateway; this list is all it needs.
+const CHANNELS: Channel[] = ['whatsapp', 'instagram', 'facebook', 'google_reviews'];
 import type { ChannelView } from '../channels';
 
 export type InboxItem = Item & { draft: string };
@@ -259,13 +263,17 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
     if (better) setText(current => (current === item.draft ? better : current));
   }
   const waiting = item.status === 'waiting';
+  const prefix = item.id.split(':')[0];
+  const channel = CHANNELS.find(c => c === prefix) ?? null;
   const shell = lead ? 'rounded-xl border-l-[5px] border-lamp bg-white p-5 shadow-[0_1px_0_#dfe7ec]' : 'py-5';
 
   return (
     <article className={`${shell} ${fresh ? 'arrived' : ''}`}>
-      <div className="flex flex-wrap items-baseline gap-x-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {channel && <ChannelBadge channel={channel} size="sm" />}
         <h3 className="font-bold">{item.author === 'Unknown' ? 'Someone' : item.author}</h3>
         <span className="text-[15px] text-navy-soft">{item.platform}, {when(item.receivedAt)}</span>
+        {item.link && waiting && <a href={item.link} target="_blank" rel="noreferrer" className="text-[15px] text-navy-soft underline decoration-shore underline-offset-4 hover:text-navy">Open on {item.platform}</a>}
         {item.stars !== undefined && <span className="text-[15px]" aria-label={`${item.stars} out of 5 stars`}>{'★'.repeat(item.stars)}<span className="text-shore">{'★'.repeat(5 - item.stars)}</span></span>}
       </div>
       <p className="mt-1.5 max-w-[60ch] whitespace-pre-line">{item.text}</p>
@@ -276,12 +284,19 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
         </p>
       )}
 
-      {item.reply && <p className="mt-3 border-l-2 border-kelp pl-3 text-[15px] text-kelp">Your reply: {item.reply}</p>}
+      {item.reply && (
+        <div className="ml-4 mt-3 border-l-2 border-kelp pl-4">
+          <p className="whitespace-pre-line text-[15px]">{item.reply}</p>
+          <p className="mt-1 text-[15px] font-bold text-kelp">
+            {item.link ? <a href={item.link} target="_blank" rel="noreferrer" className="underline underline-offset-4">See your reply on {item.platform}</a> : 'You replied'}
+          </p>
+        </div>
+      )}
 
       {waiting && item.heldReply && !writing && (
-        <div className="mt-4 rounded-lg border border-shore bg-mist p-3">
-          <p className="text-[15px] font-bold">Ready to send</p>
-          <p className="mt-1 whitespace-pre-line">{item.heldReply}</p>
+        <div className="ml-4 mt-4 border-l-2 border-lamp pl-4">
+          <p className="text-[15px] font-bold text-navy-soft">Ready to send</p>
+          <p className="mt-1 max-w-[60ch] whitespace-pre-line">{item.heldReply}</p>
         </div>
       )}
 
