@@ -1,13 +1,15 @@
 import { draftReply, view } from '@/src/inbox';
 import { customerCount, liveThemes } from '@/src/store/books';
 import { redirect } from 'next/navigation';
-import { load, loadThemes } from '@/src/store/db';
+import { load, loadThemes, sweepHistory } from '@/src/store/db';
 import { channelViews } from '../channels';
 import { Inbox, type InboxData } from './inbox';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Page() {
+  // The sweep runs before every look, so the owner never sees text past its 30 days.
+  await sweepHistory();
   const { businessName, ownerNames, messages, state } = await load();
   if (!businessName) redirect('/start');
   const v = view(state);

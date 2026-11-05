@@ -202,6 +202,11 @@ export function Inbox({ data }: { data: InboxData }) {
                 ))}
               </ul>
             )}
+            {tab === 'answered' && (
+              <p className="mt-4 border-t border-shore pt-4 text-[15px] text-navy-soft">
+                A customer&apos;s words vanish 30 days after your last reply, like vanishing messages. Who wrote, when and where stay here.
+              </p>
+            )}
           </section>
 
           <button onClick={() => start(() => clearAll())} className="mt-16 text-sm text-navy-soft underline underline-offset-4">
@@ -292,7 +297,9 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
         {item.link && waiting && <a href={item.link} target="_blank" rel="noreferrer" className="text-[15px] text-navy-soft underline decoration-shore underline-offset-4 hover:text-navy">Open on {item.platform}</a>}
         {item.stars !== undefined && <span className="text-[15px]" aria-label={`${item.stars} out of 5 stars`}>{'★'.repeat(item.stars)}<span className="text-shore">{'★'.repeat(5 - item.stars)}</span></span>}
       </div>
-      <p className="mt-1.5 max-w-[60ch] whitespace-pre-line">{item.text}</p>
+      {item.vanished
+        ? <p className="mt-1.5 text-navy-soft italic">The words vanished 30 days after your reply.</p>
+        : <p className="mt-1.5 max-w-[60ch] whitespace-pre-line">{item.text}</p>}
 
       {waiting && item.reasons.length > 0 && (
         <p className="mt-2.5 flex flex-wrap gap-1.5" aria-label="Why this is near the top">

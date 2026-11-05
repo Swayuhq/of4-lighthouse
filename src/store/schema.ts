@@ -28,6 +28,8 @@ export const message = pgTable(
     /** What the provider that read it needs to reply. */
     replyRef: text('reply_ref'),
     link: text('link'),
+    /** When the customer's text vanished, 30 days after the owner's last reply. Who, when and where stay. */
+    vanishedAt: timestamp('vanished_at', { withTimezone: true }),
   },
   t => [primaryKey({ columns: [t.tenantId, t.contentId] })],
 );

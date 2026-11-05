@@ -110,3 +110,7 @@ create table if not exists push_event (
   received_at timestamptz not null default now(),
   unique (provider, event_id)
 );
+
+-- The comment history. A customer's text vanishes 30 days after the owner's last reply; who, when and where stay.
+-- Decided by Sujit on 5 Nov 2026.
+alter table message add column if not exists vanished_at timestamptz;

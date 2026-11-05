@@ -1,5 +1,5 @@
 // The only module that talks to Postgres. One business for now; every row still carries its tenant id.
-import { and, asc, desc, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, like, lt, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import type { InboxMessage } from '../parse';
@@ -136,6 +136,34 @@ export async function takePush(
   });
 }
 
+/** Days a customer's text stays after the owner's last reply, and days a pushed event row stays. */
+export const HISTORY_DAYS = 30;
+
+/**
+ * The retention sweep for the comment history. A comment whose newest status is a reply older than 30 days loses its text
+ * and the facts the reader took from it. Who wrote, when, where and that it was answered stay, and so does the owner's reply.
+ * Pushed event rows older than 30 days go too; Zernio stops retrying long before that.
+ */
+export async function sweepHistory(now = new Date()): Promise<{ vanished: number; events: number }> {
+  const cutoff = new Date(now.getTime() - HISTORY_DAYS * 86_400_000);
+  return db.transaction(async tx => {
+    const gone = await tx.execute<{ content_id: string }>(sql`
+      with last as (
+        select distinct on (content_id) content_id, kind, at from event
+        where tenant_id = ${TENANT} and kind in ('waiting', 'answered', 'spam', 'sent')
+        order by content_id, id desc)
+      update message m set body = '', vanished_at = ${now.toISOString()}
+      from last
+      where m.tenant_id = ${TENANT} and m.content_id = last.content_id and m.vanished_at is null
+        and last.kind in ('answered', 'sent') and last.at < ${cutoff.toISOString()}
+      returning m.content_id`);
+    const ids = [...gone].map(r => r.content_id);
+    if (ids.length) await tx.delete(messageFacts).where(and(eq(messageFacts.tenantId, TENANT), inArray(messageFacts.contentId, ids)));
+    const events = await tx.delete(pushEvent).where(and(eq(pushEvent.tenantId, TENANT), lt(pushEvent.receivedAt, cutoff))).returning({ id: pushEvent.id });
+    return { vanished: ids.length, events: events.length };
+  });
+}
+
 /** Every pushed event, oldest first, for the arrival probe and the tests. */
 export async function pushEvents() {
   return db.select().from(pushEvent).where(eq(pushEvent.tenantId, TENANT)).orderBy(asc(pushEvent.id));
@@ -195,7 +223,8 @@ export async function unread(): Promise<InboxMessage[]> {
     .select({ m: message })
     .from(message)
     .leftJoin(messageFacts, and(eq(messageFacts.tenantId, message.tenantId), eq(messageFacts.contentId, message.contentId)))
-    .where(and(eq(message.tenantId, TENANT), isNull(messageFacts.contentId)));
+    // A vanished comment has no words left to read.
+    .where(and(eq(message.tenantId, TENANT), isNull(messageFacts.contentId), isNull(message.vanishedAt)));
   return rows
     .map(({ m }) => ({ id: m.contentId, platform: m.platform, author: m.author, receivedAt: m.receivedAt, text: m.body, ...(m.stars ? { stars: m.stars } : {}) }))
     .filter(m => !owners.has(m.author));
