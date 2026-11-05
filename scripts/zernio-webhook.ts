@@ -4,6 +4,7 @@
 // Zernio's answers carry the secret, so only the id, address, events and state are ever printed.
 //   zernio-webhook.sh set https://<tunnel>/api/webhooks/zernio
 //   zernio-webhook.sh test
+//   zernio-webhook.sh off   (when the tunnel closes, so Zernio stops trying a dead address)
 export {};
 
 const BASE = 'https://zernio.com/api/v1';
@@ -45,6 +46,11 @@ if (action === 'set') {
   if (!found?._id) throw new Error(`no webhook named ${NAME} in Zernio`);
   await call('POST', '/webhooks/test', { webhookId: found._id, event: 'comment.received' });
   console.log('sample comment.received sent to', found.url);
+} else if (action === 'off') {
+  const found = await ours();
+  if (!found?._id) throw new Error(`no webhook named ${NAME} in Zernio`);
+  await call('PUT', '/webhooks/settings', { webhookId: found._id, isActive: false });
+  console.log('switched off', show(await ours()));
 } else {
-  throw new Error('use: set <url> | test');
+  throw new Error('use: set <url> | test | off');
 }
