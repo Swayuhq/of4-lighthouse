@@ -105,6 +105,49 @@ tr.shared td:first-child { font-weight: 600; }
 </section>
 
 <section>
+  <div class="eyebrow">Decided with Dhruv · 5 November, 19:13 IST</div>
+  <h2>Build for the beta, measure, then decide on scale</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Decision</th><th>What it means for this page</th></tr></thead>
+      <tbody>
+        <tr><td>Beta builds only what is required, sized for beta load</td><td>Plan for 12 businesses in November and 30 in December. The 100 and 500 columns are for reading the trend, not for building.</td></tr>
+        <tr><td>The beta connector goal: every customer message answered and delivered to the Swayu inbox</td><td>Push intake and the three lanes come first. Reading likes and detailed numbers waits until a family needs it, and is checked first against what Zernio and Composio already offer.</td></tr>
+        <tr><td>No in house connectors</td><td>Maintenance, bug fixes and each platform's terms make them more expensive than they look. If a provider's price cannot be brought down by arithmetic, the approach is rethought from scratch, not rebuilt by hand. Dhruv keeps a checklist of alternatives to Composio.</td></tr>
+        <tr><td>Features are not built as separate plugin repositories</td><td>Small pieces may be built apart and merged into swayu-app. The gateway is proven in Lighthouse first, then moved.</td></tr>
+        <tr><td>Nobody is blocked by the refactor</td><td>A family that says it is waiting on connectors tells Dhruv why.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="two">
+    <div class="callout"><b>Correction to the call</b><span>The bill is not $1,000 a month at 7 businesses or at none. With no businesses Swayu pays about $0 to $29 a month: Zernio's first 2 accounts are free and Composio Pro is $29. At 12 businesses it is $190 to $447, and about $1,000 is the high end at 30. Only Composio's line grows with the number of calls.</span></div>
+    <div class="callout"><b>Correction to the call</b><span>The rate limiter is tested: 31 tests across three files, 208 in all, passing, with an independent review that said yes on its second round. What is untested is real load: the busiest inbox case and several apps sharing one Zernio team.</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Dhruv's question</div>
+  <h2>When Zernio and Composio both offer a channel, which one we use</h2>
+  <p>The two charge differently. Zernio charges per connected account, with every call included up to 600 a minute for the team, and it pushes new comments and reviews. Composio charges per call past 100,000 a month, only 20,000 free on its own managed apps, and asks rather than pushes. So a channel read many times a day costs nothing extra on Zernio and adds up on Composio.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Channel</th><th>Lighthouse today</th><th>Recommended for beta</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Instagram, read and reply</td><td>Zernio</td><td><span class="pill ok">Zernio</span></td><td>Read every few minutes by OF4; pushed comments; no per call price</td></tr>
+        <tr><td>Facebook Page, read</td><td>Zernio</td><td><span class="pill ok">Zernio</span></td><td>Same as Instagram</td></tr>
+        <tr><td>Facebook Page, reply</td><td>Composio</td><td><span class="pill open">Zernio after a test</span></td><td>Composio's own Meta app is already reviewed by Meta, so it replied on a real Page in Lighthouse without waiting for our own review. Zernio's Facebook reply is untried. One provider for both sides means one limit and one retry key, so move it once Zernio's reply passes the same test</td></tr>
+        <tr><td>Google reviews, read and reply</td><td>Zernio</td><td><span class="pill ok">Zernio</span></td><td>Pushed new reviews and every review read through Zernio, built 5 November. Composio also lists Google review tools, untested</td></tr>
+        <tr><td>LinkedIn, X, YouTube, TikTok posting</td><td>Not wired</td><td><span class="pill ok">Zernio</span></td><td>Posting is per account there; X reads are passed through at X's price either way</td></tr>
+        <tr><td>Gmail, Google Sheets, HubSpot</td><td>Not wired</td><td><span class="pill ok">Composio</span></td><td>Zernio does not offer them</td></tr>
+        <tr><td>Search Console, Analytics 4, PageSpeed</td><td>Not wired</td><td><span class="pill open">Google directly or Composio</span></td><td>Google's own APIs are free. Through Composio each call counts toward the 100,000. Dhruv decides</td></tr>
+        <tr><td>WhatsApp</td><td>Meta directly</td><td><span class="pill ok">Meta directly</span></td><td>Meta pushes messages; per message price is Meta's either way</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Today's routes are from the Lighthouse route table, <code>src/gateway/setup.ts</code>. The recommendations follow the two price models above and are Dhruv's to confirm.</p>
+</section>
+
+<section>
   <div class="eyebrow">1 · Who calls what</div>
   <h2>Most outside accounts are shared by two to four families</h2>
   <p>From the connectors survey (18 answers, 2 November) and the November objectives. A shared connector is one account per business that several families use at once, so their requests land on the same limit.</p>
