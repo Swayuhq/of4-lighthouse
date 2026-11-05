@@ -4,6 +4,8 @@
 // Zernio's answers carry the secret, so only the id, address, events and state are ever printed.
 //   zernio-webhook.sh set https://<tunnel>/api/webhooks/zernio
 //   zernio-webhook.sh test
+export {};
+
 const BASE = 'https://zernio.com/api/v1';
 const NAME = 'Lighthouse inbox';
 const EVENTS = ['comment.received', 'review.new'];
