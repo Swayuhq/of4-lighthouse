@@ -7,6 +7,7 @@ import { facebookComments, facebookReply, instagramComments } from '../composio'
 import { whatsappReply } from '../whatsapp';
 import type { Provider } from './gateway';
 import { LIMITS, RateLimited, retryAfter } from './limiter';
+import { placesStub } from './places';
 
 /**
  * One comment or review, whichever provider read it. `id` is the platform's own id, the same through every provider,
@@ -43,7 +44,7 @@ export const composio: Provider = async (channel, action, args) => {
 // ---------- Zernio ----------
 
 /** One request to Zernio inside its budget. A 429 pauses every Zernio call; the request is sent once more only if the wait is short. */
-async function zernio<T>(path: string, init: RequestInit = {}, again = false): Promise<T> {
+export async function zernio<T>(path: string, init: RequestInit = {}, again = false): Promise<T> {
   const key = process.env.SWAYU_ZERNIO_API_KEY;
   if (!key) throw new Error('SWAYU_ZERNIO_API_KEY is not set. Start Lighthouse with pnpm start:op.');
   await LIMITS.zernio.take();
@@ -68,11 +69,13 @@ async function zernio<T>(path: string, init: RequestInit = {}, again = false): P
 type Account = { _id?: string; id?: string; platform: string };
 
 /** The first connected account on that platform. Lighthouse has one test business. */
-async function accountId(platform: string): Promise<string> {
+const ACCOUNT_LABEL: Record<string, string> = { facebook: 'Facebook Page', instagram: 'Instagram account', googlebusiness: 'Google Business Profile' };
+
+export async function accountId(platform: string): Promise<string> {
   const { accounts } = await zernio<{ accounts: Account[] }>(`/accounts?platform=${encodeURIComponent(platform)}`);
   const found = accounts.find(a => a.platform === platform);
   const id = found?._id ?? found?.id;
-  if (!id) throw new Error(`no ${platform} account is connected in Zernio`);
+  if (!id) throw new Error(`no ${ACCOUNT_LABEL[platform] ?? platform} is connected in Zernio`);
   return id;
 }
 
@@ -88,6 +91,48 @@ export function commentLink(platform: string, permalink: string | undefined, com
   return `${permalink}${permalink.includes('?') ? '&' : '?'}comment_id=${commentId.split('_').at(-1)}`;
 }
 type ZComment = { id: string; message?: string; createdTime?: string; from?: { name?: string; username?: string; isOwner?: boolean }; replies?: { from?: { isOwner?: boolean } }[] };
+type GbpReview = { id: string; reviewer?: { displayName?: string; isAnonymous?: boolean }; rating?: number; comment?: string; createTime?: string; reviewReply?: unknown };
+
+/** Every one of the owner's reviews, with what Google says the totals are. `complete` is false when the read stopped early. */
+export type ReviewSet = { total?: number; average?: number; complete: boolean; reviews: Item[] };
+
+/** 50 reviews a page, Zernio's most, so 40 pages is 2,000 reviews. A bound, so a broken page token cannot read forever. */
+export const MAX_REVIEW_PAGES = 40;
+
+async function allOwnerReviews(): Promise<ReviewSet> {
+  // With no Google profile connected this throws, so no reviews never reads as zero reviews.
+  const account = await accountId('googlebusiness');
+  const seen = new Map<string, Item>();
+  const tokens = new Set<string>();
+  let token: string | null = '';
+  let total: number | undefined;
+  let average: number | undefined;
+  for (let page = 0; page < MAX_REVIEW_PAGES && token !== null; page++) {
+    const query = `pageSize=50${token ? `&pageToken=${encodeURIComponent(token)}` : ''}`;
+    const body: { reviews?: GbpReview[]; totalReviewCount?: number; averageRating?: number; nextPageToken?: string | null } =
+      await zernio(`/accounts/${encodeURIComponent(account)}/gmb-reviews?${query}`);
+    total = body.totalReviewCount ?? total;
+    average = body.averageRating ?? average;
+    for (const r of body.reviews ?? []) {
+      if (seen.has(r.id)) continue;
+      seen.set(r.id, {
+        id: r.id, ref: `${account}|${r.id}`,
+        author: r.reviewer?.isAnonymous || !r.reviewer?.displayName ? 'A Google user' : r.reviewer.displayName,
+        // Zernio sends 0 when Google gave no rating; 0 is not a star count.
+        text: r.comment ?? '', at: r.createTime ?? '', stars: r.rating ? r.rating : undefined,
+        ...(r.reviewReply ? { answered: true } : {}),
+      });
+    }
+    // No token, or an empty one, means this was the last page.
+    const next = body.nextPageToken || null;
+    // A token we already followed would loop, so stop and say the set is not whole.
+    if (next !== null && tokens.has(next)) break;
+    if (next !== null) tokens.add(next);
+    token = next;
+  }
+  return { total, average, complete: token === null, reviews: [...seen.values()] };
+}
+
 type ZReview = { id: string; platform: string; accountId: string; reviewer?: { name?: string }; rating?: number; text?: string; created?: string; hasReply?: boolean };
 
 const ZERNIO_PLATFORM: Record<string, string> = { facebook: 'facebook', instagram: 'instagram' };
@@ -132,6 +177,7 @@ export const zernioProvider: Provider = async (channel, action, args) => {
       id: r.id, ref: `${r.accountId}|${r.id}`, author: r.reviewer?.name ?? 'Someone', text: r.text ?? '', at: r.created ?? '', stars: r.rating,
     })) satisfies Item[];
   }
+  if (channel === 'google_reviews' && action === 'read_all') return allOwnerReviews();
   if (channel === 'google_reviews' && action === 'reply') {
     const [account, reviewId] = String(args.ref).split('|');
     const out = await zernio<{ reply?: { id?: string } }>(`/inbox/reviews/${encodeURIComponent(reviewId)}/reply`, {
@@ -150,5 +196,6 @@ export const zernioProvider: Provider = async (channel, action, args) => {
 /** WhatsApp runs on Swayu's own Meta app. Messages arrive by webhook, so only replies go out through here. */
 export const own: Provider = async (channel, action, args) => {
   if (channel === 'whatsapp' && action === 'reply') return { id: await whatsappReply(String(args.ref), String(args.text)) } satisfies Sent;
+  if (channel === 'google_places' && action === 'read') return placesStub(args);
   throw new NotOffered(`not offered for ${channel} ${action}`);
 };

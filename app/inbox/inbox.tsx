@@ -1,6 +1,7 @@
 'use client';
 // The owner's one screen: the tally, Today's 3, then everything else.
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import type { Counts, Item, Status } from '@/src/inbox';
 import type { Theme } from '@/src/agents/insights';
@@ -25,10 +26,16 @@ export type InboxData = {
   themes: Theme[];
   business: string;
   channels: ChannelView[];
+  /** Zernio pushes new comments and reviews, so the full check only catches a push that was lost. */
+  pushOn: boolean;
 };
 
 /** How often the open inbox asks every connected channel for new messages. */
 const CHECK_EVERY_MS = 30_000;
+/** With push on, the same full check runs this often, as the safety net for a lost push. */
+const SAFETY_CHECK_MS = 10 * 60_000;
+/** With push on, how often the screen reloads what is already stored. It reads Postgres only and calls no provider. */
+const SHOW_EVERY_MS = 15_000;
 
 type Toast = { text: string; undo?: { id: string; status: Status } };
 
@@ -76,14 +83,18 @@ export function Inbox({ data }: { data: InboxData }) {
   // Connecting was the switch. While this page is open it checks every connected channel; a server job replaces this when Lighthouse goes live.
   // A broken channel counts too: the check is what tries it again.
   const live = data.channels.some(c => c.status === 'connected' || c.status === 'broken');
+  const router = useRouter();
+  const pushOn = data.pushOn;
   useEffect(() => {
     if (!live) return;
     const timer = setInterval(async () => {
       const { added } = await checkChannels();
       if (added) setToast({ text: `${added} new message${added === 1 ? '' : 's'} caught` });
-    }, CHECK_EVERY_MS);
-    return () => clearInterval(timer);
-  }, [live]);
+    }, pushOn ? SAFETY_CHECK_MS : CHECK_EVERY_MS);
+    // A pushed message is already stored; the screen only needs to show it.
+    const show = pushOn ? setInterval(() => router.refresh(), SHOW_EVERY_MS) : undefined;
+    return () => { clearInterval(timer); clearInterval(show); };
+  }, [live, pushOn, router]);
 
   function act(item: InboxItem, status: Status) {
     start(async () => {
@@ -191,6 +202,11 @@ export function Inbox({ data }: { data: InboxData }) {
                 ))}
               </ul>
             )}
+            {tab === 'answered' && (
+              <p className="mt-4 border-t border-shore pt-4 text-[15px] text-navy-soft">
+                A customer&apos;s words vanish 30 days after your last reply, like vanishing messages. Who wrote, when and where stay here.
+              </p>
+            )}
           </section>
 
           <button onClick={() => start(() => clearAll())} className="mt-16 text-sm text-navy-soft underline underline-offset-4">
@@ -281,7 +297,9 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
         {item.link && waiting && <a href={item.link} target="_blank" rel="noreferrer" className="text-[15px] text-navy-soft underline decoration-shore underline-offset-4 hover:text-navy">Open on {item.platform}</a>}
         {item.stars !== undefined && <span className="text-[15px]" aria-label={`${item.stars} out of 5 stars`}>{'★'.repeat(item.stars)}<span className="text-shore">{'★'.repeat(5 - item.stars)}</span></span>}
       </div>
-      <p className="mt-1.5 max-w-[60ch] whitespace-pre-line">{item.text}</p>
+      {item.vanished
+        ? <p className="mt-1.5 text-navy-soft italic">The words vanished 30 days after your reply.</p>
+        : <p className="mt-1.5 max-w-[60ch] whitespace-pre-line">{item.text}</p>}
 
       {waiting && item.reasons.length > 0 && (
         <p className="mt-2.5 flex flex-wrap gap-1.5" aria-label="Why this is near the top">

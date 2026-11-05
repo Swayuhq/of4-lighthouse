@@ -20,10 +20,10 @@ export type GatewayDeps = {
   record: (row: LedgerRow) => Promise<void>;
 };
 
-const LABEL: Record<string, string> = { facebook: 'Facebook', instagram: 'Instagram', whatsapp: 'WhatsApp', google_reviews: 'Google reviews' };
+const LABEL: Record<string, string> = { facebook: 'Facebook', instagram: 'Instagram', whatsapp: 'WhatsApp', google_reviews: 'Google reviews', google_places: 'Google Maps places' };
 const PROVIDER_LABEL: Record<ProviderName, string> = { composio: 'Composio', zernio: 'Zernio', own: 'Swayu' };
-const VERB: Record<string, string> = { read: 'read', reply: 'reply on' };
-const ING: Record<string, string> = { read: 'reading', reply: 'replying on' };
+const VERB: Record<string, string> = { read: 'read', reply: 'reply on', read_all: 'read every review on' };
+const ING: Record<string, string> = { read: 'reading', reply: 'replying on', read_all: 'reading every review on' };
 const label = (channel: string) => LABEL[channel] ?? channel;
 
 export function createGateway(deps: GatewayDeps) {
@@ -32,8 +32,9 @@ export function createGateway(deps: GatewayDeps) {
   const reading = new Map<string, Promise<unknown>>();
 
   function send(provider: ProviderName, { channel, action, args }: CallRequest): Promise<unknown> {
-    if (action !== 'read') return deps.providers[provider](channel, action, args);
-    const key = `${provider}:${channel}:${JSON.stringify(args)}`;
+    if (action !== 'read' && action !== 'read_all') return deps.providers[provider](channel, action, args);
+    // The action is part of the key: the inbox read and the every review read must never answer each other.
+    const key = `${provider}:${channel}:${action}:${JSON.stringify(args)}`;
     let read = reading.get(key);
     if (!read) {
       read = deps.providers[provider](channel, action, args).finally(() => reading.delete(key));
@@ -81,7 +82,9 @@ export function createGateway(deps: GatewayDeps) {
 
     try {
       const result = await send(provider, request);
-      await log(request, 'done', { provider });
+      // A read that stopped before the end says so in the ledger, so nothing claims it read everything.
+      const partial = (result as { complete?: unknown } | null)?.complete === false;
+      await log(request, 'done', partial ? { provider, note: 'stopped early' } : { provider });
       return { ok: true, provider, result };
     } catch (error) {
       const reason = `${PROVIDER_LABEL[provider]} could not ${VERB[action] ?? action} ${label(channel)}: ${error instanceof Error ? error.message : 'unknown error'}`;

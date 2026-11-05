@@ -2,7 +2,7 @@
 export type CallRow = { id: number; lead: string; channel: string; action: string; outcome: string; provider: string | null; note: string | null; at: Date };
 export type Activity = { id: number; text: string; times: number; at: Date; kind: 'ok' | 'waiting' | 'stopped'; routine: boolean };
 
-const CHANNEL: Record<string, string> = { facebook: 'Facebook', instagram: 'Instagram', whatsapp: 'WhatsApp', google_reviews: 'Google reviews' };
+const CHANNEL: Record<string, string> = { facebook: 'Facebook', instagram: 'Instagram', whatsapp: 'WhatsApp', google_reviews: 'Google reviews', google_places: 'Google Maps' };
 const PROVIDER: Record<string, string> = { composio: 'Composio', zernio: 'Zernio', own: 'Swayu' };
 
 export function sentence(r: CallRow): string {
@@ -10,6 +10,8 @@ export function sentence(r: CallRow): string {
   const via = r.provider ? ` through ${PROVIDER[r.provider] ?? r.provider}` : '';
   if (r.outcome === 'refused') return `Stopped: ${r.note ?? 'not allowed.'}`;
   if (r.outcome === 'failed') return `Failed: ${r.note ?? 'unknown error.'}`;
+  if (r.action === 'read_all') return r.note ? `Read part of your ${channel}${via}; it stopped early.` : `Read all your ${channel}${via}.`;
+  if (r.action === 'read' && r.channel === 'google_places') return `Looked up nearby businesses on ${channel}${via}.`;
   if (r.action === 'read') return `Read new ${r.channel === 'google_reviews' ? 'reviews' : 'comments'} on ${channel}${via}.`;
   if (r.outcome === 'held') return `Wrote a reply on ${channel} and kept it for you to send.`;
   if (r.outcome === 'approved') return `You pressed Send on a ${channel} reply.`;

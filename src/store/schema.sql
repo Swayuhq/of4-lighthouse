@@ -94,3 +94,23 @@ alter table event drop constraint if exists event_kind_check;
 alter table event add constraint event_kind_check check (kind in ('arrived', 'waiting', 'answered', 'spam', 'sent', 'drafted'));
 alter table connector_call drop constraint if exists connector_call_outcome_check;
 alter table connector_call add constraint connector_call_outcome_check check (outcome in ('refused', 'approved', 'declined', 'held', 'done', 'failed'));
+
+-- One row for every event a provider pushed to us. The unique event id drops a delivery we already took.
+-- Ids and times only, never the message text. Added 5 Nov 2026 with the Zernio webhook.
+create table if not exists push_event (
+  id bigserial primary key,
+  tenant_id uuid not null,
+  provider text not null,
+  event_id text not null,
+  kind text not null,
+  channel text,
+  content_id text,
+  outcome text not null check (outcome in ('stored', 'already had', 'not connected', 'test', 'skipped', 'refused')),
+  sent_at timestamptz,
+  received_at timestamptz not null default now(),
+  unique (provider, event_id)
+);
+
+-- The comment history. A customer's text vanishes 30 days after the owner's last reply; who, when and where stay.
+-- Decided by Sujit on 5 Nov 2026.
+alter table message add column if not exists vanished_at timestamptz;

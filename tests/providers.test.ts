@@ -68,7 +68,7 @@ describe('Zernio comments read the same shape as Composio', () => {
 
   it('no connected account says so', async () => {
     answer({ '/accounts': { accounts: [] } });
-    await expect(zernioProvider('instagram', 'read', {})).rejects.toThrow('no instagram account is connected in Zernio');
+    await expect(zernioProvider('instagram', 'read', {})).rejects.toThrow('no Instagram account is connected in Zernio');
   });
 
   it('a missing key fails before any request', async () => {
@@ -104,7 +104,7 @@ describe('Zernio Google reviews', () => {
 describe('Unknown is never zero, and a reply finds its comment through any provider', () => {
   it('Google reviews with no Google profile connected fail instead of reading as zero reviews', async () => {
     answer({ '/accounts': { accounts: [{ _id: 'acc1', platform: 'facebook' }] }, '/inbox/reviews?': { data: [] } });
-    await expect(zernioProvider('google_reviews', 'read', {})).rejects.toThrow('no googlebusiness account is connected');
+    await expect(zernioProvider('google_reviews', 'read', {})).rejects.toThrow('no Google Business Profile is connected');
     expect(calls.some(c => c.url.includes('/inbox/reviews'))).toBe(false);
   });
 

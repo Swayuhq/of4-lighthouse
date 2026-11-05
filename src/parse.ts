@@ -15,6 +15,8 @@ export type InboxMessage = {
   replyRef?: string;
   /** The message's own page on its platform, when the provider gives one. */
   link?: string;
+  /** Its text vanished 30 days after the owner's last reply. Who, when and where stay. */
+  vanished?: boolean;
   /** The owner already answered it on the platform itself, outside Lighthouse. */
   answeredElsewhere?: boolean;
 };

@@ -1,0 +1,418 @@
+<title>Outside Research Connectors</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one wide column, figure first in every section. The big picture, how far each source has come, one run in time, the gateway's decisions, the call and its answer, what is kept, cost, rules, who does what. */
+:root {
+  --bg: #f5f7f6; --panel: #ffffff; --ink: #16231f; --muted: #5a6a64; --line: #d7dfdb;
+  --accent: #00584d; --mark: #009b74; --soft: #e0f1ea;
+  --of1: #3d5a99; --of1-bg: #e4eaf7;
+  --ok: #1f7a4d; --ok-bg: #e3f3ea; --part: #8f5d00; --part-bg: #fbf0d9; --no: #a33b2b; --no-bg: #f8e3df; --off: #8a9792; --off-bg: #eef1ef;
+  --display: "Fraunces", Georgia, serif; --body: "Public Sans", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1614; --panel: #16201d; --ink: #e5eeea; --muted: #9aaba4; --line: #2a3733;
+  --accent: #6fd6b8; --mark: #35c99f; --soft: #163029;
+  --of1: #9db4ec; --of1-bg: #1b2440;
+  --ok: #7fd7a6; --ok-bg: #173126; --part: #f0c060; --part-bg: #33290f; --no: #f19a8a; --no-bg: #3a1d18; --off: #6d7b76; --off-bg: #1d2624; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1614; --panel: #16201d; --ink: #e5eeea; --muted: #9aaba4; --line: #2a3733;
+  --accent: #6fd6b8; --mark: #35c99f; --soft: #163029;
+  --of1: #9db4ec; --of1-bg: #1b2440;
+  --ok: #7fd7a6; --ok-bg: #173126; --part: #f0c060; --part-bg: #33290f; --no: #f19a8a; --no-bg: #3a1d18; --off: #6d7b76; --off-bg: #1d2624; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h1 { font-size: clamp(28px, 4vw, 42px); color: var(--accent); }
+h2 { font-size: 23px; }
+h3 { margin: 0; font-size: 15px; }
+p { margin: 0; max-width: 72ch; }
+.lead { font-size: 18px; }
+.eyebrow { font: 600 12px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+section { display: grid; gap: 14px; min-width: 0; }
+.note { color: var(--muted); font-size: 13px; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 13px; }
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font: 600 12px/20px var(--body); white-space: nowrap; }
+.ok { color: var(--ok); background: var(--ok-bg); } .part { color: var(--part); background: var(--part-bg); } .no { color: var(--no); background: var(--no-bg); }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 880px; background: var(--panel); border: 1px solid var(--line); }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 12px/1.3 var(--body); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--soft); }
+tr:last-child td { border-bottom: 0; }
+td.own { color: var(--accent); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.figure { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.figure svg { display: block; width: 100%; height: auto; min-width: 980px; }
+.figure svg text { fill: var(--ink); font-family: var(--body); font-size: 14px; }
+.figure svg .sub { fill: var(--muted); font-size: 12px; }
+.figure svg .lbl { fill: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+.figure svg .box { fill: var(--bg); stroke: var(--line); }
+.figure svg .band { fill: var(--bg); stroke: none; }
+.figure svg .of1 { fill: var(--of1-bg); stroke: var(--of1); stroke-width: 1.5; }
+.figure svg .con { fill: var(--ok-bg); stroke: var(--ok); stroke-width: 1.5; }
+.figure svg .db { fill: var(--part-bg); stroke: var(--part); stroke-width: 1.5; }
+.figure svg .bad { fill: var(--no-bg); stroke: var(--no); stroke-width: 1.5; }
+.figure svg .edge { stroke: var(--muted); fill: none; stroke-width: 1.5; }
+.figure svg .edge.ok { stroke: var(--ok); } .figure svg .edge.no { stroke: var(--no); } .figure svg .edge.part { stroke: var(--part); }
+.figure svg .t-ok { fill: var(--ok); font-weight: 600; } .figure svg .t-no { fill: var(--no); font-weight: 600; } .figure svg .t-part { fill: var(--part); font-weight: 600; }
+.figure svg .dot-on { fill: var(--mark); } .figure svg .dot-off { fill: var(--off-bg); stroke: var(--off); } .figure svg .dot-no { fill: var(--no-bg); stroke: var(--no); }
+.figure svg .rail { stroke: var(--line); stroke-width: 3; }
+.figure svg .rail-on { stroke: var(--mark); stroke-width: 3; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); align-items: center; }
+.sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 6px; border: 1.5px solid; }
+.sw.of1 { background: var(--of1-bg); border-color: var(--of1); } .sw.con { background: var(--ok-bg); border-color: var(--ok); } .sw.db { background: var(--part-bg); border-color: var(--part); } .sw.bad { background: var(--no-bg); border-color: var(--no); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.two > * { min-width: 0; }
+pre { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font: 13px/1.6 var(--mono); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 4px; }
+.tile .big { font: 700 26px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.tile .lbl { font-size: 13px; color: var(--muted); }
+/* What is kept: one bar per kind of data on a shared time axis */
+.keep { display: grid; gap: 10px; }
+.keep .row { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 14px; align-items: center; }
+.keep .track { position: relative; height: 26px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+.keep .fill { position: absolute; inset: 0 auto 0 0; border-radius: 5px; display: flex; align-items: center; padding: 0 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.keep .f-ok { background: var(--ok-bg); color: var(--ok); }
+.keep .f-part { background: var(--part-bg); color: var(--part); }
+.keep .f-no { background: var(--no-bg); color: var(--no); }
+.keep .axis { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 14px; font-size: 12px; color: var(--muted); }
+.keep .ticks { display: flex; justify-content: space-between; }
+/* Who does what: three lanes over three stages */
+.lanes { display: grid; grid-template-columns: 120px repeat(3, minmax(0, 1fr)); gap: 8px; min-width: 900px; }
+.lanes .hd { font: 600 12px/1.3 var(--body); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 6px 4px; }
+.lanes .who { font-weight: 700; padding: 12px 4px; }
+.lanes .cell { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; align-content: start; font-size: 13.5px; }
+.lanes .cell.empty { background: transparent; border-style: dashed; color: var(--muted); }
+.lanes .task { border-left: 3px solid var(--mark); padding-left: 8px; }
+.lanes .task.hrb { border-color: var(--of1); }
+.lanes .task.dec { border-color: var(--part); }
+@media (max-width: 640px) { .keep .row, .keep .axis { grid-template-columns: 1fr; } .keep .axis span:first-child { display: none; } }
+</style>
+
+<div class="wrap">
+
+<header style="display:grid;gap:12px">
+  <span class="eyebrow">OF1 outside research · connectors (shared layer)</span>
+  <h1>Outside Research Connectors</h1>
+  <p class="lead">Your research reads four kinds of outside data. None of the four is live yet: two are offered by a provider and wait to be wired, one needs Google's own Places service, and one cannot give rivals' ordinary ads in India. Every read goes through the same connector gateway OF4 uses, so you can build against its answer shape today.</p>
+</header>
+
+<section>
+  <span class="eyebrow">The big picture</span>
+  <h2>Where outside research sits in Swayu</h2>
+  <div class="legend"><span><span class="sw of1"></span>OF1, built by HRB</span><span><span class="sw con"></span>Connectors, built by Sujit</span><span><span class="sw db"></span>Database, shared by every lead</span><span><span class="sw bad"></span>Not available for India</span></div>
+  <div class="figure scroll">
+    <svg viewBox="0 0 1140 520" role="img" aria-label="Four layers. The owner talks only to the head of marketing. Under it sit the leads, with the analytics lead holding outside research as its fourth capability. Under the leads sit the shared layers: the connector gateway, the database and the ledger. Under those sit the outside sources: Google Places, Google Business Profile, a keyword service and the Meta Ad Library. Research results go into the database and the head of marketing reads them there.">
+      <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>
+      <rect class="band" x="0" y="0" width="1140" height="88" rx="8"/>
+      <rect class="band" x="0" y="104" width="1140" height="118" rx="8"/>
+      <rect class="band" x="0" y="238" width="1140" height="124" rx="8"/>
+      <rect class="band" x="0" y="378" width="1140" height="136" rx="8"/>
+      <text class="lbl" x="16" y="24">Owner</text>
+      <text class="lbl" x="16" y="128">Leads</text>
+      <text class="lbl" x="16" y="262">Shared layers</text>
+      <text class="lbl" x="16" y="402">Outside world</text>
+      <rect class="box" x="360" y="22" width="180" height="50" rx="8"/>
+      <text x="450" y="52" text-anchor="middle" font-weight="600">Business owner</text>
+      <rect class="box" x="620" y="22" width="220" height="50" rx="8"/>
+      <text x="730" y="44" text-anchor="middle" font-weight="600">Head of marketing</text>
+      <text class="sub" x="730" y="62" text-anchor="middle">the only one the owner talks to</text>
+      <path class="edge" d="M540 42 H618" marker-end="url(#a1)"/>
+      <path class="edge" d="M618 54 H542" marker-end="url(#a1)"/>
+      <rect class="of1" x="140" y="132" width="330" height="78" rx="8"/>
+      <text x="305" y="156" text-anchor="middle" font-weight="600">Analytics lead</text>
+      <text class="sub" x="305" y="176" text-anchor="middle">capability 4: outside research (new, OF1)</text>
+      <text class="sub" x="305" y="196" text-anchor="middle">writes insights for the head of marketing</text>
+      <rect class="box" x="500" y="132" width="200" height="78" rx="8"/>
+      <text x="600" y="164" text-anchor="middle" font-weight="600">Replies lead</text>
+      <text class="sub" x="600" y="184" text-anchor="middle">OF4: reviews, comments</text>
+      <rect class="box" x="730" y="132" width="180" height="78" rx="8"/>
+      <text x="820" y="164" text-anchor="middle" font-weight="600">Ads lead</text>
+      <text class="sub" x="820" y="184" text-anchor="middle">OF5</text>
+      <rect class="box" x="940" y="132" width="180" height="78" rx="8"/>
+      <text x="1030" y="164" text-anchor="middle" font-weight="600">Other leads</text>
+      <text class="sub" x="1030" y="184" text-anchor="middle">other families</text>
+      <rect class="con" x="140" y="266" width="460" height="82" rx="8"/>
+      <text x="370" y="292" text-anchor="middle" font-weight="600">Connector gateway</text>
+      <text class="sub" x="370" y="314" text-anchor="middle">one door for every lead: permission, route, shared budget</text>
+      <text class="sub" x="370" y="334" text-anchor="middle">built and tested in Lighthouse for OF4 on Facebook and Instagram</text>
+      <rect class="db" x="640" y="266" width="300" height="82" rx="8"/>
+      <text x="790" y="292" text-anchor="middle" font-weight="600">Database</text>
+      <text class="sub" x="790" y="314" text-anchor="middle">research table, insights table</text>
+      <text class="sub" x="790" y="334" text-anchor="middle">leads meet here, never talk directly</text>
+      <rect class="box" x="970" y="266" width="150" height="82" rx="8"/>
+      <text x="1045" y="302" text-anchor="middle" font-weight="600">Ledger</text>
+      <text class="sub" x="1045" y="322" text-anchor="middle">a row per call</text>
+      <rect class="box" x="140" y="410" width="220" height="88" rx="8"/>
+      <text x="250" y="436" text-anchor="middle" font-weight="600">Google Places</text>
+      <text class="sub" x="250" y="458" text-anchor="middle">3 · rivals on the map</text>
+      <text class="sub" x="250" y="478" text-anchor="middle">Google's own service</text>
+      <rect class="box" x="380" y="410" width="220" height="88" rx="8"/>
+      <text x="490" y="436" text-anchor="middle" font-weight="600">Google Business Profile</text>
+      <text class="sub" x="490" y="458" text-anchor="middle">1 · owner's reviews, rating</text>
+      <text class="sub" x="490" y="478" text-anchor="middle">Zernio or Composio</text>
+      <rect class="box" x="620" y="410" width="220" height="88" rx="8"/>
+      <text x="730" y="436" text-anchor="middle" font-weight="600">Keyword service</text>
+      <text class="sub" x="730" y="458" text-anchor="middle">2 · searches a month</text>
+      <text class="sub" x="730" y="478" text-anchor="middle">DataForSEO or Semrush via Composio</text>
+      <rect class="bad" x="860" y="410" width="260" height="88" rx="8"/>
+      <text x="990" y="436" text-anchor="middle" font-weight="600">Meta Ad Library</text>
+      <text class="sub" x="990" y="458" text-anchor="middle">4 · rivals' ads</text>
+      <text class="sub" x="990" y="478" text-anchor="middle">ordinary ads: EU and UK only</text>
+      <path class="edge" d="M305 210 V264" marker-end="url(#a1)"/>
+      <path class="edge" d="M600 210 C600 240 470 240 470 264" marker-end="url(#a1)"/>
+      <path class="edge" d="M820 210 C820 245 560 240 540 264" marker-end="url(#a1)"/>
+      <path class="edge" d="M250 348 V408" marker-end="url(#a1)"/>
+      <path class="edge" d="M370 348 C370 380 490 380 490 408" marker-end="url(#a1)"/>
+      <path class="edge" d="M470 348 C470 385 730 380 730 408" marker-end="url(#a1)"/>
+      <path class="edge no" d="M560 348 C560 390 990 375 990 408" marker-end="url(#a1)" stroke-dasharray="5 4"/>
+      <path class="edge" d="M600 307 H638" marker-end="url(#a1)"/>
+      <path class="edge" d="M940 307 H968" marker-end="url(#a1)"/>
+      <path class="edge part" d="M880 264 C880 230 860 110 800 74" marker-end="url(#a1)" stroke-dasharray="5 4"/>
+      <text class="t-part" x="890" y="244" font-size="12">head of marketing reads results</text>
+    </svg>
+  </div>
+  <p class="note">Your research never calls Google or Meta itself. It asks the gateway, the gateway reads the source, your research writes fixed fields into the research table, and the head of marketing reads them there (decision of 5 November, HRB and Dhruv).</p>
+</section>
+
+<section>
+  <span class="eyebrow">Question 1 · where each source comes from, and how far it has come</span>
+  <h2>Five steps from "a provider lists it" to "live in Swayu"</h2>
+  <div class="figure scroll">
+    <svg viewBox="0 0 1140 390" role="img" aria-label="A ladder of five steps for each source: a provider lists it, wired in Lighthouse, tested on a real account, your research reads it, live in swayu-app. Owner's reviews: listed and wired, not tested on a real profile. Keyword data: listed only. Rivals on the map: no step yet. Rivals' ads: blocked for India.">
+      <text class="lbl" x="250" y="30" text-anchor="middle">1 · provider lists it</text>
+      <text class="lbl" x="460" y="30" text-anchor="middle">2 · wired in Lighthouse</text>
+      <text class="lbl" x="670" y="30" text-anchor="middle">3 · tested, real account</text>
+      <text class="lbl" x="880" y="30" text-anchor="middle">4 · your research reads it</text>
+      <text class="lbl" x="1060" y="30" text-anchor="middle">5 · live in swayu-app</text>
+      <text x="10" y="84" font-weight="600">1 · Owner's reviews</text>
+      <text class="sub" x="10" y="104">Google Business Profile</text>
+      <line class="rail" x1="250" y1="90" x2="1060" y2="90"/><line class="rail-on" x1="250" y1="90" x2="460" y2="90"/>
+      <circle class="dot-on" cx="250" cy="90" r="11"/><circle class="dot-on" cx="460" cy="90" r="11"/><circle class="dot-off" cx="670" cy="90" r="11"/><circle class="dot-off" cx="880" cy="90" r="11"/><circle class="dot-off" cx="1060" cy="90" r="11"/>
+      <text class="t-part" x="670" y="122" text-anchor="middle">no real profile yet</text>
+      <text x="10" y="164" font-weight="600">2 · Keyword data</text>
+      <text class="sub" x="10" y="184">via Composio</text>
+      <line class="rail" x1="250" y1="170" x2="1060" y2="170"/>
+      <circle class="dot-on" cx="250" cy="170" r="11"/><circle class="dot-off" cx="460" cy="170" r="11"/><circle class="dot-off" cx="670" cy="170" r="11"/><circle class="dot-off" cx="880" cy="170" r="11"/><circle class="dot-off" cx="1060" cy="170" r="11"/>
+      <text class="t-part" x="460" y="202" text-anchor="middle">paid service behind it</text>
+      <text x="10" y="244" font-weight="600">3 · Rivals on the map</text>
+      <text class="sub" x="10" y="264">Google Places</text>
+      <line class="rail" x1="250" y1="250" x2="1060" y2="250"/>
+      <circle class="dot-off" cx="250" cy="250" r="11"/><circle class="dot-off" cx="460" cy="250" r="11"/><circle class="dot-off" cx="670" cy="250" r="11"/><circle class="dot-off" cx="880" cy="250" r="11"/><circle class="dot-off" cx="1060" cy="250" r="11"/>
+      <text class="t-part" x="250" y="282" text-anchor="middle">Google's own service</text>
+      <text class="t-part" x="460" y="282" text-anchor="middle">stub first</text>
+      <text x="10" y="324" font-weight="600">4 · Rivals' ads</text>
+      <text class="sub" x="10" y="344">Meta Ad Library</text>
+      <line class="rail" x1="250" y1="330" x2="1060" y2="330"/>
+      <circle class="dot-on" cx="250" cy="330" r="11"/><circle class="dot-no" cx="460" cy="330" r="11"/><circle class="dot-no" cx="670" cy="330" r="11"/><circle class="dot-no" cx="880" cy="330" r="11"/><circle class="dot-no" cx="1060" cy="330" r="11"/>
+      <text class="t-no" x="660" y="362" text-anchor="middle">Zernio lists it, but ordinary ads shown only in India are not in the library</text>
+    </svg>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>What the research needs</th><th>Source</th><th>State</th><th>What may be kept</th><th>What the owner sees, for example</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>The owner's own Google reviews and rating</td><td>The same Google review reader O6 uses. O6 keeps only the newest 12 unanswered reviews it drafts replies for, so the research calls the shared reader for the full list and rating instead of reading O6's rows</td><td><span class="pill part">Listed and wired, untested</span></td><td>Review text and stars 30 days, then the shared sweep deletes them (ruling of 3 Nov)</td><td class="own">"Your rating is 4.3 from 41 reviews; people praise the coffee and mention slow service"</td></tr>
+      <tr><td class="num">2</td><td>Monthly searches for a phrase in a city</td><td>Composio lists DataForSEO and Semrush tools; a paid service sits behind them</td><td><span class="pill part">Listed only</span></td><td>Numbers only; no personal data</td><td class="own">"About 1,900 people a month search for your kind of shop in your city"</td></tr>
+      <tr><td class="num">3</td><td>Who shows on Google Maps near the business, with ratings and reviews</td><td><b>Google Places API (New)</b>: Nearby Search or Text Search, with Place Details for a few reviews. Neither Composio nor Zernio was checked for this</td><td><span class="pill part">New, to build</span></td><td>The place id may be kept indefinitely. Ratings and reviews fall under Google's caching limits; check the Maps service terms before storing any</td><td class="own">"Five bakeries within 2 km; the closest rated 4.6 from 310 reviews"</td></tr>
+      <tr><td class="num">4</td><td>Ads rivals are running</td><td>Meta Ad Library, directly or through Zernio (<code>GET /v1/ads/library</code>)</td><td><span class="pill no">Not for India</span></td><td>Not applicable</td><td class="own">Ordinary business ads shown only in India are not in the library</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">"Covered" on the connector switchboard means a provider lists a tool for it. It does not mean the connector is built or tested. The switchboard also says no provider lists the Ad Library; Zernio's docs show it does, and the India limit still applies. Source 4: outside the EU and UK the Ad Library holds only political, election and social issue ads. Zernio's own page says "A US-only commercial advertiser is invisible whatever you pass in countries", and the same holds for India. Reading a rival's own Facebook Page is not a way round it: our connectors read only Pages the owner manages, and another business's Page needs Meta's Page Public Content Access, which requires Meta app review. So rival ads leave this month's research unless a source that respects Meta's terms is found.</p>
+</section>
+
+<section>
+  <span class="eyebrow">One research run, step by step</span>
+  <h2>At onboarding, and every month after</h2>
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant HoM as Head of marketing
+    participant AL as Analytics lead
+    participant GW as Connector gateway
+    participant SRC as Outside source
+    participant DB as Database
+    Note over HoM,DB: At onboarding the head of marketing asks. Every month after, the analytics lead starts on its own schedule.
+    HoM->>AL: research this business
+    AL->>GW: read google_places near the business
+    GW->>GW: permission, route, budget
+    GW->>SRC: one Nearby Search
+    SRC-->>GW: up to 20 places
+    GW-->>AL: ok, Place list
+    AL->>AL: extraction, fixed fields only
+    AL->>DB: research rows and insights
+    HoM->>DB: reads insights
+    HoM-->>HoM: plain sentences for the owner
+</pre>
+  <p class="note">The analytics lead and the head of marketing never message each other with results. The database is the only place they meet, so the flow is the same at onboarding and later.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Question 2 · what comes back, and why</span>
+  <h2>What the gateway decides on every call</h2>
+  <div class="figure scroll">
+    <svg viewBox="0 0 1140 300" role="img" aria-label="A call passes four checks. Permission: a send by the analytics lead is refused. Route: a source with no route is refused. Budget: a full budget returns wait. Provider: a 429 returns wait, an error returns a refusal with a reason. Otherwise the answer is ok with a list. All three answers are written to the ledger.">
+      <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>
+      <rect class="of1" x="10" y="100" width="140" height="70" rx="8"/>
+      <text x="80" y="130" text-anchor="middle" font-weight="600">Your call</text>
+      <text class="sub" x="80" y="150" text-anchor="middle">read google_places</text>
+      <rect class="con" x="190" y="100" width="150" height="70" rx="8"/>
+      <text x="265" y="130" text-anchor="middle" font-weight="600">Permission</text>
+      <text class="sub" x="265" y="150" text-anchor="middle">read only for you</text>
+      <rect class="con" x="380" y="100" width="150" height="70" rx="8"/>
+      <text x="455" y="130" text-anchor="middle" font-weight="600">Route</text>
+      <text class="sub" x="455" y="150" text-anchor="middle">which provider</text>
+      <rect class="con" x="570" y="100" width="150" height="70" rx="8"/>
+      <text x="645" y="130" text-anchor="middle" font-weight="600">Budget</text>
+      <text class="sub" x="645" y="150" text-anchor="middle">shared by all leads</text>
+      <rect class="box" x="760" y="100" width="150" height="70" rx="8"/>
+      <text x="835" y="130" text-anchor="middle" font-weight="600">Provider</text>
+      <text class="sub" x="835" y="150" text-anchor="middle">Google, Zernio</text>
+      <rect class="con" x="950" y="100" width="180" height="70" rx="8"/>
+      <text class="t-ok" x="1040" y="130" text-anchor="middle">ok: true</text>
+      <text class="sub" x="1040" y="150" text-anchor="middle">result: Place[]</text>
+      <path class="edge" d="M150 135 H188" marker-end="url(#a2)"/>
+      <path class="edge" d="M340 135 H378" marker-end="url(#a2)"/>
+      <path class="edge" d="M530 135 H568" marker-end="url(#a2)"/>
+      <path class="edge" d="M720 135 H758" marker-end="url(#a2)"/>
+      <path class="edge ok" d="M910 135 H948" marker-end="url(#a2)"/>
+      <path class="edge no" d="M265 100 V50" marker-end="url(#a2)"/>
+      <text class="t-no" x="265" y="38" text-anchor="middle">refused: may not send</text>
+      <path class="edge no" d="M455 100 V50" marker-end="url(#a2)"/>
+      <text class="t-no" x="455" y="38" text-anchor="middle">refused: no route</text>
+      <path class="edge part" d="M645 170 V222" marker-end="url(#a2)"/>
+      <text class="t-part" x="645" y="242" text-anchor="middle">wait: budget full</text>
+      <path class="edge part" d="M810 170 V222" marker-end="url(#a2)"/>
+      <text class="t-part" x="830" y="242" text-anchor="middle">wait: provider said 429</text>
+      <path class="edge no" d="M860 100 V50" marker-end="url(#a2)"/>
+      <text class="t-no" x="860" y="38" text-anchor="middle">refused: provider error</text>
+      <rect class="box" x="190" y="262" width="940" height="30" rx="6"/>
+      <text class="sub" x="660" y="282" text-anchor="middle">every answer, ok, wait or refused, writes one ledger row</text>
+    </svg>
+  </div>
+  <div class="two">
+    <div class="card">
+      <h3>What your research sends</h3>
+<pre>{
+  lead: "analytics",
+  channel: "google_places",
+  action: "read",
+  args: {
+    near: { lat: 0, lng: 0 },     // the business location
+    radiusMetres: 2000,
+    kind: "bakery"
+  }
+}</pre>
+      <p class="note">Same shape as every OF4 read today (<code>CallRequest</code> in the gateway). Only <code>args</code> differs per source.</p>
+    </div>
+    <div class="card">
+      <h3>What it gets back, one of three</h3>
+<pre>// it worked
+{ ok: true, provider: "google", result: Place[] }
+
+// a provider asked us to slow down; try again later
+{ ok: false, reason: "...", waitSeconds: 58 }
+
+// refused or broken; the reason is one plain sentence
+{ ok: false, reason: "The analytics lead may not send replies." }</pre>
+      <p class="note">Your side handles all three. A wait is not a failure: the source works, read it on the next run.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>The place shape <span class="pill part">Proposal, to agree together</span></h3>
+<pre>type Place = {
+  placeId: string;          // Google's id; the only field we keep long term
+  name: string;
+  rating?: number;          // 1.0 to 5.0
+  reviewCount?: number;
+  distanceMetres?: number;
+  mapsLink?: string;        // google.com/maps only
+  reviews?: { author: string; stars: number; text: string; at: string }[];  // up to 5, credit the author when shown
+};</pre>
+    <p class="note">You build against a stub that returns exactly this shape with sample places. When the live Places read lands, nothing on your side changes.</p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">What may be kept, and for how long</span>
+  <h2>Each kind of data has its own clock</h2>
+  <div class="figure">
+    <div class="keep">
+      <div class="axis"><span></span><div class="ticks"><span>the read</span><span>30 days</span><span>while the business exists</span></div></div>
+      <div class="row"><span>Rival's place id</span><div class="track"><div class="fill f-ok" style="width:100%">kept, Google exempts it</div></div></div>
+      <div class="row"><span>Owner's review text and stars</span><div class="track"><div class="fill f-part" style="width:50%">30 days, then swept</div></div></div>
+      <div class="row"><span>Rival's rating and reviews</span><div class="track"><div class="fill f-no" style="width:14%">read fresh</div></div></div>
+      <div class="row"><span>Keyword numbers</span><div class="track"><div class="fill f-ok" style="width:100%">kept, no personal data</div></div></div>
+      <div class="row"><span>Insights you write</span><div class="track"><div class="fill f-part" style="width:72%">to decide with the lead</div></div></div>
+    </div>
+  </div>
+  <p class="note">"Read fresh" holds until someone reads the Maps service terms on ratings and reviews. If they allow 30 days, that bar grows to match the owner's own reviews.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Cost, a few runs a month per business</span>
+  <h2>What source 3 costs</h2>
+  <div class="tiles">
+    <div class="tile"><span class="big">1 call</span><span class="lbl">One Nearby Search returns up to 20 places near the business</span></div>
+    <div class="tile"><span class="big">about $0.04</span><span class="lbl">Per call with ratings and reviews (Enterprise and Atmosphere fields, about $40 per 1,000)</span></div>
+    <div class="tile"><span class="big">1,000 free</span><span class="lbl">Free calls a month for Enterprise level calls, since March 2025</span></div>
+    <div class="tile"><span class="big">80 calls</span><span class="lbl">20 beta businesses, 4 runs a month each: inside the free amount</span></div>
+  </div>
+  <p class="note">Prices come from third party summaries of Google's pricing page and one Google page disagrees with them, so check <a href="https://developers.google.com/maps/billing-and-pricing/pricing">Google's pricing page</a> before the key is created. Any spend is Harish's call.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Rules your research meets in swayu-app</span>
+  <h2>Before the data reaches an agent</h2>
+  <div class="two">
+    <div class="card"><h3>Rival text is untrusted (rule 8)</h3><p>Reviews and posts from rivals pass a schema constrained extraction step: closed lists where a field has fixed values, unknown fields rejected, a check for instructions hidden in free text. Only then does an agent read them.</p></div>
+    <div class="card"><h3>Untrue claims (rule 8b)</h3><p>A rival's page can carry a false statement that reads like a fact. The research names the page each claim came from, so the owner can open it before trusting it.</p></div>
+    <div class="card"><h3>Keep only what Google allows</h3><p>The place id may be kept indefinitely. Treat ratings and reviews as read fresh on each run until the Maps service terms say otherwise. The owner's own review text expires after 30 days.</p></div>
+    <div class="card"><h3>One way out, one way in</h3><p>Every outside read goes through the gateway, so permission, budget and ledger apply. A direct call to Google from the research code would bypass all three.</p></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Who does what</span>
+  <h2>Nobody waits on the other</h2>
+  <div class="scroll">
+    <div class="lanes">
+      <div class="hd"></div><div class="hd">Now</div><div class="hd">This week</div><div class="hd">After the swayu-app restructure</div>
+      <div class="who" style="color:var(--of1)">HRB</div>
+      <div class="cell"><span class="task hrb">Agree the place shape and this week's sources with Sujit</span></div>
+      <div class="cell"><span class="task hrb">Build the research on the stub and the data you have</span><span class="task hrb">Source 1 through the same review reader O6 uses</span></div>
+      <div class="cell"><span class="task hrb">Research moves in as a pull request on the new layout</span></div>
+      <div class="who" style="color:var(--mark)">Sujit</div>
+      <div class="cell"><span class="task">Agree the place shape with HRB</span></div>
+      <div class="cell"><span class="task">Permission rule: analytics reads, never sends</span><span class="task">Stub <code>google_places</code> read in the agreed shape</span><span class="task">Check Places price and terms</span><span class="task">Swap the stub for the live read, check it against Google Maps by hand</span></div>
+      <div class="cell"><span class="task">Connector code moves in as a pull request</span></div>
+      <div class="who" style="color:var(--part)">Harish</div>
+      <div class="cell empty">Nothing yet</div>
+      <div class="cell"><span class="task dec">Says yes or no to the Google key and spend (<code>SWAYU_GOOGLE_PLACES_API_KEY</code>, in 1Password)</span></div>
+      <div class="cell"><span class="task dec">Says go: connector code sits in shared paths</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Still open</span>
+  <h2>Open questions</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Question</th><th>Who answers</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td>Do the Maps service terms let us store a rival's rating, and for how long?</td><td>Sujit reads the terms</td><td>Decides whether the research table keeps ratings or rereads them each run</td></tr>
+      <tr><td>Is rival ad research in scope for India this month at all?</td><td>HRB with Dhruv</td><td>The Ad Library cannot give ordinary business ads in India</td></tr>
+      <tr><td>Who owns reading the owner's own reviews when both O6 and the research use them?</td><td>Engineering lead, asked 5 Nov</td><td>One reader, one 30 day sweep, no double reads</td></tr>
+      <tr><td>Does Composio or Zernio offer Places data?</td><td>Sujit checks</td><td>Could save a new key; not checked yet</td></tr>
+      <tr><td>Which keyword service, and who pays for it?</td><td>Sujit checks, Harish decides</td><td>DataForSEO and Semrush both charge behind Composio</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<p class="note">Sources: <a href="https://developers.google.com/maps/documentation/places/web-service/policies">Places API policies</a> (place id exempt from caching limits), <a href="https://docs.zernio.com/platforms/meta-ads/ad-library">Zernio Ad Library docs</a>, <a href="https://www.woosmap.com/blog/google-places-api-pricing">Places pricing summary</a>, <a href="https://openplacesapi.com/blog/google-places-api-pricing">second pricing summary</a>, the connector switchboard and the Lighthouse gateway code. Read 5 November 2026.</p>
+
+</div>

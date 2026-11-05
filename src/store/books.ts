@@ -12,6 +12,7 @@ export type MessageRow = {
   body: string;
   stars: number | null;
   link?: string | null;
+  vanishedAt?: Date | null;
 };
 
 export type EventRow = { id: number; contentId: string; kind: string; replyText: string | null };
@@ -29,6 +30,7 @@ export function toState(ownerNames: string[], messages: MessageRow[], events: Ev
       text: m.body,
       ...(m.stars === null ? {} : { stars: m.stars }),
       ...(m.link ? { link: m.link } : {}),
+      ...(m.vanishedAt ? { vanished: true } : {}),
     });
     state.thread[m.contentId] = m.thread;
   }
