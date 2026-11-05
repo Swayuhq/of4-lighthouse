@@ -13,7 +13,7 @@ const TIMEOUT_MS = 20_000;
 type Answer = { data?: unknown[]; id?: string };
 
 /** Runs one Composio action and returns what Meta answered. Any refusal throws with Composio's own reason. */
-async function run(slug: string, args: Record<string, unknown>, toolkit: Toolkit = 'facebook', again = false): Promise<Answer> {
+export async function run(slug: string, args: Record<string, unknown>, toolkit: Toolkit = 'facebook', again = false): Promise<Answer> {
   const key = process.env.SWAYU_COMPOSIO_API_KEY;
   if (!key) throw new Error('SWAYU_COMPOSIO_API_KEY is not set. Start Lighthouse with pnpm start:op.');
   await LIMITS.composio.take();

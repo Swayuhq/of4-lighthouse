@@ -43,7 +43,7 @@ export const composio: Provider = async (channel, action, args) => {
 // ---------- Zernio ----------
 
 /** One request to Zernio inside its budget. A 429 pauses every Zernio call; the request is sent once more only if the wait is short. */
-async function zernio<T>(path: string, init: RequestInit = {}, again = false): Promise<T> {
+export async function zernio<T>(path: string, init: RequestInit = {}, again = false): Promise<T> {
   const key = process.env.SWAYU_ZERNIO_API_KEY;
   if (!key) throw new Error('SWAYU_ZERNIO_API_KEY is not set. Start Lighthouse with pnpm start:op.');
   await LIMITS.zernio.take();
@@ -68,7 +68,7 @@ async function zernio<T>(path: string, init: RequestInit = {}, again = false): P
 type Account = { _id?: string; id?: string; platform: string };
 
 /** The first connected account on that platform. Lighthouse has one test business. */
-async function accountId(platform: string): Promise<string> {
+export async function accountId(platform: string): Promise<string> {
   const { accounts } = await zernio<{ accounts: Account[] }>(`/accounts?platform=${encodeURIComponent(platform)}`);
   const found = accounts.find(a => a.platform === platform);
   const id = found?._id ?? found?.id;
