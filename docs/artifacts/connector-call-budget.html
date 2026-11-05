@@ -1,0 +1,290 @@
+<title>Connector Call Budget</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one wide landscape column (about 1180px), figures first, prose only for the argument. */
+:root {
+  --bg: #f6f8f7; --panel: #ffffff; --ink: #14231f; --muted: #52635e; --rule: #d7e0dc;
+  --mark: #009B74; --deep: #00584D; --over: #b4412b; --warn: #a86b00; --soft: #e6f2ee; --overSoft: #f8e7e3;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1716; --panel: #16211f; --ink: #e4ece9; --muted: #9db0aa; --rule: #2a3936;
+  --mark: #2fbf98; --deep: #7fd6bd; --over: #ef8a73; --warn: #e3ad4a; --soft: #183029; --overSoft: #3a201a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1716; --panel: #16211f; --ink: #e4ece9; --muted: #9db0aa; --rule: #2a3936;
+  --mark: #2fbf98; --deep: #7fd6bd; --over: #ef8a73; --warn: #e3ad4a; --soft: #183029; --overSoft: #3a201a; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 64px; display: grid; gap: 48px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(30px, 4vw, 44px); }
+h2 { font-size: 26px; }
+h3 { font-size: 18px; }
+p { margin: 0; max-width: 70ch; }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+section { display: grid; gap: 16px; }
+.lede { color: var(--muted); font-size: 18px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.tile { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 18px 20px; display: grid; gap: 6px; min-width: 0; }
+.tile b { font: 700 34px/1 var(--display); font-variant-numeric: tabular-nums; }
+.tile.over b { color: var(--over); }
+.tile span { color: var(--muted); font-size: 14px; }
+.figure { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 20px; overflow-x: auto; }
+.figure svg { display: block; width: 100%; height: auto; min-width: 720px; }
+.figure svg text { fill: var(--ink); font-family: var(--body); font-size: 13px; }
+.figure svg .muted { fill: var(--muted); }
+.figure svg .num { font-family: var(--mono); font-size: 12px; }
+.note { font-size: 14px; color: var(--muted); }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 15px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 600 12px/1.3 var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill { display: inline-block; font: 600 12px/1 var(--mono); padding: 4px 8px; border-radius: 99px; white-space: nowrap; }
+.pill.ok { background: var(--soft); color: var(--deep); }
+.pill.over { background: var(--overSoft); color: var(--over); }
+.pill.open { border: 1px solid var(--rule); color: var(--muted); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.two > div { min-width: 0; }
+code { font-family: var(--mono); font-size: 13px; }
+a { color: var(--deep); }
+ol.q { margin: 0; padding-left: 22px; display: grid; gap: 10px; max-width: 80ch; }
+</style>
+
+<div class="wrap">
+
+<header style="display:grid;gap:14px">
+  <span class="eyebrow">Connectors and channels · shared layer · 5 November 2026</span>
+  <h1>How many outside calls Swayu makes, and where the limits bite</h1>
+  <p class="lede">Every outcome family reads from and writes to the same outside providers. This page counts the calls each family said it needs, sets them against each provider's published limit, and names the one place the limit breaks first.</p>
+</header>
+
+<section>
+  <div class="tiles">
+    <div class="tile"><span>Zernio budget, shared by everyone on one Zernio team</span><b>600 / min</b><span>3 to 2,000 connected accounts. 60 / min with 0 to 2.</span></div>
+    <div class="tile"><span>All families together, at 20 businesses, busiest case</span><b>about 24 / min</b><span>34,200 calls a day spread evenly. Daily volume is not the problem.</span></div>
+    <div class="tile over"><span>One open inbox, busiest case, per business</span><b>52 / min</b><span>The inbox checks every 30 seconds, and one check can cost 26 Zernio requests.</span></div>
+    <div class="tile over"><span>Where the Zernio budget runs out</span><b>12 businesses</b><span>with inboxes open at once, before any other family calls Zernio.</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">1 · What each family asked for</span>
+  <h2>Calls per business per day, from the connectors survey</h2>
+  <p>18 answers from 2 November. Each family picked a band per connector, so the bars show the lowest and highest the bands allow, summed over that family's connectors. The scale is logarithmic so the small families stay visible.</p>
+  <div class="figure" role="img" aria-label="Range of calls per business per day by family, log scale">
+    <svg viewBox="0 0 1100 330">
+      <!-- x scale: log10, 1 -> 260, 10000 -> 1060, 200px per decade -->
+      <g class="muted">
+        <line x1="260" y1="20" x2="260" y2="270" stroke="var(--rule)"/>
+        <line x1="460" y1="20" x2="460" y2="270" stroke="var(--rule)"/>
+        <line x1="660" y1="20" x2="660" y2="270" stroke="var(--rule)"/>
+        <line x1="860" y1="20" x2="860" y2="270" stroke="var(--rule)"/>
+        <line x1="1060" y1="20" x2="1060" y2="270" stroke="var(--rule)"/>
+        <text class="muted num" x="260" y="292" text-anchor="middle">1</text>
+        <text class="muted num" x="460" y="292" text-anchor="middle">10</text>
+        <text class="muted num" x="660" y="292" text-anchor="middle">100</text>
+        <text class="muted num" x="860" y="292" text-anchor="middle">1,000</text>
+        <text class="muted num" x="1060" y="292" text-anchor="middle">10,000</text>
+        <text class="muted" x="660" y="320" text-anchor="middle">calls per business per day</text>
+      </g>
+      <g>
+        <text x="0" y="50">OF1 Plans, reports, analytics</text>
+        <rect x="460" y="36" width="200" height="20" rx="4" fill="var(--mark)"><title>OF1: 10 to 100 a day, read only, once a day</title></rect>
+        <text class="num" x="670" y="51">10 to 100 · read only · once a day</text>
+
+        <text x="0" y="90">OF2 Social</text>
+        <rect x="262" y="76" width="198" height="20" rx="4" fill="var(--mark)"><title>OF2: under 10 a day, read and write, once a day</title></rect>
+        <text class="num" x="470" y="91">under 10 · read and write · once a day</text>
+
+        <text x="0" y="130">OF3 Google and website</text>
+        <rect x="580" y="116" width="460" height="20" rx="4" fill="var(--mark)"><title>OF3: 14 connectors, 40 to 500 a day, mostly when the owner asks</title></rect>
+        <text class="num" x="580" y="111" text-anchor="start" style="font-size:11px">40 to 500 · 14 connectors · mostly when the owner asks</text>
+
+        <text x="0" y="170">OF4 Customer replies</text>
+        <rect x="460" y="156" width="200" height="20" rx="4" fill="var(--mark)"><title>OF4: 10 to 100 a day, read and write, under a minute</title></rect>
+        <text class="num" x="670" y="171">10 to 100 · read and write · under a minute</text>
+
+        <text x="0" y="210">OF5 Ads</text>
+        <rect x="660" y="196" width="200" height="20" rx="4" fill="var(--deep)"><title>OF5: 100 to 1,000 a day, read and write, within an hour</title></rect>
+        <text class="num" x="870" y="211">100 to 1,000 · read and write · within an hour</text>
+
+        <text x="0" y="250">OF6 Voice</text>
+        <text class="muted num" x="270" y="250">no survey answer</text>
+      </g>
+    </svg>
+  </div>
+  <p class="note">Bands: "under 10" counted as up to 10, "10 to 100" and "100 to 1,000" as written. Total per business: 160 to 1,710 a day. Many of OF3's calls go to Google, WordPress or other hosts, not Zernio or Composio, so this is the whole picture, not one provider's share.</p>
+</section>
+
+<section>
+  <span class="eyebrow">2 · The multiplier</span>
+  <h2>One inbox check is up to 26 Zernio requests</h2>
+  <p>The inbox asks every connected channel for new messages every 30 seconds while the page is open. Reading comments through Zernio takes one request to find the account, one to list posts, then one per post that has comments, for up to 10 posts.</p>
+  <div class="figure" role="img" aria-label="One inbox check fans out into 26 Zernio requests">
+    <svg viewBox="0 0 1100 250">
+      <rect x="10" y="95" width="170" height="56" rx="8" fill="var(--soft)" stroke="var(--mark)"/>
+      <text x="95" y="119" text-anchor="middle" style="font-weight:600">Inbox check</text>
+      <text class="muted" x="95" y="138" text-anchor="middle">every 30 seconds</text>
+
+      <g stroke="var(--muted)" fill="none"><path d="M180 123 C230 123 230 45 280 45"/><path d="M180 123 L280 123"/><path d="M180 123 C230 123 230 201 280 201"/></g>
+
+      <rect x="280" y="20" width="200" height="50" rx="8" fill="var(--panel)" stroke="var(--rule)"/>
+      <text x="380" y="50" text-anchor="middle">Facebook comments</text>
+      <rect x="280" y="98" width="200" height="50" rx="8" fill="var(--panel)" stroke="var(--rule)"/>
+      <text x="380" y="128" text-anchor="middle">Instagram comments</text>
+      <rect x="280" y="176" width="200" height="50" rx="8" fill="var(--panel)" stroke="var(--rule)"/>
+      <text x="380" y="206" text-anchor="middle">Google reviews</text>
+
+      <g stroke="var(--muted)" fill="none"><path d="M480 45 L540 45"/><path d="M480 123 L540 123"/><path d="M480 201 L540 201"/></g>
+
+      <g>
+        <text class="num" x="550" y="40">account 1 + post list 1 + up to 10 posts</text>
+        <text class="num" x="550" y="58" style="font-weight:600">= 12 requests</text>
+        <text class="num" x="550" y="118">account 1 + post list 1 + up to 10 posts</text>
+        <text class="num" x="550" y="136" style="font-weight:600">= 12 requests</text>
+        <text class="num" x="550" y="196">account 1 + review list 1</text>
+        <text class="num" x="550" y="214" style="font-weight:600">= 2 requests</text>
+      </g>
+      <rect x="880" y="88" width="200" height="70" rx="8" fill="var(--overSoft)" stroke="var(--over)"/>
+      <text x="980" y="118" text-anchor="middle" style="font-weight:600">26 per check</text>
+      <text x="980" y="140" text-anchor="middle">52 per minute</text>
+      <g stroke="var(--over)" fill="none"><path d="M830 52 C860 52 855 123 880 123"/><path d="M830 130 L880 123"/><path d="M830 208 C860 208 855 123 880 123"/></g>
+    </svg>
+  </div>
+  <p class="note">WhatsApp arrives by Meta's own push to Swayu, so it costs no reads. A second open tab doubles the count, because reads are shared only while one is already in flight.</p>
+</section>
+
+<section>
+  <span class="eyebrow">3 · Where it breaks</span>
+  <h2>Zernio requests per minute as businesses open their inbox</h2>
+  <div class="figure" role="img" aria-label="Requests per minute rise by 52 per business and pass 600 at 12 businesses">
+    <svg viewBox="0 0 1100 330">
+      <!-- x: business n at 80 + (n-1)*50, bar width 34; y: 0 at 280, 1100 at 20 -> 0.2364 px per request -->
+      <line x1="60" y1="280" x2="1080" y2="280" stroke="var(--rule)"/>
+      <line x1="60" y1="138.2" x2="1080" y2="138.2" stroke="var(--over)" stroke-dasharray="6 5"/>
+      <text class="num" x="1078" y="130" text-anchor="end" style="fill:var(--over)">Zernio budget 600 / min</text>
+      <text class="muted num" x="54" y="284" text-anchor="end">0</text>
+      <text class="muted num" x="54" y="142" text-anchor="end">600</text>
+      <text class="muted num" x="54" y="44" text-anchor="end">1,040</text>
+      <g id="bars"></g>
+      <text class="muted" x="570" y="318" text-anchor="middle">businesses with the inbox open at the same time</text>
+    </svg>
+  </div>
+  <p class="note">Busiest case: every channel has 10 recent posts with comments. Measured on the test business on 5 November: about 570 reads over 12 minutes, one every 5 seconds, with 0 failures and 0 limit answers, because the test posts have few comments. The busiest case has not been measured.</p>
+</section>
+
+<section>
+  <span class="eyebrow">4 · The published limits</span>
+  <h2>Each provider counts differently</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Provider</th><th>Limit</th><th>Counted across</th><th>When it is hit</th><th>What the owner would notice</th></tr></thead>
+    <tbody>
+      <tr><td>Zernio</td><td class="n">600 / min</td><td>The whole Zernio team, one key or many</td><td>Answers 429 with seconds to wait</td><td>New comments and reviews show up late</td></tr>
+      <tr><td>Zernio analytics</td><td class="n">10 / second</td><td>The whole Zernio team</td><td>Same</td><td>Numbers on a report load slowly</td></tr>
+      <tr><td>Zernio posting</td><td class="n">25 posts / hour</td><td>Each connected account</td><td>Holds the post with a cooldown</td><td>A scheduled post goes out later</td></tr>
+      <tr><td>Composio</td><td class="n">2,000 / min</td><td>The whole Composio organisation</td><td>Answers 429 with seconds to wait</td><td>Same as Zernio</td></tr>
+      <tr><td>Meta, Pages</td><td class="n">4,800 × engaged users / day</td><td>Each Page</td><td>Refuses until the window clears</td><td>A small Page with few engaged users gets a small budget</td></tr>
+      <tr><td>Meta, Instagram</td><td class="n">4,800 × impressions / day</td><td>Each app and account pair</td><td>Same</td><td>Same</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Sources: docs.zernio.com/guides/rate-limits, docs.composio.dev rate limits (Hobby plan), Meta Graph API rate limiting page, all read 5 November 2026. Zernio and Composio sit in front of Meta, so Meta's own per Page limit still applies behind them.</p>
+</section>
+
+<section>
+  <span class="eyebrow">5 · Running at the same time</span>
+  <h2>What already holds, and the gap</h2>
+  <div class="two">
+    <div class="figure" style="display:grid;gap:10px">
+      <h3>Holds today, inside one running app</h3>
+      <p>One budget per provider, shared by every lead and every open tab in that app. Taking a slot has no gap between the check and the take, so two leads cannot both take the last slot.</p>
+      <p>A 429 pauses every call to that provider until the wait is over. A caller that would wait more than 10 seconds fails at once with the reason.</p>
+      <p>Ten leads asking for the same read at the same moment cost one read. Replies are never shared.</p>
+      <p>Each answer's limit header raises or lowers the budget to the provider's real number.</p>
+    </div>
+    <div class="figure" style="display:grid;gap:10px;border-color:var(--over)">
+      <h3>The gap: Zernio counts the team, the budget counts one app</h3>
+      <svg viewBox="0 0 520 190" style="min-width:0">
+        <rect x="10" y="10" width="150" height="40" rx="6" fill="var(--panel)" stroke="var(--rule)"/><text x="85" y="35" text-anchor="middle">swayu-app</text>
+        <rect x="10" y="70" width="150" height="40" rx="6" fill="var(--panel)" stroke="var(--rule)"/><text x="85" y="95" text-anchor="middle">Lighthouse</text>
+        <rect x="10" y="130" width="150" height="40" rx="6" fill="var(--panel)" stroke="var(--rule)"/><text x="85" y="155" text-anchor="middle">Ads tools</text>
+        <g stroke="var(--muted)" fill="none"><path d="M160 30 C260 30 260 90 340 90"/><path d="M160 90 L340 90"/><path d="M160 150 C260 150 260 90 340 90"/></g>
+        <text class="num" x="250" y="22" text-anchor="middle">each thinks it has 600</text>
+        <rect x="340" y="62" width="170" height="56" rx="6" fill="var(--overSoft)" stroke="var(--over)"/><text x="425" y="86" text-anchor="middle" style="font-weight:600">Zernio team</text><text x="425" y="106" text-anchor="middle">600 / min in total</text>
+      </svg>
+      <p>Two ways to close it. One shared counter in the database that every app takes from. Or one gateway service that every family calls, so one budget sees every request.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">6 · Making it fit</span>
+  <h2>Changes, in the order they save the most</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Change</th><th>Saves</th><th>Cost</th><th>Status</th><th>What the owner sees</th></tr></thead>
+    <tbody>
+      <tr><td>Let Zernio push new comments and reviews to Swayu instead of asking every 30 seconds. Its docs list <code>comment.received</code> and, for Google, <code>review.new</code> in real time.</td><td>Almost all inbox reads</td><td>One webhook route and a signature check</td><td><span class="pill open">To agree</span></td><td>Messages arrive in seconds, not on the next check</td></tr>
+      <tr><td>Ask only for posts that changed since the last read, not the last 10 every time</td><td>Up to 10 of 12 requests per channel</td><td>Keep the time of the last read per channel</td><td><span class="pill open">To agree</span></td><td>Nothing changes</td></tr>
+      <tr><td>One shared Zernio budget across every app on the team</td><td>No surprise 429s when families run at once</td><td>A counter table or one gateway service</td><td><span class="pill open">To agree</span></td><td>Nothing, until it would have failed</td></tr>
+      <tr><td>Owner replies first. A reply the owner pressed Send on goes ahead of background reads and reports.</td><td>The calls that matter most never wait</td><td>Two queues on one budget</td><td><span class="pill open">To agree</span></td><td>Send never stalls behind a report</td></tr>
+      <tr><td>Count every call by family, provider and day, from the ledger row each call already writes</td><td>Lets us see the budget before it breaks</td><td>One query and one page</td><td><span class="pill ok">Ledger exists</span></td><td>Nothing; this is for the team</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <span class="eyebrow">7 · Tracking</span>
+  <h2>What we will count every day</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Measure</th><th>Comes from</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Calls per family, per provider, per day</td><td>The ledger row written on every gateway call, which already names the lead</td><td>Checks the survey bands against what really happens</td></tr>
+      <tr><td>Busiest minute per provider</td><td>The same rows, grouped by minute</td><td>Limits are per minute, so daily totals hide the peaks</td></tr>
+      <tr><td>Limit answers (429) and seconds waited</td><td>One log line per 429, already written</td><td>The first sign a budget is too small</td></tr>
+      <tr><td>Remaining budget each provider reports</td><td>The limit headers on every answer</td><td>The provider's own count, not ours</td></tr>
+      <tr><td>Seconds from a customer's comment to the inbox</td><td>The arrival probe, measured per hop</td><td>The owner feels this one directly</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <span class="eyebrow">8 · To decide</span>
+  <h2>Open questions</h2>
+  <ol class="q">
+    <li>Is every family on one Zernio team? If yes, the 600 a minute is shared, including the ads tools already connected.</li>
+    <li>Push or ask: may the inbox move to Zernio's webhooks before beta?</li>
+    <li>One shared budget: a counter table every app takes from, or one gateway service every family calls?</li>
+    <li>Who owns the daily usage count: the connectors layer, or Swayu's own health layer?</li>
+    <li>Which keyword data service, and who pays? OF1, OF3 and OF5 all asked for one.</li>
+  </ol>
+</section>
+
+<section>
+  <span class="eyebrow">Not yet measured</span>
+  <p class="note">The busiest case in sections 2 and 3. Meta's real budget for a small Page. Whether "tracked post" in Zernio's webhook docs covers posts made outside Zernio. Google Places and Google Business Profile quotas. These are checked before the numbers above are treated as final.</p>
+</section>
+
+</div>
+
+<script>
+// Bars for section 3: 52 requests per minute per business, 1 to 20 businesses.
+(function () {
+  var g = document.getElementById('bars');
+  if (!g) return;
+  var ns = 'http://www.w3.org/2000/svg';
+  for (var n = 1; n <= 20; n++) {
+    var v = 52 * n, x = 80 + (n - 1) * 50, h = v * 0.2364, y = 280 - h;
+    var r = document.createElementNS(ns, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y); r.setAttribute('width', 34); r.setAttribute('height', h); r.setAttribute('rx', 4);
+    r.setAttribute('fill', v > 600 ? 'var(--over)' : 'var(--mark)');
+    var t = document.createElementNS(ns, 'title'); t.textContent = n + ' businesses: ' + v + ' requests a minute' + (v > 600 ? ', over the budget' : '');
+    r.appendChild(t); g.appendChild(r);
+    var l = document.createElementNS(ns, 'text');
+    l.setAttribute('x', x + 17); l.setAttribute('y', 298); l.setAttribute('text-anchor', 'middle'); l.setAttribute('class', 'muted num');
+    l.textContent = n; g.appendChild(l);
+  }
+})();
+</script>
