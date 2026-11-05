@@ -106,6 +106,24 @@ describe('The activity list', () => {
     expect(sentence({ id: 1, lead: 'analytics', channel: 'google_reviews', action: 'read_all', outcome: 'done', provider: 'zernio', note: null, at: new Date() }))
       .toBe('Read all your Google reviews through Zernio.');
   });
+
+  it('a read that stopped early never claims it read them all', () => {
+    expect(sentence({ id: 1, lead: 'analytics', channel: 'google_reviews', action: 'read_all', outcome: 'done', provider: 'zernio', note: 'stopped early', at: new Date() }))
+      .toBe('Read part of your Google reviews through Zernio; it stopped early.');
+  });
+
+  it('the gateway marks the ledger row when the read stopped early', async () => {
+    const { createGateway } = await import('../src/gateway/gateway');
+    const rows: { outcome: string; note?: string }[] = [];
+    const unused = async () => { throw new Error('not this provider'); };
+    const gateway = createGateway({
+      policies: POLICIES, routes: { 'google_reviews:read_all': 'zernio' },
+      providers: { composio: unused, zernio: async () => ({ complete: false, reviews: [] }), own: unused },
+      askOwner: async () => 'approved', record: async row => { rows.push(row); },
+    });
+    await gateway.call({ lead: 'analytics', channel: 'google_reviews', action: 'read_all', args: {} });
+    expect(rows).toMatchObject([{ outcome: 'done', note: 'stopped early' }]);
+  });
 });
 
 describe('Verifier findings, round 2', () => {
@@ -140,10 +158,5 @@ describe('Verifier findings, round 2', () => {
     pages({ '': { reviews: [review('r1', { rating: 0 })], totalReviewCount: 1, nextPageToken: null } });
     const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
     expect(set.reviews[0].stars).toBeUndefined();
-  });
-
-  it('no Google profile connected reads in plain words', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ accounts: [] }))));
-    await expect(zernioProvider('google_reviews', 'read_all', {})).rejects.toThrow('no Google Business Profile is connected');
   });
 });

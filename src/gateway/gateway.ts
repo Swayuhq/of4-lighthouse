@@ -82,7 +82,9 @@ export function createGateway(deps: GatewayDeps) {
 
     try {
       const result = await send(provider, request);
-      await log(request, 'done', { provider });
+      // A read that stopped before the end says so in the ledger, so nothing claims it read everything.
+      const partial = (result as { complete?: unknown } | null)?.complete === false;
+      await log(request, 'done', partial ? { provider, note: 'stopped early' } : { provider });
       return { ok: true, provider, result };
     } catch (error) {
       const reason = `${PROVIDER_LABEL[provider]} could not ${VERB[action] ?? action} ${label(channel)}: ${error instanceof Error ? error.message : 'unknown error'}`;

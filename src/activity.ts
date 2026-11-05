@@ -10,7 +10,7 @@ export function sentence(r: CallRow): string {
   const via = r.provider ? ` through ${PROVIDER[r.provider] ?? r.provider}` : '';
   if (r.outcome === 'refused') return `Stopped: ${r.note ?? 'not allowed.'}`;
   if (r.outcome === 'failed') return `Failed: ${r.note ?? 'unknown error.'}`;
-  if (r.action === 'read_all') return `Read all your ${channel}${via}.`;
+  if (r.action === 'read_all') return r.note ? `Read part of your ${channel}${via}; it stopped early.` : `Read all your ${channel}${via}.`;
   if (r.action === 'read' && r.channel === 'google_places') return `Looked up nearby businesses on ${channel}${via}.`;
   if (r.action === 'read') return `Read new ${r.channel === 'google_reviews' ? 'reviews' : 'comments'} on ${channel}${via}.`;
   if (r.outcome === 'held') return `Wrote a reply on ${channel} and kept it for you to send.`;
