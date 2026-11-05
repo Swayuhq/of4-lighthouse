@@ -3,7 +3,8 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ADAPTERS, pullSample, toMessages, type Channel } from './connectors';
-import { connections, load, saveFacts, saveThemes, storeFromChannel, unread } from './store/db';
+import { connections, load, saveFacts, saveThemes, storeFromChannel, takePush, unread, type PushOutcome } from './store/db';
+import type { Push } from './zernio-push';
 import { agentsOn } from './agents/model';
 import { readAll } from './agents/reader';
 import { findThemes } from './agents/insights';
@@ -51,4 +52,16 @@ export async function receive(channel: Channel, items: unknown[]): Promise<numbe
   const added = await storeFromChannel(channel, messages, conn.cursor);
   if (added) await readNew();
   return added;
+}
+
+/**
+ * Stores what a provider pushed, once per event. A sample send, an event Lighthouse does not read and a message that does not
+ * fit the one shape are recorded and store nothing. The caller starts the readers only when this says stored.
+ */
+export async function receivePush(provider: string, push: Push): Promise<PushOutcome> {
+  const row = { provider, eventId: push.eventId, kind: push.kind, channel: push.channel, sentAt: push.sentAt };
+  if (push.test) return takePush(row, [], 'test');
+  if (!push.channel || !push.item) return takePush(row, [], push.skip === 'shape' ? 'refused' : 'skipped');
+  const { messages } = toMessages(push.channel, [push.item]);
+  return takePush(row, messages, messages.length ? null : 'refused');
 }

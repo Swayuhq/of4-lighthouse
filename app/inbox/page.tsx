@@ -27,6 +27,8 @@ export default async function Page() {
     themes: liveThemes(await loadThemes(), new Set(messages.map(m => m.contentId))),
     business: businessName,
     channels: await channelViews(messages),
+    // The webhook refuses every push until its secret is set, so the secret is what turns push on.
+    pushOn: Boolean(process.env.SWAYU_ZERNIO_WEBHOOK_SECRET),
   };
   return <Inbox data={data} />;
 }

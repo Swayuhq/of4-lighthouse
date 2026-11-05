@@ -1,6 +1,6 @@
 // Lighthouse keeps books, it does not look and guess. A message is written once,
 // and every change to it is a new event row, so the counts line is a sum the owner can check.
-import { bigserial, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigserial, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 import type { Facts } from '../facts';
 import type { Theme } from '../agents/insights';
 import type { Channel, ConnectionStatus } from '../connectors';
@@ -89,3 +89,22 @@ export const connectorCall = pgTable('connector_call', {
   note: text('note'),
   at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * One row for every event a provider pushed to us. The unique event id drops a delivery we already took.
+ * It holds ids and times only, never the message text, which lives once in the message table.
+ */
+export const pushEvent = pgTable('push_event', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  tenantId: uuid('tenant_id').notNull(),
+  provider: text('provider').notNull(),
+  eventId: text('event_id').notNull(),
+  kind: text('kind').notNull(),
+  channel: text('channel'),
+  contentId: text('content_id'),
+  /** stored, already had, not connected, test, skipped or refused. */
+  outcome: text('outcome').notNull(),
+  /** When the provider made the event. */
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [unique().on(t.provider, t.eventId)]);

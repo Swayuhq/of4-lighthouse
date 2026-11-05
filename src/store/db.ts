@@ -6,7 +6,7 @@ import type { InboxMessage } from '../parse';
 import type { Status } from '../inbox';
 import type { Facts } from '../facts';
 import type { Theme } from '../agents/insights';
-import { business, connection, connectorCall, event, insight, message, messageFacts } from './schema';
+import { business, connection, connectorCall, event, insight, message, messageFacts, pushEvent } from './schema';
 import { ADAPTERS, type Channel } from '../connectors';
 import { toState } from './books';
 
@@ -104,6 +104,43 @@ export async function storeFromChannel(channel: Channel, messages: InboxMessage[
   });
 }
 
+export type PushOutcome = 'stored' | 'already had' | 'not connected' | 'test' | 'skipped' | 'refused' | 'duplicate';
+
+/**
+ * Takes one pushed event and its message in one transaction. The event row goes first, so a second delivery of the same
+ * event waits on it and then finds it taken. A failure rolls both back, so the provider's retry is not mistaken for a duplicate.
+ * The message is stored only while its channel is connected, checked in the same statement that marks the channel heard from.
+ */
+export async function takePush(
+  row: { provider: string; eventId: string; kind: string; channel: Channel | null; sentAt: string | null },
+  messages: InboxMessage[],
+  outcome: Exclude<PushOutcome, 'stored' | 'already had' | 'not connected' | 'duplicate'> | null,
+): Promise<PushOutcome> {
+  await ensureBusiness();
+  const sent = row.sentAt ? new Date(row.sentAt) : null;
+  return db.transaction(async tx => {
+    const [taken] = await tx.insert(pushEvent).values({
+      tenantId: TENANT, provider: row.provider, eventId: row.eventId, kind: row.kind, channel: row.channel,
+      contentId: messages[0]?.id ?? null, outcome: outcome ?? 'not connected',
+      sentAt: sent && !Number.isNaN(sent.getTime()) ? sent : null,
+    }).onConflictDoNothing().returning({ id: pushEvent.id });
+    if (!taken) return 'duplicate';
+    if (outcome || !row.channel || !messages.length) return outcome ?? 'skipped';
+    const live = await tx.update(connection).set({ lastPullAt: new Date() })
+      .where(and(eq(connection.tenantId, TENANT), eq(connection.channel, row.channel), eq(connection.status, 'connected')))
+      .returning({ channel: connection.channel });
+    if (!live.length) return 'not connected';
+    const final: PushOutcome = (await insertMessages(tx, messages, ADAPTERS[row.channel].label)) ? 'stored' : 'already had';
+    await tx.update(pushEvent).set({ outcome: final }).where(eq(pushEvent.id, taken.id));
+    return final;
+  });
+}
+
+/** Every pushed event, oldest first, for the arrival probe and the tests. */
+export async function pushEvents() {
+  return db.select().from(pushEvent).where(eq(pushEvent.tenantId, TENANT)).orderBy(asc(pushEvent.id));
+}
+
 export async function record(contentId: string, kind: Status | 'sent', replyText?: string) {
   await db.insert(event).values({ tenantId: TENANT, contentId, kind, replyText: replyText ?? null });
 }
@@ -140,6 +177,7 @@ export async function nameBusiness(name: string) {
 export async function startOver() {
   await db.transaction(async tx => {
     await tx.delete(insight).where(eq(insight.tenantId, TENANT));
+    await tx.delete(pushEvent).where(eq(pushEvent.tenantId, TENANT));
     await tx.delete(connectorCall).where(eq(connectorCall.tenantId, TENANT));
     await tx.delete(event).where(eq(event.tenantId, TENANT));
     await tx.delete(messageFacts).where(eq(messageFacts.tenantId, TENANT));
