@@ -1,4 +1,4 @@
 // Every lead and every channel by name. A policy that names anything else fails at startup instead of silently blocking.
-entity Lead enum ["replies", "ads"];
-entity Channel enum ["facebook", "instagram", "google_reviews", "whatsapp"];
+entity Lead enum ["replies", "ads", "analytics"];
+entity Channel enum ["facebook", "instagram", "google_reviews", "whatsapp", "google_places"];
 action "read", "reply" appliesTo { principal: Lead, resource: Channel };

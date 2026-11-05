@@ -14,3 +14,8 @@ permit (principal == Lead::"ads", action == Action::"read", resource)
 when { [Channel::"facebook", Channel::"instagram"].contains(resource) };
 
 forbid (principal == Lead::"ads", action == Action::"reply", resource);
+
+// The analytics lead (OF1 outside research) reads who shows up on Google Maps for a search. It never sends anything, anywhere.
+permit (principal == Lead::"analytics", action == Action::"read", resource == Channel::"google_places");
+
+forbid (principal == Lead::"analytics", action == Action::"reply", resource);

@@ -18,6 +18,8 @@ export const ROUTES: GatewayDeps['routes'] = {
   'google_reviews:read': 'zernio',
   'google_reviews:reply': 'zernio',
   'whatsapp:reply': 'own',
+  // A stub with sample places until Harish says yes to the Google key and spend.
+  'google_places:read': 'own',
 };
 
 let policies: GatewayDeps['policies'] | undefined;

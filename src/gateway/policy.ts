@@ -15,6 +15,7 @@ export const CATALOG = [
   { channel: 'instagram', action: 'read' }, { channel: 'instagram', action: 'reply' },
   { channel: 'google_reviews', action: 'read' }, { channel: 'google_reviews', action: 'reply' },
   { channel: 'whatsapp', action: 'read' }, { channel: 'whatsapp', action: 'reply' },
+  { channel: 'google_places', action: 'read' },
 ] as const;
 
 /**

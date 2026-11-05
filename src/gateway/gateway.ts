@@ -20,7 +20,7 @@ export type GatewayDeps = {
   record: (row: LedgerRow) => Promise<void>;
 };
 
-const LABEL: Record<string, string> = { facebook: 'Facebook', instagram: 'Instagram', whatsapp: 'WhatsApp', google_reviews: 'Google reviews' };
+const LABEL: Record<string, string> = { facebook: 'Facebook', instagram: 'Instagram', whatsapp: 'WhatsApp', google_reviews: 'Google reviews', google_places: 'Google Maps places' };
 const PROVIDER_LABEL: Record<ProviderName, string> = { composio: 'Composio', zernio: 'Zernio', own: 'Swayu' };
 const VERB: Record<string, string> = { read: 'read', reply: 'reply on' };
 const ING: Record<string, string> = { read: 'reading', reply: 'replying on' };

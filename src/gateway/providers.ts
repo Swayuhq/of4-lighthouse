@@ -7,6 +7,7 @@ import { facebookComments, facebookReply, instagramComments } from '../composio'
 import { whatsappReply } from '../whatsapp';
 import type { Provider } from './gateway';
 import { LIMITS, RateLimited, retryAfter } from './limiter';
+import { placesStub } from './places';
 
 /**
  * One comment or review, whichever provider read it. `id` is the platform's own id, the same through every provider,
@@ -150,5 +151,6 @@ export const zernioProvider: Provider = async (channel, action, args) => {
 /** WhatsApp runs on Swayu's own Meta app. Messages arrive by webhook, so only replies go out through here. */
 export const own: Provider = async (channel, action, args) => {
   if (channel === 'whatsapp' && action === 'reply') return { id: await whatsappReply(String(args.ref), String(args.text)) } satisfies Sent;
+  if (channel === 'google_places' && action === 'read') return placesStub(args);
   throw new NotOffered(`not offered for ${channel} ${action}`);
 };
