@@ -89,6 +89,46 @@ export function commentLink(platform: string, permalink: string | undefined, com
   return `${permalink}${permalink.includes('?') ? '&' : '?'}comment_id=${commentId.split('_').at(-1)}`;
 }
 type ZComment = { id: string; message?: string; createdTime?: string; from?: { name?: string; username?: string; isOwner?: boolean }; replies?: { from?: { isOwner?: boolean } }[] };
+type GbpReview = { id: string; reviewer?: { displayName?: string; isAnonymous?: boolean }; rating?: number; comment?: string; createTime?: string; reviewReply?: unknown };
+
+/** Every one of the owner's reviews, with what Google says the totals are. `complete` is false when the read stopped early. */
+export type ReviewSet = { total?: number; average?: number; complete: boolean; reviews: Item[] };
+
+/** 50 reviews a page, Zernio's most, so 40 pages is 2,000 reviews. A bound, so a broken page token cannot read forever. */
+export const MAX_REVIEW_PAGES = 40;
+
+async function allOwnerReviews(): Promise<ReviewSet> {
+  // With no Google profile connected this throws, so no reviews never reads as zero reviews.
+  const account = await accountId('googlebusiness');
+  const seen = new Map<string, Item>();
+  const tokens = new Set<string>();
+  let token: string | null = '';
+  let total: number | undefined;
+  let average: number | undefined;
+  for (let page = 0; page < MAX_REVIEW_PAGES && token !== null; page++) {
+    const query = `pageSize=50${token ? `&pageToken=${encodeURIComponent(token)}` : ''}`;
+    const body: { reviews?: GbpReview[]; totalReviewCount?: number; averageRating?: number; nextPageToken?: string | null } =
+      await zernio(`/accounts/${encodeURIComponent(account)}/gmb-reviews?${query}`);
+    total = body.totalReviewCount ?? total;
+    average = body.averageRating ?? average;
+    for (const r of body.reviews ?? []) {
+      if (seen.has(r.id)) continue;
+      seen.set(r.id, {
+        id: r.id, ref: `${account}|${r.id}`,
+        author: r.reviewer?.isAnonymous || !r.reviewer?.displayName ? 'A Google user' : r.reviewer.displayName,
+        text: r.comment ?? '', at: r.createTime ?? '', stars: r.rating,
+        ...(r.reviewReply ? { answered: true } : {}),
+      });
+    }
+    const next = body.nextPageToken ?? null;
+    // A token we already followed would loop, so stop and say the set is not whole.
+    if (next !== null && tokens.has(next)) break;
+    if (next !== null) tokens.add(next);
+    token = next;
+  }
+  return { total, average, complete: token === null, reviews: [...seen.values()] };
+}
+
 type ZReview = { id: string; platform: string; accountId: string; reviewer?: { name?: string }; rating?: number; text?: string; created?: string; hasReply?: boolean };
 
 const ZERNIO_PLATFORM: Record<string, string> = { facebook: 'facebook', instagram: 'instagram' };
@@ -133,6 +173,7 @@ export const zernioProvider: Provider = async (channel, action, args) => {
       id: r.id, ref: `${r.accountId}|${r.id}`, author: r.reviewer?.name ?? 'Someone', text: r.text ?? '', at: r.created ?? '', stars: r.rating,
     })) satisfies Item[];
   }
+  if (channel === 'google_reviews' && action === 'read_all') return allOwnerReviews();
   if (channel === 'google_reviews' && action === 'reply') {
     const [account, reviewId] = String(args.ref).split('|');
     const out = await zernio<{ reply?: { id?: string } }>(`/inbox/reviews/${encodeURIComponent(reviewId)}/reply`, {

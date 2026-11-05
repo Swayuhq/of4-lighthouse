@@ -30,6 +30,7 @@ const DESCRIBE: Record<string, string> = {
   reply: 'Reply to one customer comment or review on',
 };
 const DESCRIBE_TOOL: Record<string, string> = {
+  google_reviews_read_all: "Read every one of the owner's Google reviews with full text, plus the total count and average rating.",
   google_places_read: 'See which businesses show up on Google Maps for one search phrase, in map order, with ratings, review counts and up to 5 reviews each.',
 };
 const INPUT: Record<string, z.ZodType> = { google_places_read: PLACES_INPUT };

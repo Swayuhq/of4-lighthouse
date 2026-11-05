@@ -22,8 +22,8 @@ export type GatewayDeps = {
 
 const LABEL: Record<string, string> = { facebook: 'Facebook', instagram: 'Instagram', whatsapp: 'WhatsApp', google_reviews: 'Google reviews', google_places: 'Google Maps places' };
 const PROVIDER_LABEL: Record<ProviderName, string> = { composio: 'Composio', zernio: 'Zernio', own: 'Swayu' };
-const VERB: Record<string, string> = { read: 'read', reply: 'reply on' };
-const ING: Record<string, string> = { read: 'reading', reply: 'replying on' };
+const VERB: Record<string, string> = { read: 'read', reply: 'reply on', read_all: 'read every review on' };
+const ING: Record<string, string> = { read: 'reading', reply: 'replying on', read_all: 'reading every review on' };
 const label = (channel: string) => LABEL[channel] ?? channel;
 
 export function createGateway(deps: GatewayDeps) {
@@ -32,7 +32,7 @@ export function createGateway(deps: GatewayDeps) {
   const reading = new Map<string, Promise<unknown>>();
 
   function send(provider: ProviderName, { channel, action, args }: CallRequest): Promise<unknown> {
-    if (action !== 'read') return deps.providers[provider](channel, action, args);
+    if (action !== 'read' && action !== 'read_all') return deps.providers[provider](channel, action, args);
     const key = `${provider}:${channel}:${JSON.stringify(args)}`;
     let read = reading.get(key);
     if (!read) {

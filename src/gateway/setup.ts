@@ -17,6 +17,7 @@ export const ROUTES: GatewayDeps['routes'] = {
   'instagram:reply': 'zernio',
   'google_reviews:read': 'zernio',
   'google_reviews:reply': 'zernio',
+  'google_reviews:read_all': 'zernio',
   'whatsapp:reply': 'own',
   // A stub with sample places until Harish says yes to the Google key and spend.
   'google_places:read': 'own',
