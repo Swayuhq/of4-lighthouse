@@ -154,7 +154,7 @@ ol.q { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 80ch; 
       <div class="change"><b>Changes</b><ul>
         <li>One Postgres, not three databases split by priority. Priority belongs to the queue, the order work is done in, not to storage. Three databases would also break the rule that a halted run's ledger row and halt marker commit together in one transaction.</li>
         <li>No sharding for the beta, but the split key is already there: every table carries <code>tenant_id</code> (rule 10). That is Instagram's logical shard.</li>
-        <li>A comment is not deleted the moment the reply goes out. The next reply to the same customer needs the history, and repeat customers are half of OF4. The ledger row is kept for good (rule 9). The comment text gets a fixed clock instead. 30 days would match Google reviews, but that number is still to be decided.</li>
+        <li>A comment is not deleted the moment the reply goes out. The next reply to the same customer needs the history, and repeat customers are half of OF4. The ledger row is kept for good (rule 9). The comment moves to a history the owner can open, and its text vanishes 30 days after the last reply, matching Google reviews. Decided by Sujit on 5 November.</li>
         <li>A rival's rating is not stored at all; it is read fresh each run. Only the place id is kept.</li>
       </ul></div>
     </div>
@@ -282,7 +282,7 @@ ol.q { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 80ch; 
       <tr><td>Webhook intake and event table for Zernio <code>comment.received</code> and <code>review.new</code></td><td>Removes almost all reads, and messages arrive in seconds</td><td>A test comment shows in the inbox with its hop times from the arrival probe</td><td><span class="pill later">Next</span></td></tr>
       <tr><td>Shared budget counter in Postgres</td><td>Every app on the team draws from one 600</td><td>Two processes in parallel never pass the limit; a test runs them at once</td><td><span class="pill later">Next</span></td></tr>
       <tr><td>Priority in the job queue</td><td>Send never waits on research</td><td>A Send queued behind 50 research reads runs first</td><td><span class="pill later">Next</span></td></tr>
-      <tr><td>Retention sweep per table</td><td>Nothing kept without a clock</td><td>A row past its clock is gone after one sweep; a row inside it stays</td><td><span class="pill later">Waits on the comment clock</span></td></tr>
+      <tr><td>Retention sweep per table</td><td>Nothing kept without a clock</td><td>A row past its clock is gone after one sweep; a row inside it stays</td><td><span class="pill later">Next; clock set at 30 days</span></td></tr>
       <tr><td>Permission per lead, full owner reviews, places stub</td><td>Analytics can start on real shapes</td><td>207 tests, two independent reviews, the second said ready</td><td><span class="pill now">Built 5 Nov</span></td></tr>
     </tbody>
   </table></div>
