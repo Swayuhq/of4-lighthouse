@@ -55,7 +55,7 @@ ol.q { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 80ch; 
 <div class="wrap">
 
 <header style="display:grid;gap:14px">
-  <span class="eyebrow">Connectors and channels · shared layer · 5 November 2026</span>
+  <span class="eyebrow">Connectors and channels · shared layer · 5 November 2026 · push intake and the 30 day history built</span>
   <h1>One gateway every outcome family can call at once</h1>
   <p class="lede">Three paper drawings of the connector gateway, a reference drawn from how Instagram stores likes and comments, and the design both lead to: what to build for the beta now, and what to keep ready for when Swayu grows.</p>
 </header>
@@ -247,7 +247,7 @@ ol.q { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 80ch; 
       <tr><td>Rival rating and reviews</td><td>Not stored</td><td>Analytics lead</td><td>Read fresh each run</td></tr>
       <tr><td>Rival place id</td><td>Postgres</td><td>Analytics lead</td><td>While the business exists</td></tr>
       <tr><td>Ledger row</td><td>Postgres</td><td>Team, owner in plain sentences</td><td>Kept; it is the audit trail (rule 9)</td></tr>
-      <tr><td>Pushed event</td><td>Postgres, event table</td><td>Job queue</td><td>Once handled and past the duplicate window</td></tr>
+      <tr><td>Pushed event</td><td>Postgres, event table</td><td>Arrival probe</td><td>30 days after it arrived. It holds ids and times only, never the text. Built 5 November</td></tr>
     </tbody>
   </table></div>
 </section>
@@ -279,10 +279,10 @@ ol.q { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 80ch; 
   <div class="scroll"><table>
     <thead><tr><th>Build</th><th>Why first</th><th>Proof it works</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td>Webhook intake and event table for Zernio <code>comment.received</code> and <code>review.new</code></td><td>Removes almost all reads, and messages arrive in seconds</td><td>A test comment shows in the inbox with its hop times from the arrival probe</td><td><span class="pill later">Next</span></td></tr>
+      <tr><td>Webhook intake and event table for Zernio <code>comment.received</code> and <code>review.new</code></td><td>Removes almost all reads, and messages arrive in seconds</td><td>A test comment shows in the inbox with its hop times from the arrival probe. On a local server, 5 November: a signed push stored once and answered in 0.09 s, the same event again was dropped, an unsigned push was refused (401); 23 tests. The live test comment waits on the webhook secret in 1Password and in Zernio</td><td><span class="pill now">Built 5 Nov, live test next</span></td></tr>
       <tr><td>Shared budget counter in Postgres</td><td>Every app on the team draws from one 600</td><td>Two processes in parallel never pass the limit; a test runs them at once</td><td><span class="pill later">Next</span></td></tr>
       <tr><td>Priority in the job queue</td><td>Send never waits on research</td><td>A Send queued behind 50 research reads runs first</td><td><span class="pill later">Next</span></td></tr>
-      <tr><td>Retention sweep per table</td><td>Nothing kept without a clock</td><td>A row past its clock is gone after one sweep; a row inside it stays</td><td><span class="pill later">Next; clock set at 30 days</span></td></tr>
+      <tr><td>Retention sweep per table</td><td>Nothing kept without a clock</td><td>A row past its clock is gone after one sweep; a row inside it stays. Built for comment text (clock from the last reply, notice under Answered) and pushed events; 8 tests</td><td><span class="pill now">Part built 5 Nov</span></td></tr>
       <tr><td>Permission per lead, full owner reviews, places stub</td><td>Analytics can start on real shapes</td><td>207 tests, two independent reviews, the second said ready</td><td><span class="pill now">Built 5 Nov</span></td></tr>
     </tbody>
   </table></div>

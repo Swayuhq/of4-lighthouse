@@ -119,6 +119,8 @@ flowchart LR
 | Routes | `src/gateway/setup.ts` | Facebook read Zernio, reply Composio; Instagram and Google reviews Zernio; WhatsApp Meta |
 | Lead | `src/gateway/leads.ts`, `src/drafting.ts` | After each check, the replies lead drafts one reply per new waiting message, holding reply tools only |
 | Screens | `/inbox`, `/activity` | A ready reply sits on its card with Send; Activity shows every call in plain words |
+| Push in | `app/api/webhooks/zernio/route.ts`, `src/zernio-push.ts` | Zernio pushes new comments and reviews within seconds. Signature checked, each event taken once, answered before the readers run. With push on, the full check runs every 10 minutes as the safety net |
+| History | `sweepHistory` in `src/store/db.ts` | A customer's words vanish 30 days after the owner's last reply; who, when and where stay. The owner is told under Answered |
 
 ## Walk it through, about five minutes
 
@@ -133,6 +135,6 @@ When Gemini is busy (it answered 503 several times on 4 November), new messages 
 
 ## Status
 
-A prototype. Stopped on 30 October 2026 after Dhruv agreed the OF4 direction, then picked up on 4 November 2026 as the connector layer comparison Dhruv asked for: Composio and Zernio both behind one gateway, permissions at the connector level, the lead loop on Mastra, tested on real test accounts. Facebook and Instagram are live through the gateway, WhatsApp through Meta's webhook on a test number; file imports still work. Not yet proven: a reply through Zernio on any channel, Google reviews with a real profile, WhatsApp from a real phone. The story is in [`docs/prototype-journey.md`](docs/prototype-journey.md).
+A prototype. Stopped on 30 October 2026 after Dhruv agreed the OF4 direction, then picked up on 4 November 2026 as the connector layer comparison Dhruv asked for: Composio and Zernio both behind one gateway, permissions at the connector level, the lead loop on Mastra, tested on real test accounts. Facebook and Instagram are live through the gateway, WhatsApp through Meta's webhook on a test number; file imports still work. Since 5 November Zernio can push new comments and reviews to Lighthouse; a live push from a real comment is not tested yet. Not yet proven: a reply through Zernio on any channel, Google reviews with a real profile, WhatsApp from a real phone. The story is in [`docs/prototype-journey.md`](docs/prototype-journey.md).
 
 Part of Swayu outcome family OF4, customer insights and brand monitoring. Owner: Sujit.
