@@ -33,7 +33,8 @@ export function createGateway(deps: GatewayDeps) {
 
   function send(provider: ProviderName, { channel, action, args }: CallRequest): Promise<unknown> {
     if (action !== 'read' && action !== 'read_all') return deps.providers[provider](channel, action, args);
-    const key = `${provider}:${channel}:${JSON.stringify(args)}`;
+    // The action is part of the key: the inbox read and the every review read must never answer each other.
+    const key = `${provider}:${channel}:${action}:${JSON.stringify(args)}`;
     let read = reading.get(key);
     if (!read) {
       read = deps.providers[provider](channel, action, args).finally(() => reading.delete(key));

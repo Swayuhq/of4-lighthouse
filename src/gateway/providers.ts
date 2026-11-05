@@ -69,11 +69,13 @@ export async function zernio<T>(path: string, init: RequestInit = {}, again = fa
 type Account = { _id?: string; id?: string; platform: string };
 
 /** The first connected account on that platform. Lighthouse has one test business. */
+const ACCOUNT_LABEL: Record<string, string> = { facebook: 'Facebook Page', instagram: 'Instagram account', googlebusiness: 'Google Business Profile' };
+
 export async function accountId(platform: string): Promise<string> {
   const { accounts } = await zernio<{ accounts: Account[] }>(`/accounts?platform=${encodeURIComponent(platform)}`);
   const found = accounts.find(a => a.platform === platform);
   const id = found?._id ?? found?.id;
-  if (!id) throw new Error(`no ${platform} account is connected in Zernio`);
+  if (!id) throw new Error(`no ${ACCOUNT_LABEL[platform] ?? platform} is connected in Zernio`);
   return id;
 }
 
@@ -116,11 +118,13 @@ async function allOwnerReviews(): Promise<ReviewSet> {
       seen.set(r.id, {
         id: r.id, ref: `${account}|${r.id}`,
         author: r.reviewer?.isAnonymous || !r.reviewer?.displayName ? 'A Google user' : r.reviewer.displayName,
-        text: r.comment ?? '', at: r.createTime ?? '', stars: r.rating,
+        // Zernio sends 0 when Google gave no rating; 0 is not a star count.
+        text: r.comment ?? '', at: r.createTime ?? '', stars: r.rating ? r.rating : undefined,
         ...(r.reviewReply ? { answered: true } : {}),
       });
     }
-    const next = body.nextPageToken ?? null;
+    // No token, or an empty one, means this was the last page.
+    const next = body.nextPageToken || null;
     // A token we already followed would loop, so stop and say the set is not whole.
     if (next !== null && tokens.has(next)) break;
     if (next !== null) tokens.add(next);

@@ -97,7 +97,7 @@ describe('Every review, page by page', () => {
 
   it('with no Google profile connected the read fails, so no reviews never reads as zero reviews', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ accounts: [] }))));
-    await expect(zernioProvider('google_reviews', 'read_all', {})).rejects.toThrow('no googlebusiness account is connected');
+    await expect(zernioProvider('google_reviews', 'read_all', {})).rejects.toThrow('no Google Business Profile is connected');
   });
 });
 
@@ -105,5 +105,45 @@ describe('The activity list', () => {
   it('says every review was read, in plain words', () => {
     expect(sentence({ id: 1, lead: 'analytics', channel: 'google_reviews', action: 'read_all', outcome: 'done', provider: 'zernio', note: null, at: new Date() }))
       .toBe('Read all your Google reviews through Zernio.');
+  });
+});
+
+describe('Verifier findings, round 2', () => {
+  it('the inbox read and the every review read in flight at once are never shared', async () => {
+    const { createGateway } = await import('../src/gateway/gateway');
+    let release!: () => void;
+    const gate = new Promise<void>(r => { release = r; });
+    const calls: string[] = [];
+    const zernio = async (_channel: string, action: string) => { calls.push(action); await gate; return action === 'read_all' ? { complete: true, reviews: [] } : []; };
+    const unused = async () => { throw new Error('not this provider'); };
+    const gateway = createGateway({
+      policies: POLICIES, routes: { 'google_reviews:read': 'zernio', 'google_reviews:read_all': 'zernio' },
+      providers: { composio: unused, zernio, own: unused }, askOwner: async () => 'approved', record: async () => {},
+    });
+    const inbox = gateway.call({ lead: 'replies', channel: 'google_reviews', action: 'read', args: {} });
+    const all = gateway.call({ lead: 'analytics', channel: 'google_reviews', action: 'read_all', args: {} });
+    release();
+    const [a, b] = await Promise.all([inbox, all]);
+    expect(calls.sort()).toEqual(['read', 'read_all']);
+    expect(a.ok && Array.isArray(a.result)).toBe(true);
+    expect(b.ok && !Array.isArray(b.result)).toBe(true);
+  });
+
+  it('an empty page token means the last page', async () => {
+    pages({ '': { reviews: [review('r1')], totalReviewCount: 1, nextPageToken: '' } });
+    const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
+    expect(urls.filter(u => u.includes('/gmb-reviews'))).toHaveLength(1);
+    expect(set.complete).toBe(true);
+  });
+
+  it('a rating of 0 means Google sent none, so it is left out, not counted as zero stars', async () => {
+    pages({ '': { reviews: [review('r1', { rating: 0 })], totalReviewCount: 1, nextPageToken: null } });
+    const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
+    expect(set.reviews[0].stars).toBeUndefined();
+  });
+
+  it('no Google profile connected reads in plain words', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ accounts: [] }))));
+    await expect(zernioProvider('google_reviews', 'read_all', {})).rejects.toThrow('no Google Business Profile is connected');
   });
 });
