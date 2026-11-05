@@ -77,13 +77,13 @@ ol.steps .who { font-size: 13px; color: var(--muted); text-align: right; }
   <div class="scroll"><table>
     <thead><tr><th>#</th><th>What the research needs</th><th>Source</th><th>State</th><th>What may be kept</th><th>What the owner sees, for example</th></tr></thead>
     <tbody>
-      <tr><td class="num">1</td><td>The owner's own Google reviews and rating</td><td>Already read for O6 (review replies). Read it from the database, not from Google a second time</td><td><span class="pill ok">Covered</span></td><td>Review text and stars 30 days, then the shared sweep deletes them (ruling of 3 Nov)</td><td class="own">"Your rating is 4.3 from 41 reviews; people praise the coffee and mention slow service"</td></tr>
-      <tr><td class="num">2</td><td>Monthly searches for a phrase in a city</td><td>Keyword data source on the switchboard</td><td><span class="pill ok">Covered</span></td><td>Numbers only; no personal data</td><td class="own">"About 1,900 people a month search for your kind of shop in your city"</td></tr>
+      <tr><td class="num">1</td><td>The owner's own Google reviews and rating</td><td>The same Google review reader O6 uses. O6 keeps only the newest 12 unanswered reviews it drafts replies for, so the research calls the shared reader for the full list and rating instead of reading O6's rows</td><td><span class="pill ok">Covered</span></td><td>Review text and stars 30 days, then the shared sweep deletes them (ruling of 3 Nov)</td><td class="own">"Your rating is 4.3 from 41 reviews; people praise the coffee and mention slow service"</td></tr>
+      <tr><td class="num">2</td><td>Monthly searches for a phrase in a city</td><td>Keyword data source on the switchboard</td><td><span class="pill ok">Covered</span> <span class="note">per the switchboard, not rechecked here</span></td><td>Numbers only; no personal data</td><td class="own">"About 1,900 people a month search for your kind of shop in your city"</td></tr>
       <tr><td class="num">3</td><td>Who shows on Google Maps near the business, with ratings and reviews</td><td><b>Google Places API (New)</b>: Nearby Search or Text Search, then Place Details for a few reviews. Neither Composio nor Zernio was checked for this</td><td><span class="pill part">New, to build</span></td><td>The place id may be kept indefinitely. Ratings and reviews fall under Google's caching limits; check the Maps service terms before storing any</td><td class="own">"Five bakeries within 2 km; the closest rated 4.6 from 310 reviews"</td></tr>
       <tr><td class="num">4</td><td>Ads rivals are running</td><td>Meta Ad Library, directly or through Zernio (<code>GET /v1/ads/library</code>)</td><td><span class="pill no">Not for India</span></td><td>Not applicable</td><td class="own">Ordinary business ads shown only in India are not in the library</td></tr>
     </tbody>
   </table></div>
-  <p class="note">Source 4: outside the EU and UK the Ad Library holds only political, election and social issue ads. Zernio's own page says "A US-only commercial advertiser is invisible whatever you pass in countries", and the same holds for India. Two ways to close the gap: drop rival ads from this week's research, or read rivals' public posts on their own Pages instead, which the connectors already do.</p>
+  <p class="note">Source 4: outside the EU and UK the Ad Library holds only political, election and social issue ads. Zernio's own page says "A US-only commercial advertiser is invisible whatever you pass in countries", and the same holds for India. Reading a rival's own Facebook Page is not a way round it: our connectors read only Pages the owner manages, and another business's Page needs Meta's Page Public Content Access, which requires Meta app review. So rival ads leave this month's research unless a source that respects Meta's terms is found.</p>
 </section>
 
 <section>
@@ -109,10 +109,10 @@ ol.steps .who { font-size: 13px; color: var(--muted); text-align: right; }
       <text class="sub" x="645" y="140" text-anchor="middle">source 2</text>
       <rect class="box" x="530" y="172" width="230" height="58" rx="8"/>
       <text x="645" y="197" text-anchor="middle" font-weight="600">Zernio, Composio</text>
-      <text class="sub" x="645" y="216" text-anchor="middle">rivals' public Page posts</text>
+      <text class="sub" x="645" y="216" text-anchor="middle">Ad Library, EU and UK ads only</text>
       <rect class="db" x="530" y="252" width="230" height="64" rx="8"/>
       <text x="645" y="278" text-anchor="middle" font-weight="600">Database</text>
-      <text class="sub" x="645" y="298" text-anchor="middle">source 1: reviews O6 already read</text>
+      <text class="sub" x="645" y="298" text-anchor="middle">research results, O6 replies</text>
       <rect class="db" x="830" y="110" width="140" height="80" rx="8"/>
       <text x="900" y="144" text-anchor="middle" font-weight="600">Research table</text>
       <text class="sub" x="900" y="164" text-anchor="middle">fixed fields only</text>
@@ -123,10 +123,10 @@ ol.steps .who { font-size: 13px; color: var(--muted); text-align: right; }
       <path class="edge" d="M465 150 C495 150 495 49 528 49" marker-end="url(#arr)"/>
       <path class="edge" d="M465 150 C495 150 495 125 528 125" marker-end="url(#arr)"/>
       <path class="edge" d="M465 150 C495 150 495 201 528 201" marker-end="url(#arr)"/>
-      <path class="edge" d="M90 190 V284 H528" marker-end="url(#arr)" stroke-dasharray="4 4"/>
+      <path class="edge" d="M465 150 C495 150 495 284 528 284" marker-end="url(#arr)"/>
       <path class="edge" d="M760 125 C795 125 795 150 828 150" marker-end="url(#arr)"/>
       <path class="edge" d="M970 150 H998" marker-end="url(#arr)"/>
-      <text class="sub" x="300" y="300">dashed: read straight from the database, no outside call</text>
+      
     </svg>
   </div>
   <p class="note">Leads never report to each other; they meet in the database (decision of 5 Nov, HRB and Dhruv). Raw outside text never reaches the head of marketing: it passes the extraction step first, so only fixed fields land in the research table.</p>
@@ -205,9 +205,9 @@ ol.steps .who { font-size: 13px; color: var(--muted); text-align: right; }
   <span class="eyebrow">Who does what, in order</span>
   <h2>Nobody waits on the other</h2>
   <ol class="steps">
-    <li><span>Agree the place shape above, and which sources are in this week (sources 1, 2, 3; source 4 out or swapped for rivals' Page posts).</span><span class="who">HRB and Sujit</span></li>
+    <li><span>Agree the place shape above, and which sources are in this week (sources 1, 2 and 3; source 4 out for India).</span><span class="who">HRB and Sujit</span></li>
     <li><span>Add <code>analytics</code> to the gateway's permission rules: read only on its sources, every send blocked. Add a stub <code>google_places</code> read that returns sample places in the agreed shape.</span><span class="who">Sujit, in Lighthouse</span></li>
-    <li><span>Build the research on the stub and the data you already have. Source 1 reads the database O6 fills.</span><span class="who">HRB</span></li>
+    <li><span>Build the research on the stub and the data you already have. Source 1 calls the same review reader O6 uses, through the gateway.</span><span class="who">HRB</span></li>
     <li><span>Check the Places price and terms, then ask Harish for the Google key and spend (named <code>SWAYU_GOOGLE_PLACES_API_KEY</code>, kept in 1Password).</span><span class="who">Sujit, Harish decides</span></li>
     <li><span>Swap the stub for the live Places read. Run once on a test location and compare with Google Maps by hand.</span><span class="who">Sujit</span></li>
     <li><span>After the swayu-app restructure lands: both pieces move in as pull requests against the new layout. Connector code sits in shared paths, so Harish says go first.</span><span class="who">Both, Harish says go</span></li>
@@ -221,7 +221,7 @@ ol.steps .who { font-size: 13px; color: var(--muted); text-align: right; }
     <thead><tr><th>Question</th><th>Who answers</th><th>Why it matters</th></tr></thead>
     <tbody>
       <tr><td>Do the Maps service terms let us store a rival's rating, and for how long?</td><td>Sujit reads the terms</td><td>Decides whether the research table keeps ratings or rereads them each run</td></tr>
-      <tr><td>Is rival ad research in scope for India this month, or replaced by rivals' public posts?</td><td>HRB with Dhruv</td><td>The Ad Library cannot give ordinary business ads in India</td></tr>
+      <tr><td>Is rival ad research in scope for India this month at all?</td><td>HRB with Dhruv</td><td>The Ad Library cannot give ordinary business ads in India</td></tr>
       <tr><td>Who owns reading the owner's own reviews when both O6 and the research use them?</td><td>Engineering lead, asked 5 Nov</td><td>One reader, one 30 day sweep, no double reads</td></tr>
       <tr><td>Does Composio or Zernio offer Places data?</td><td>Sujit checks</td><td>Could save a new key; not checked yet</td></tr>
     </tbody>
