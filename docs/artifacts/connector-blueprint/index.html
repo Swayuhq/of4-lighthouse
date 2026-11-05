@@ -61,6 +61,20 @@ ol.q { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 80ch; 
 </header>
 
 <section>
+  <span class="eyebrow">Decided with Dhruv · 5 November, 19:13 IST</span>
+  <h2>What this blueprint means for the beta</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Decision</th><th>Effect on the sections below</th></tr></thead>
+    <tbody>
+      <tr><td>Build only what the beta needs, sized for beta load (12 businesses in November, 30 in December)</td><td>Sections 5, 7 and 9 are the build. Section 8 and the Instagram reference are kept for later and are not built now</td></tr>
+      <tr><td>The beta connector goal: every customer message answered and delivered to the Swayu inbox</td><td>Push intake is the first build. Reading likes and detailed numbers waits, and is first checked against what Zernio and Composio offer</td></tr>
+      <tr><td>No in house connectors; no separate plugin repositories</td><td>The gateway is code inside Swayu that calls Zernio, Composio and Meta. It is proven in Lighthouse, then moved to swayu-app</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Costs and which provider serves each channel are on the connector budget page: https://claude.ai/artifact/9vGt6KuW5QVrSi5bABXgsZ</p>
+</section>
+
+<section>
   <span class="eyebrow">1 · The reference</span>
   <h2>What Instagram actually did, from its own engineers</h2>
   <div class="facts">
@@ -228,7 +242,7 @@ ol.q { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 80ch; 
   <div class="scroll"><table>
     <thead><tr><th>Data</th><th>Where</th><th>Who reads it</th><th>When it goes</th></tr></thead>
     <tbody>
-      <tr><td>Customer comment or message text</td><td>Postgres, inbox table</td><td>Owner, replies lead</td><td>To decide: a fixed number of days after the last reply, then the text is removed and the ids stay</td></tr>
+      <tr><td>Customer comment or message text</td><td>Postgres, inbox table</td><td>Owner, replies lead</td><td>Decided by Sujit, 5 November: once replied, the comment moves to a history the owner can open. 30 days after the last reply its text vanishes, like vanishing messages, and the owner is told so at the foot of the history. Who, when, channel and replied stay</td></tr>
       <tr><td>Google review text and stars</td><td>Postgres, inbox table</td><td>Owner, replies lead, analytics lead</td><td>30 days, then swept</td></tr>
       <tr><td>Rival rating and reviews</td><td>Not stored</td><td>Analytics lead</td><td>Read fresh each run</td></tr>
       <tr><td>Rival place id</td><td>Postgres</td><td>Analytics lead</td><td>While the business exists</td></tr>
@@ -240,7 +254,7 @@ ol.q { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 80ch; 
 
 <section>
   <span class="eyebrow">8 · When to split the database</span>
-  <h2>Three steps, each started by a measurement</h2>
+  <h2>Three steps, each started by a measurement (later, not for the beta)</h2>
   <div class="figure" role="img" aria-label="Three stages from one Postgres to logical shards on several machines">
     <svg viewBox="0 0 1100 170">
       <rect x="10" y="20" width="330" height="120" rx="10" fill="var(--soft)" stroke="var(--mark)"/>
@@ -278,7 +292,7 @@ ol.q { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 80ch; 
   <span class="eyebrow">10 · To decide</span>
   <h2>Open questions</h2>
   <ol class="q">
-    <li>How many days does a customer's comment text stay after the last reply?</li>
+    <li><s>How many days does a customer's comment text stay after the last reply?</s> Answered 5 November: 30 days, then it vanishes from the history.</li>
     <li>May the inbox move to Zernio's push before beta, with a 10 minute check as the safety net?</li>
     <li>One shared budget table, or one gateway service every family calls?</li>
     <li>Are all families on one Zernio team?</li>
