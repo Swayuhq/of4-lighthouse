@@ -146,3 +146,44 @@ describe('view with the reader facts', () => {
     expect(counts.arrived).toBe(counts.answered + counts.waiting + counts.spam);
   });
 });
+
+// The waiting messages in Lighthouse on 6 Nov 2026, which put three old compliments above two orders.
+describe("Today's 3 puts buyers and questions above compliments", () => {
+  const fb = (id: string, author: string, receivedAt: string, text: string) => ({ id, platform: 'Facebook', author, receivedAt, text });
+  const facts = (kind: Facts['kind']): Facts => ({ kind, problem: 'none', asks: null, deadline: null });
+  function inbox() {
+    const messages = [
+      fb('s0', 'Soni Saga', '2026-10-30T10:43', 'niceeeee'),
+      fb('s1', 'Soni Saga', '2026-10-30T10:43', 'wowwwwwww'),
+      fb('s2', 'Soni Saga', '2026-10-30T10:43', 'wherre to buyyy'),
+      fb('u0', 'Sujit Nirmal', '2026-10-30T12:46', 'I would like to buy the matcha'),
+      fb('u1', 'Sujit Nirmal', '2026-11-06T13:01', 'Want to buy this matcha'),
+      fb('u2', 'Sujit Nirmal', '2026-11-06T13:01', 'What are the more flavours in this'),
+      fb('u3', 'Sujit Nirmal', '2026-11-06T13:02', 'Want to give an order for the 2 chocolate'),
+    ];
+    const state = { ...ingest(emptyState(), messages, 'Facebook'), status: { u0: 'answered' as const } };
+    const kinds: Record<string, Facts['kind']> = { s0: 'praise', s1: 'other', s2: 'question', u0: 'order', u1: 'order', u2: 'question', u3: 'order' };
+    return { ...state, facts: Object.fromEntries(Object.entries(kinds).map(([id, k]) => [id, facts(k)])) };
+  }
+
+  it('leads with a buying question and two orders, one person first', () => {
+    expect(view(inbox()).today.map(i => i.text)).toEqual(['wherre to buyyy', 'Want to buy this matcha', 'Want to give an order for the 2 chocolate']);
+  });
+
+  it('says why in words', () => {
+    const v = view(inbox());
+    expect(v.items.find(i => i.id === 'u1')!.reasons).toEqual(['wants to buy', 'wrote before']);
+    expect(v.items.find(i => i.id === 'u2')!.reasons).toEqual(['asks a question', 'wrote before']);
+  });
+
+  it('does not count three comments in the same minute as writing before', () => {
+    expect(view(inbox()).items.find(i => i.id === 's2')!.reasons).not.toContain('wrote before');
+  });
+
+  it('never puts praise in Today, even when it has the most points', () => {
+    const state = inbox();
+    state.messages = state.messages.filter(m => m.id === 's0');
+    expect(view(state).today).toEqual([]);
+    expect(view(state).items[0].status).toBe('waiting');
+  });
+});

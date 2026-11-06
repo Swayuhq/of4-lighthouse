@@ -50,7 +50,7 @@ export function act(state: State, id: string, action: 'send' | Status, text = ''
 // Urgency comes from facts the owner can check, never from mood (Harish, 14 October).
 // The points live here, in one place, so they are easy to change.
 const PROBLEM_WORDS = ['refund', 'money back', 'not delivered', 'not here', 'damaged', 'wrong item', 'cancel'];
-const POINTS = { lowStars: 3, problemWords: 3, waitingOverDay: 2, waitingHours: 1, wroteBefore: 1, deadline: 1 };
+const POINTS = { lowStars: 3, problemWords: 3, wantsToBuy: 3, question: 2, waitingOverDay: 2, waitingHours: 1, wroteBefore: 1, deadline: 1 };
 
 const LINK = /https?:\/\/|www\.|bit\.ly|tap here|click here/i;
 const PRIZE = /\b(won|winner|prize|free|lottery|crypto)\b/i;
@@ -70,6 +70,14 @@ function score(m: InboxMessage, now: string, wroteBefore: boolean, facts?: Facts
     if (problem) {
       points += POINTS.problemWords;
       reasons.push(problem);
+    }
+    // A customer ready to buy, or waiting on an answer, is worth more than a compliment (Sujit, 6 November).
+    if (facts.kind === 'order') {
+      points += POINTS.wantsToBuy;
+      reasons.push('wants to buy');
+    } else if (facts.kind === 'question') {
+      points += POINTS.question;
+      reasons.push('asks a question');
     }
     if (facts.deadline) {
       points += POINTS.deadline;
@@ -98,7 +106,8 @@ export function view(state: State): View {
   const all = [...state.messages].sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
   // "Now" is the newest message, not the clock, so an old export does not show 700 hours waiting.
   const now = all.at(-1)?.receivedAt ?? '';
-  const seenAuthors = new Set<string>();
+  // The first day each customer wrote. Several comments in one sitting are one visit, not a returning customer.
+  const firstDay = new Map<string, string>();
   const items: Item[] = [];
   for (const m of all) {
     if (owners.has(m.author)) continue;
@@ -106,8 +115,9 @@ export function view(state: State): View {
     const facts = state.facts[m.id];
     const looksSpam = facts ? facts.kind === 'spam' : LINK.test(m.text) && PRIZE.test(m.text);
     const guess: Status = ownerReplied ? 'answered' : looksSpam ? 'spam' : 'waiting';
-    const wroteBefore = m.author !== 'Unknown' && seenAuthors.has(m.author);
-    seenAuthors.add(m.author);
+    const day = m.receivedAt.slice(0, 10);
+    const wroteBefore = m.author !== 'Unknown' && (firstDay.get(m.author) ?? day) < day;
+    if (!firstDay.has(m.author)) firstDay.set(m.author, day);
     items.push({ ...m, status: state.status[m.id] ?? guess, ...score(m, now, wroteBefore, facts), reply: state.reply[m.id], facts, heldReply: state.drafts[m.id] });
   }
   // Most points first; equal points, the one waiting longer first.
@@ -122,7 +132,18 @@ export function view(state: State): View {
   };
   counts.missed = counts.arrived - counts.answered - counts.waiting - counts.spam;
   const tone = learnTone(all.filter(m => owners.has(m.author)).map(m => m.text));
-  return { items, today: waiting.slice(0, 3), more: Math.max(0, waiting.length - 3), counts, tone };
+  const today = pickToday(waiting);
+  return { items, today, more: waiting.length - today.length, counts, tone };
+}
+
+/** The three the owner answers first: never praise alone, and one card per customer before anyone gets a second. */
+function pickToday(waiting: Item[]): Item[] {
+  const candidates = waiting.filter(i => i.facts?.kind !== 'praise');
+  const today: Item[] = [];
+  const people = new Set<string>();
+  for (const i of candidates) if (today.length < 3 && !people.has(i.author)) { today.push(i); people.add(i.author); }
+  for (const i of candidates) if (today.length < 3 && !today.includes(i)) today.push(i);
+  return today;
 }
 
 const GREETINGS = ['hi', 'hello', 'hey', 'namaste', 'dear', 'hola'];
