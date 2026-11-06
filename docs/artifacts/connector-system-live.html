@@ -1,0 +1,487 @@
+<title>Connector System Live</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a tab bar of five views; each view is one large interactive diagram with a thin control row and a small detail panel. */
+:root{
+  --bg:#f5f8f7; --panel:#ffffff; --ink:#13221e; --muted:#5d6d68; --rule:#d8e1de;
+  --forest:#00584D; --jade:#009B74; --jade-soft:#dff2ec; --amber:#b86e00; --amber-soft:#fcefd8;
+  --red:#c0352b; --red-soft:#fbe5e3; --grey:#eef2f0; --violet:#5b3fa6; --violet-soft:#eee9fb;
+  --font:"Manrope",ui-sans-serif,system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1513; --panel:#141f1c; --ink:#e5eeeb; --muted:#9bb0a9; --rule:#283834;
+  --forest:#62d3b6; --jade:#3cc39e; --jade-soft:#163830; --amber:#f2b55c; --amber-soft:#3a2b13;
+  --red:#ff8a80; --red-soft:#3e1b19; --grey:#1c2926; --violet:#b9a3f5; --violet-soft:#2a2240; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1513; --panel:#141f1c; --ink:#e5eeeb; --muted:#9bb0a9; --rule:#283834;
+  --forest:#62d3b6; --jade:#3cc39e; --jade-soft:#163830; --amber:#f2b55c; --amber-soft:#3a2b13;
+  --red:#ff8a80; --red-soft:#3e1b19; --grey:#1c2926; --violet:#b9a3f5; --violet-soft:#2a2240; color-scheme:dark}
+*{box-sizing:border-box} [hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:18px}
+h1{margin:0;font-size:clamp(24px,3.4vw,34px);font-weight:800;letter-spacing:-.02em;color:var(--forest)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{font:700 14px var(--font);padding:9px 14px;border-radius:999px;border:1px solid var(--rule);background:var(--panel);color:var(--ink);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--forest);border-color:var(--forest);color:var(--bg)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--jade);outline-offset:2px}
+.view{display:grid;gap:12px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:999px;overflow:hidden;background:var(--panel)}
+.seg button{font:600 13px var(--font);padding:7px 12px;border:0;background:transparent;color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--jade-soft);color:var(--forest)}
+.play{font:700 13px var(--font);padding:8px 14px;border-radius:999px;border:0;background:var(--jade);color:#fff;cursor:pointer}
+.stage{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:12px;overflow-x:auto}
+.stage svg{display:block;width:100%;min-width:880px;height:auto}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.stat{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:10px 12px}
+.stat b{display:block;font:800 26px/1.1 var(--font);font-variant-numeric:tabular-nums}
+.stat span{font:600 11px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.ok b{color:var(--jade)} .bad b{color:var(--red)} .wait b{color:var(--amber)}
+.detail{background:var(--panel);border:1px solid var(--rule);border-left:4px solid var(--jade);border-radius:10px;padding:10px 14px;min-height:46px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pill{font:600 11px var(--mono);padding:3px 8px;border-radius:999px;white-space:nowrap}
+.p-built{background:var(--jade-soft);color:var(--forest)} .p-partly{background:var(--amber-soft);color:var(--amber)} .p-todo{background:var(--grey);color:var(--muted)} .p-red{background:var(--red-soft);color:var(--red)}
+.src{font-size:12px;color:var(--muted)}
+svg text{fill:var(--ink);font-family:var(--font)}
+svg .mut{fill:var(--muted)}
+svg .node{cursor:pointer}
+svg .node rect{fill:var(--panel);stroke:var(--rule);stroke-width:1.5;transition:stroke .2s,fill .2s}
+svg .node:hover rect,svg .node.on rect{stroke:var(--jade);stroke-width:2.5}
+svg .built rect{fill:var(--jade-soft)} svg .partly rect{fill:var(--amber-soft)} svg .todo rect{stroke-dasharray:5 4}
+svg .of3 rect{fill:var(--violet-soft);stroke:var(--violet);stroke-dasharray:5 4}
+svg .wire{stroke:var(--rule);stroke-width:2;fill:none}
+svg .gate{fill:var(--jade-soft);stroke:var(--jade);stroke-width:2}
+svg .dot-idle{fill:var(--rule)} svg .dot-go{fill:var(--jade)} svg .dot-wait{fill:var(--amber)} svg .dot-no{fill:var(--red)}
+svg .pkt{fill:var(--jade)}
+.rankwrap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start}
+.rank{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:12px}
+.card{position:absolute;left:10px;right:10px;height:56px;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:0 12px;border-radius:9px;border:1px solid var(--rule);background:var(--panel);transition:top .7s cubic-bezier(.5,0,.2,1),background .4s,border-color .4s,opacity .4s}
+.card.top{background:var(--jade-soft);border-color:var(--jade)}
+.card.out{opacity:.45}
+.card .n{font:800 18px var(--font);color:var(--forest);text-align:center;font-variant-numeric:tabular-nums}
+.card .t{min-width:0}
+.card .t b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .t span{font-size:12px;color:var(--muted)}
+.card .pt{font:800 15px var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.card .pt small{display:block;font:600 10px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.divider{position:absolute;left:10px;right:10px;border-top:2px dashed var(--jade);transition:top .7s cubic-bezier(.5,0,.2,1)}
+.divider span{position:absolute;right:0;top:-10px;background:var(--panel);padding:0 6px;font:600 11px var(--mono);color:var(--forest)}
+.rules{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:14px;display:grid;gap:8px}
+.rules h3{margin:0;font-size:15px}
+.rule{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:6px 8px;border-radius:6px;transition:background .4s}
+.rule.chg{background:var(--amber-soft)}
+.rule b{font-family:var(--mono);white-space:nowrap}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.rankwrap{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <h1>Connector system, from 12 businesses to 1,000 lead agents</h1>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="scale" id="t-scale">Scale</button>
+    <button role="tab" aria-selected="false" data-tab="flow" id="t-flow">Message flow</button>
+    <button role="tab" aria-selected="false" data-tab="rank" id="t-rank">Today's 3</button>
+    <button role="tab" aria-selected="false" data-tab="perm" id="t-perm">Permissions</button>
+    <button role="tab" aria-selected="false" data-tab="design" id="t-design">Design by size</button>
+    <button role="tab" aria-selected="false" data-tab="layers" id="t-layers">Layers</button>
+  </div>
+
+  <!-- SCALE -->
+  <section class="view" id="v-scale">
+    <div class="controls">
+      <div class="seg" id="s-biz"></div>
+      <div class="seg" id="s-work"><button aria-pressed="false" data-v="read">Every lead reads</button><button aria-pressed="true" data-v="reply">Every lead replies</button></div>
+      <div class="seg" id="s-tier"><button aria-pressed="false" data-v="60">60 / min</button><button aria-pressed="true" data-v="600">600 / min</button></div>
+      <div class="seg" id="s-mode"><button aria-pressed="true" data-v="today">Before the line</button><button aria-pressed="false" data-v="line">With the line</button></div>
+      <button class="play" id="s-play">▶ Run</button>
+    </div>
+    <div class="stage"><svg id="scale-svg" viewBox="0 0 1100 430" aria-label="Lead agents sending calls through the gateway to Zernio"></svg></div>
+    <div class="stats">
+      <div class="stat"><span>Lead agents</span><b id="st-leads">0</b></div>
+      <div class="stat"><span>Zernio requests</span><b id="st-req">0</b></div>
+      <div class="stat ok"><span>Served</span><b id="st-ok">0</b></div>
+      <div class="stat bad"><span>Refused</span><b id="st-no">0</b></div>
+      <div class="stat wait"><span>Last one served</span><b id="st-t">0 s</b></div>
+    </div>
+    <p class="src">Numbers: <code>scripts/simulate-leads.ts</code>, real gateway and limiter on a simulated clock, all lead agents in the same instant. Each business has 8 lead agents.</p>
+  </section>
+
+  <!-- FLOW -->
+  <section class="view" id="v-flow" hidden>
+    <div class="controls"><div class="seg" id="f-where"><button aria-pressed="true" data-v="laptop">On a laptop</button><button aria-pressed="false" data-v="prod">In production</button></div><button class="play" id="f-play">▶ Send a customer comment</button><span class="pill p-built">proven live</span><span class="pill p-partly">built, not seen live</span><span class="pill p-todo">not built</span></div>
+    <div class="stage"><svg id="flow-svg" viewBox="0 0 1240 360" aria-label="A customer message moving through Swayu"></svg></div>
+    <div class="detail" id="f-detail"><span class="src">Click any box</span></div>
+  </section>
+
+  <!-- TODAY'S 3 -->
+  <section class="view" id="v-rank" hidden>
+    <div class="controls"><div class="seg" id="r-rule"><button aria-pressed="true" data-v="now">Old rule</button><button aria-pressed="false" data-v="new">New rule</button></div><span class="pill p-built" id="r-state">old rule</span></div>
+    <div class="rankwrap">
+      <div class="rank" id="r-list"></div>
+      <div class="rules" id="r-rules"></div>
+    </div>
+    <p class="src">The 8 messages waiting in Lighthouse on 6 Nov, read from its database. The new rule is built in <code>src/inbox.ts</code>, 6 Nov.</p>
+  </section>
+
+  <!-- PERMISSIONS -->
+  <section class="view" id="v-perm" hidden>
+    <div class="controls">
+      <div class="seg" id="p-lead"><button aria-pressed="true" data-v="replies">Replies lead</button><button aria-pressed="false" data-v="ads">Ads lead</button><button aria-pressed="false" data-v="analytics">Analytics</button></div>
+      <div class="seg" id="p-act"><button aria-pressed="true" data-v="read">Read</button><button aria-pressed="false" data-v="reply">Reply</button></div>
+      <div class="seg" id="p-ch"><button aria-pressed="true" data-v="instagram">Instagram</button><button aria-pressed="false" data-v="whatsapp">WhatsApp</button><button aria-pressed="false" data-v="google_places">Google Maps</button></div>
+      <button class="play" id="p-play">▶ Try it</button>
+    </div>
+    <div class="stage"><svg id="perm-svg" viewBox="0 0 1100 300" aria-label="Permission check"></svg></div>
+    <div class="detail" id="p-detail"><span class="src">Pick a lead, an action and a channel</span></div>
+  </section>
+
+  <!-- DESIGN -->
+  <section class="view" id="v-design" hidden>
+    <div class="controls"><div class="seg" id="d-size"><button aria-pressed="true" data-v="0">Low · 12 to 30</button><button aria-pressed="false" data-v="1">Mid · around 75</button><button aria-pressed="false" data-v="2">High · 125, 1,000 leads</button></div></div>
+    <div class="stage"><svg id="design-svg" viewBox="0 0 1100 420" aria-label="Which pieces switch on at each size"></svg></div>
+    <div class="detail" id="d-detail"><span class="src">Click any piece</span></div>
+  </section>
+
+  <!-- LAYERS -->
+  <section class="view" id="v-layers" hidden>
+    <div class="stage"><svg id="layers-svg" viewBox="0 0 1100 470" aria-label="The thirteen shared layers"></svg></div>
+    <div class="detail" id="l-detail"><span class="src">Click any layer</span></div>
+  </section>
+</div>
+
+<script>
+(() => {
+const NS = 'http://www.w3.org/2000/svg';
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const txt = (s, attrs, parent) => { const t = el('text', attrs, parent); t.textContent = s; return t; };
+const $ = id => document.getElementById(id);
+function seg(id, on) {
+  const box = $(id);
+  box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; box.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); on(b.dataset.v); });
+  return () => box.querySelector('[aria-pressed="true"]').dataset.v;
+}
+function detail(id, html) { $(id).innerHTML = html; }
+const pill = (s) => s === 'built' ? '<span class="pill p-built">proven</span>' : s === 'partly' ? '<span class="pill p-partly">built, not seen live</span>' : s === 'of3' ? '<span class="pill" style="background:var(--violet-soft);color:var(--violet)">OF3 to plug in</span>' : '<span class="pill p-todo">not built</span>';
+
+// Tabs
+document.querySelector('.tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  document.querySelectorAll('.view').forEach(v => v.hidden = v.id !== 'v-' + b.dataset.tab);
+});
+
+/* ---------- SCALE ---------- */
+// Measured rows: [businesses][work][tier][mode] = [requests, served, refused, lastServedSeconds, businessesWithNothing]
+const M = {
+  12: { read: { 60: { today: [12,96,0,0,0], line: [12,96,0,0,0] }, 600: { today: [12,96,0,0,0], line: [12,96,0,0,0] } },
+        reply:{ 60: { today: [60,60,36,0,4], line: [96,96,0,60,0] }, 600: { today: [96,96,0,0,0], line: [96,96,0,0,0] } } },
+  30: { read: { 60: { today: [30,240,0,0,0], line: [30,240,0,0,0] }, 600: { today: [30,240,0,0,0], line: [30,240,0,0,0] } },
+        reply:{ 60: { today: [60,60,180,0,22], line: [240,240,0,180,0] }, 600: { today: [240,240,0,0,0], line: [240,240,0,0,0] } } },
+  75: { read: { 60: { today: [60,480,120,0,15], line: [75,600,0,60,0] }, 600: { today: [75,600,0,0,0], line: [75,600,0,0,0] } },
+        reply:{ 60: { today: [60,60,540,0,67], line: [600,600,0,540,0] }, 600: { today: [600,600,0,0,0], line: [600,600,0,0,0] } } },
+  125:{ read: { 60: { today: [60,480,520,0,65], line: [125,1000,0,120,0] }, 600: { today: [125,1000,0,0,0], line: [125,1000,0,0,0] } },
+        reply:{ 60: { today: [60,60,940,0,117], line: [1000,1000,0,960,0] }, 600: { today: [600,600,400,0,50], line: [1000,1000,0,60,0] } } },
+};
+const sizes = [12, 30, 75, 125];
+$('s-biz').innerHTML = sizes.map((n, i) => `<button aria-pressed="${i === 3}" data-v="${n}">${n} businesses · ${n * 8} leads</button>`).join('');
+const getBiz = seg('s-biz', drawScale), getWork = seg('s-work', drawScale), getTier = seg('s-tier', drawScale), getMode = seg('s-mode', drawScale);
+const S = $('scale-svg');
+let dots = [], timer = 0;
+
+function drawScale() {
+  cancelAnimationFrame(timer);
+  S.innerHTML = '';
+  const n = +getBiz(), tier = getTier(), mode = getMode(), work = getWork();
+  // Lead agents grid: one column of 8 per business
+  txt('Lead agents', { x: 20, y: 22, 'font-weight': 700, 'font-size': 13 }, S);
+  // 40 lead agents per row, five businesses of 8 side by side, so 1,000 fit in 25 rows.
+  const perRow = 40, cell = 11;
+  dots = [];
+  for (let b = 0; b < n; b++) for (let l = 0; l < 8; l++) {
+    const i = b * 8 + l, x = 20 + (i % perRow) * cell + Math.floor((i % perRow) / 8) * 4, y = 34 + Math.floor(i / perRow) * (cell + 3);
+    dots.push({ b, e: el('circle', { cx: x + 5, cy: y + 5, r: 4, class: 'dot-idle' }, S) });
+  }
+  // Gateway and Zernio gate
+  const gx = 500;
+  el('rect', { x: gx, y: 150, width: 150, height: 90, rx: 10, class: 'gate' }, S);
+  txt('Gateway', { x: gx + 75, y: 186, 'text-anchor': 'middle', 'font-weight': 800 }, S);
+  txt(work === 'read' ? 'same business, one read' : 'every reply separate', { x: gx + 75, y: 206, 'text-anchor': 'middle', 'font-size': 12, class: 'mut' }, S);
+  el('rect', { x: 720, y: 140, width: 150, height: 110, rx: 10, fill: 'var(--panel)', stroke: 'var(--forest)', 'stroke-width': 2 }, S);
+  txt('Zernio', { x: 795, y: 180, 'text-anchor': 'middle', 'font-weight': 800 }, S);
+  txt(`${tier} a minute`, { x: 795, y: 200, 'text-anchor': 'middle', 'font-size': 13 }, S);
+  txt('all of Swayu', { x: 795, y: 218, 'text-anchor': 'middle', 'font-size': 12, class: 'mut' }, S);
+  el('path', { d: `M470 195H${gx - 4}`, class: 'wire' }, S); el('path', { d: `M${gx + 150} 195H716`, class: 'wire' }, S);
+  // Line box
+  const lineBox = el('g', {}, S);
+  el('rect', { x: 560, y: 290, width: 250, height: 52, rx: 8, fill: mode === 'line' ? 'var(--amber-soft)' : 'var(--grey)', stroke: mode === 'line' ? 'var(--amber)' : 'var(--rule)', 'stroke-dasharray': mode === 'line' ? '' : '5 4' }, lineBox);
+  txt(mode === 'line' ? 'The line: a reply waits for the next slot' : 'Before: a wait over 10 s is refused', { x: 685, y: 321, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700 }, lineBox);
+  // Outcome bins
+  el('rect', { x: 920, y: 90, width: 160, height: 70, rx: 10, fill: 'var(--jade-soft)' }, S);
+  txt('Served', { x: 1000, y: 120, 'text-anchor': 'middle', 'font-weight': 800 }, S);
+  const okT = txt('0', { x: 1000, y: 146, 'text-anchor': 'middle', 'font-size': 20, 'font-weight': 800 }, S);
+  el('rect', { x: 920, y: 230, width: 160, height: 70, rx: 10, fill: 'var(--red-soft)' }, S);
+  txt('Refused', { x: 1000, y: 260, 'text-anchor': 'middle', 'font-weight': 800 }, S);
+  const noT = txt('0', { x: 1000, y: 286, 'text-anchor': 'middle', 'font-size': 20, 'font-weight': 800 }, S);
+  const clock = txt('0 s', { x: 795, y: 120, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 700, class: 'mut' }, S);
+  el('path', { d: 'M870 180L916 130', class: 'wire' }, S); el('path', { d: 'M870 210L916 260', class: 'wire' }, S);
+
+  const [req, ok, no, last] = M[n][work][tier][mode];
+  $('st-leads').textContent = (n * 8).toLocaleString(); $('st-req').textContent = '0'; $('st-ok').textContent = '0'; $('st-no').textContent = '0'; $('st-t').textContent = '0 s';
+  S._run = () => run(n, work, +tier, mode, req, ok, no, last, okT, noT, clock);
+}
+
+function run(n, work, tier, mode, req, ok, no, last, okT, noT, clock) {
+  cancelAnimationFrame(timer);
+  dots.forEach(d => d.e.setAttribute('class', 'dot-idle'));
+  // Which lead agents are served in which minute. Reads: a business is one request. Replies: each lead is one request.
+  const unit = work === 'read' ? (i => Math.floor(i / 8)) : (i => i);
+  const minuteOf = i => Math.floor(unit(i) / tier);
+  const servedNow = i => unit(i) < tier;
+  const minutes = Math.floor(last / 60);
+  const total = reduce ? 1 : 1400 + minutes * 260;
+  const t0 = performance.now();
+  const step = now => {
+    const p = Math.min(1, (now - t0) / total);
+    const simMin = Math.min(minutes, Math.floor(p * (minutes + 1) * 1.0001));
+    let served = 0, refused = 0;
+    dots.forEach((d, i) => {
+      let cls = 'dot-idle';
+      if (p > 0.08) {
+        if (servedNow(i)) cls = 'dot-go';
+        else if (mode === 'line') cls = minuteOf(i) <= simMin && p > 0.2 ? 'dot-go' : 'dot-wait';
+        else cls = p > 0.45 ? 'dot-no' : 'dot-wait';
+      }
+      d.e.setAttribute('class', cls);
+      if (cls === 'dot-go') served++; if (cls === 'dot-no') refused++;
+    });
+    const doneReq = Math.round(req * Math.min(1, p * 1.25));
+    $('st-req').textContent = doneReq.toLocaleString();
+    $('st-ok').textContent = served.toLocaleString(); okT.textContent = served.toLocaleString();
+    $('st-no').textContent = refused.toLocaleString(); noT.textContent = refused.toLocaleString();
+    const t = mode === 'line' ? Math.round(p * last) : 0; clock.textContent = t + ' s'; $('st-t').textContent = t + ' s';
+    if (p < 1) timer = requestAnimationFrame(step);
+    else { $('st-req').textContent = req.toLocaleString(); $('st-ok').textContent = ok.toLocaleString(); $('st-no').textContent = no.toLocaleString(); okT.textContent = ok.toLocaleString(); noT.textContent = no.toLocaleString(); $('st-t').textContent = last + ' s'; clock.textContent = last + ' s'; }
+  };
+  timer = requestAnimationFrame(step);
+}
+$('s-play').addEventListener('click', () => S._run && S._run());
+drawScale();
+setTimeout(() => S._run && S._run(), 300);
+
+/* ---------- FLOW ---------- */
+// Laptop and production differ only in the public address Zernio pushes to; the code after it is the same.
+const F = $('flow-svg');
+const ADDR = {
+  laptop: { label: 'Tunnel', sub: 'xyz.trycloudflare.com', s: 'partly', d: 'The laptop has no public address, so Zernio cannot push to it. A Cloudflare tunnel lends one for the test and forwards to 127.0.0.1:4174. Without it, a comment waits until the inbox is opened: 6 Nov, five Facebook comments sent 13:01 to 13:03 UTC arrived at 13:09.' },
+  prod: { label: 'Swayu address', sub: 'swayu.io/api/webhooks', s: 'todo', d: 'The server already has a public address. Zernio is told once where to push; the business id in each event finds the right business. No tunnel.' },
+};
+const OPEN = {
+  laptop: { label: 'Check on open', sub: 'once, no timer', d: 'Opening the inbox reads each channel once. Commit 1f9be72. Walk on 6 Nov: zero requests in 70 s on the open page.' },
+  prod: { label: 'Safety read', sub: 'every 15 to 30 min', d: 'A slow read catches any push Zernio failed to deliver. Interval not decided; Zernio retries a push 7 times over about 51 h.' },
+};
+const getWhere = seg('f-where', drawFlow);
+let FN = [], FW = [], wires = [], pkt;
+function drawFlow() {
+  F.innerHTML = '';
+  const w = getWhere(), a = ADDR[w], o = OPEN[w];
+  FN = [
+    { id: 'cust', x: 20, y: 140, w: 120, label: 'Customer', sub: 'comments, reviews', s: 'built', d: 'Instagram, Facebook, Google reviews and WhatsApp. OF3 contact forms join next. Google questions are out: Google shut that API on 3 Nov 2025.' },
+    { id: 'addr', x: 175, y: 70, w: 160, label: a.label, sub: a.sub, s: a.s, d: a.d },
+    { id: 'push', x: 365, y: 70, w: 140, label: 'Push intake', sub: 'signed, once', s: 'built', d: 'The signature is checked and a retry is saved once. 5 Nov: a comment arrived 1.9 s after it was posted.' },
+    { id: 'open', x: 365, y: 210, w: 140, label: o.label, sub: o.sub, s: w === 'laptop' ? 'built' : 'todo', d: o.d },
+    { id: 'in', x: 540, y: 140, w: 150, label: 'Incoming line', sub: 'Postgres, per business', s: 'built', d: 'One table, one shape, business id on every row, never saved twice, text gone 30 days after the last reply.' },
+    { id: 'draft', x: 725, y: 70, w: 140, label: 'Draft', sub: 'under 1 min', s: 'built', d: 'One draft per message, checked before it is kept. 6 Nov: all five Facebook comments drafted in the minute they arrived.' },
+    { id: 'owner', x: 725, y: 210, w: 140, label: 'Owner', sub: 'approves, Send', s: 'built', d: 'Nothing leaves without the owner pressing Send. 6 Nov: 7 Instagram replies and 1 Facebook reply sent this way.' },
+    { id: 'out', x: 900, y: 140, w: 140, label: 'Outgoing line', sub: 'waits its turn', s: 'partly', d: 'Replies wait for a slot under the 600 a minute budget instead of being refused. Built 6 Nov; 1,000 replies at once all go out within 60 s in the simulation.' },
+    { id: 'plat', x: 1075, y: 140, w: 145, label: 'Platform', sub: 'reply posted', s: 'built', d: 'Instagram replies through Zernio and Facebook replies through Composio, seen live 4, 5 and 6 Nov.' },
+  ];
+  FW = [['cust','addr'],['addr','push'],['cust','open'],['push','in'],['open','in'],['in','draft'],['draft','owner'],['owner','out'],['out','plat']];
+  const pos = {}; FN.forEach(n => pos[n.id] = n);
+  const mid = (n, side) => side === 'r' ? [n.x + n.w, n.y + 30] : [n.x, n.y + 30];
+  wires = FW.map(([a, b]) => { const A = mid(pos[a], 'r'), B = mid(pos[b], 'l'); if (a === 'draft') { return el('path', { d: `M${pos.draft.x + 70} ${pos.draft.y + 60}V${pos.owner.y}`, class: 'wire' }, F); } return el('path', { d: `M${A[0]} ${A[1]}C${A[0] + 25} ${A[1]} ${B[0] - 25} ${B[1]} ${B[0]} ${B[1]}`, class: 'wire' }, F); });
+  FN.forEach(n => {
+    const g = el('g', { class: `node ${n.s}`, tabindex: 0, role: 'button' }, F);
+    el('rect', { x: n.x, y: n.y, width: n.w, height: 60, rx: 9, ...(n.id === 'addr' ? { style: 'stroke:var(--violet);stroke-width:2.5' } : {}) }, g);
+    txt(n.label, { x: n.x + n.w / 2, y: n.y + 26, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': 14 }, g);
+    txt(n.sub, { x: n.x + n.w / 2, y: n.y + 45, 'text-anchor': 'middle', 'font-size': 12, class: 'mut' }, g);
+    const pick = () => { F.querySelectorAll('.node').forEach(x => x.classList.remove('on')); g.classList.add('on'); detail('f-detail', `<b>${n.label}</b>${pill(n.s)}<span>${n.d}</span>`); };
+    g.addEventListener('click', pick); g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  txt(w === 'laptop' ? 'Only the violet box changes between laptop and production. Everything after it is the same code.' : 'Same code as the laptop. The tunnel is replaced by the server\'s own address, and a slow safety read replaces the check on open.', { x: 20, y: 330, 'font-size': 13, class: 'mut' }, F);
+  pkt = el('circle', { r: 9, class: 'pkt', cx: -20, cy: -20 }, F);
+  const pickNode = id => { const g = [...F.querySelectorAll('.node')][FN.findIndex(n => n.id === id)]; g && g.dispatchEvent(new Event('click')); };
+  pickNode('addr');
+}
+drawFlow();
+$('f-play').addEventListener('click', () => {
+  const order = [0, 1, 3, 5, 6, 7, 8];
+  let i = 0;
+  const go = () => {
+    if (i >= order.length) { pkt.setAttribute('cx', -20); return; }
+    const p = wires[order[i]], L = p.getTotalLength(), t0 = performance.now(), dur = reduce ? 1 : 700;
+    const node = FN.find(n => n.id === FW[order[i]][1]);
+    const step = now => { const k = Math.min(1, (now - t0) / dur), pt = p.getPointAtLength(k * L); pkt.setAttribute('cx', pt.x); pkt.setAttribute('cy', pt.y); if (k < 1) requestAnimationFrame(step); else { F.querySelectorAll('.node').forEach(x => x.classList.remove('on')); const g = [...F.querySelectorAll('.node')][FN.indexOf(node)]; g.classList.add('on'); detail('f-detail', `<b>${node.label}</b>${pill(node.s)}<span>${node.d}</span>`); i++; setTimeout(go, reduce ? 0 : node.id === 'owner' || node.id === 'addr' ? 900 : 250); } };
+    requestAnimationFrame(step);
+  };
+  go();
+});
+
+/* ---------- TODAY'S 3 ---------- */
+// Real rows, 6 Nov. now: points from src/inbox.ts today. new: buy +3, question +2, waiting over a day +2,
+// wrote before on an earlier day +1, praise never on top, one card per person first.
+const MSG = [
+  { who: 'Customer A', when: '30 Oct', text: 'niceeeee', kind: 'praise', now: 3, nowWhy: 'waiting 170 h, wrote before', nw: 2, nwWhy: 'waiting over a day; praise' },
+  { who: 'Customer A', when: '30 Oct', text: 'wowwwwwww', kind: 'other', now: 3, nowWhy: 'waiting 170 h, wrote before', nw: 2, nwWhy: 'waiting over a day' },
+  { who: 'Customer A', when: '30 Oct', text: 'wherre to buyyy', kind: 'question', now: 3, nowWhy: 'waiting 170 h, wrote before', nw: 4, nwWhy: 'question, waiting over a day' },
+  { who: 'Sujit Nirmal', when: '6 Nov', text: 'Want to buy this matcha', kind: 'order', now: 1, nowWhy: 'wrote before', nw: 4, nwWhy: 'wants to buy, wrote before' },
+  { who: 'Sujit Nirmal', when: '6 Nov', text: 'What are the more flavours in this', kind: 'question', now: 1, nowWhy: 'wrote before', nw: 3, nwWhy: 'question, wrote before' },
+  { who: 'Sujit Nirmal', when: '6 Nov', text: 'How much of this do u have in your in st…', kind: 'question', now: 1, nowWhy: 'wrote before', nw: 3, nwWhy: 'question, wrote before' },
+  { who: 'Sujit Nirmal', when: '6 Nov', text: 'Want to give an order for the 2 chocolat…', kind: 'order', now: 1, nowWhy: 'wrote before', nw: 4, nwWhy: 'wants to buy, wrote before' },
+  { who: 'Sujit Nirmal', when: '6 Nov', text: 'Amazing what\'s, the pricing for each sli…', kind: 'question', now: 1, nowWhy: 'wrote before', nw: 3, nwWhy: 'question, wrote before' },
+];
+const RULES_NOW = [['Low star rating', '+3'], ['Complaint or refund', '+3'], ['Wants to buy', '0'], ['Asks a question', '0'], ['Waiting over a day', '+2'], ['Wrote before, even the same minute', '+1'], ['Praise only', 'can top'], ['Same person', 'many cards']];
+const RULES_NEW = [['Low star rating', '+3'], ['Complaint or refund', '+3'], ['Wants to buy', '+3'], ['Asks a question', '+2'], ['Waiting over a day', '+2'], ['Wrote before, on an earlier day', '+1'], ['Praise only', 'never on top'], ['Same person', 'one card first']];
+const ROW = 64, list = $('r-list');
+list.style.height = (MSG.length * ROW + 30) + 'px';
+const cards = MSG.map(m => { const c = document.createElement('div'); c.className = 'card'; list.appendChild(c); return c; });
+const div = document.createElement('div'); div.className = 'divider'; div.innerHTML = '<span>Today\'s 3 above</span>'; list.appendChild(div);
+function order(rule) {
+  const idx = MSG.map((_, i) => i);
+  if (rule === 'now') return idx.sort((a, b) => MSG[b].now - MSG[a].now || a - b);
+  // Most points first, oldest first on a tie; praise last; then one card per person in the top three.
+  const ranked = idx.sort((a, b) => (MSG[a].kind === 'praise') - (MSG[b].kind === 'praise') || MSG[b].nw - MSG[a].nw || a - b);
+  const top = [], seen = new Set();
+  for (const i of ranked) if (top.length < 3 && !seen.has(MSG[i].who)) { top.push(i); seen.add(MSG[i].who); }
+  for (const i of ranked) if (top.length < 3 && !top.includes(i)) top.push(i);
+  return [...top, ...ranked.filter(i => !top.includes(i))];
+}
+function drawRank(rule) {
+  const o = order(rule);
+  o.forEach((i, r) => {
+    const m = MSG[i], c = cards[i], pts = rule === 'now' ? m.now : m.nw, why = rule === 'now' ? m.nowWhy : m.nwWhy;
+    c.innerHTML = `<span class="n">${r + 1}</span><span class="t"><b>"${m.text}"</b><span>${m.who} · Facebook · ${m.when} · ${why}</span></span><span class="pt">${pts}<small>points</small></span>`;
+    c.style.top = (10 + r * ROW + (r >= 3 ? 20 : 0)) + 'px';
+    c.classList.toggle('top', r < 3); c.classList.toggle('out', r >= 3);
+  });
+  div.style.top = (10 + 3 * ROW + 7) + 'px';
+  const rules = rule === 'now' ? RULES_NOW : RULES_NEW;
+  $('r-rules').innerHTML = `<h3>${rule === 'now' ? 'Old rule' : 'New rule'}</h3>` + rules.map((r, k) => `<div class="rule${rule === 'new' && r[1] !== RULES_NOW[k][1] ? ' chg' : ''}"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('') + `<span class="src">${rule === 'now' ? 'Week old compliments from one person fill Today\'s 3. Two orders placed tonight sit below them.' : 'An order and a buying question from two people now lead. Changed rows are shaded.'}</span>`;
+  const st = $('r-state'); st.textContent = rule === 'now' ? 'replaced 6 Nov' : 'built 6 Nov'; st.className = 'pill ' + (rule === 'now' ? 'p-todo' : 'p-built');
+}
+const getRule = seg('r-rule', drawRank);
+drawRank('now');
+
+/* ---------- PERMISSIONS ---------- */
+const P = $('perm-svg');
+const RULES = {
+  replies: { read: ['instagram','whatsapp'], reply: ['instagram','whatsapp'], ask: ['reply'] },
+  ads: { read: ['instagram'], reply: [] },
+  analytics: { read: ['google_places'], reply: [] },
+};
+const getLead = seg('p-lead', drawPerm), getAct = seg('p-act', drawPerm), getCh = seg('p-ch', drawPerm);
+const PN = [
+  { x: 20, label: 'Lead asks' }, { x: 230, label: 'Tools given' }, { x: 440, label: 'Gateway check' },
+];
+const OUT = { allow: { y: 30, label: 'Allowed', sub: 'route picks Zernio or Composio', c: 'var(--jade)' }, ask: { y: 120, label: 'Owner decides', sub: 'no Send means held', c: 'var(--amber)' }, block: { y: 210, label: 'Blocked', sub: 'never reaches a provider', c: 'var(--red)' } };
+let permState = {};
+function decide(lead, act, ch) {
+  const r = RULES[lead]; if (!r[act] || !r[act].includes(ch)) return 'block';
+  return r.ask && r.ask.includes(act) ? 'ask' : 'allow';
+}
+function drawPerm() {
+  P.innerHTML = '';
+  const lead = getLead(), act = getAct(), ch = getCh();
+  PN.forEach((n, i) => { const g = el('g', { class: 'node' }, P); el('rect', { x: n.x, y: 115, width: 170, height: 70, rx: 10 }, g); txt(n.label, { x: n.x + 85, y: 146, 'text-anchor': 'middle', 'font-weight': 800 }, g); txt(i === 0 ? `${lead} · ${act} · ${ch.replace('_', ' ')}` : i === 1 ? 'only allowed actions' : 'checked again', { x: n.x + 85, y: 166, 'text-anchor': 'middle', 'font-size': 12, class: 'mut' }, g); if (i) el('path', { d: `M${PN[i - 1].x + 170} 150H${n.x}`, class: 'wire' }, P); });
+  const outs = {};
+  for (const k in OUT) { const o = OUT[k]; const g = el('g', {}, P); const r = el('rect', { x: 720, y: o.y, width: 360, height: 64, rx: 10, fill: 'var(--panel)', stroke: 'var(--rule)', 'stroke-width': 2 }, g); txt(o.label, { x: 740, y: o.y + 28, 'font-weight': 800 }, g); txt(o.sub, { x: 740, y: o.y + 48, 'font-size': 12, class: 'mut' }, g); el('path', { d: `M610 150C660 150 670 ${o.y + 32} 716 ${o.y + 32}`, class: 'wire' }, P); outs[k] = r; }
+  permState = { lead, act, ch, outs, ball: el('circle', { r: 10, cx: 105, cy: 150, fill: 'var(--jade)' }, P) };
+  detail('p-detail', '<span class="src">Press Try it</span>');
+}
+$('p-play').addEventListener('click', () => {
+  const { lead, act, ch, outs, ball } = permState; const v = decide(lead, act, ch);
+  const toolGiven = v !== 'block';
+  const pts = toolGiven ? [[105,150],[315,150],[525,150],[700, OUT[v].y + 32]] : [[105,150],[315,150]];
+  let i = 0;
+  const hop = () => {
+    if (i >= pts.length - 1) {
+      if (!toolGiven) { ball.setAttribute('fill', 'var(--red)'); outs.block.setAttribute('stroke', 'var(--red)'); detail('p-detail', `<span class="pill p-red">blocked</span><span>The ${lead} lead is never given a ${act} tool for ${ch.replace('_', ' ')}. The model cannot even try.</span>`); }
+      else { outs[v].setAttribute('stroke', OUT[v].c); ball.setAttribute('fill', OUT[v].c); detail('p-detail', v === 'ask' ? '<span class="pill p-partly">owner decides</span><span>The reply waits for the owner\'s Send. A ledger row is written either way.</span>' : '<span class="pill p-built">allowed</span><span>The gateway routes it to one provider and writes a ledger row.</span>'); }
+      return;
+    }
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], t0 = performance.now(), dur = reduce ? 1 : 550;
+    const step = now => { const k = Math.min(1, (now - t0) / dur); ball.setAttribute('cx', x0 + (x1 - x0) * k); ball.setAttribute('cy', y0 + (y1 - y0) * k); if (k < 1) requestAnimationFrame(step); else { i++; hop(); } };
+    requestAnimationFrame(step);
+  };
+  for (const k in outs) outs[k].setAttribute('stroke', 'var(--rule)');
+  ball.setAttribute('fill', 'var(--jade)'); ball.setAttribute('cx', 105); ball.setAttribute('cy', 150);
+  hop();
+});
+drawPerm();
+
+/* ---------- DESIGN BY SIZE ---------- */
+const D = $('design-svg');
+const PIECES = [
+  { name: 'Push intake', on: [1,1,1], s: 'built', d: 'Messages arrive by push, not by asking. Same at every size.' },
+  { name: 'Leads read our database', on: [1,1,1], s: 'partly', d: 'Lead reads hit Postgres, not Zernio. Only replies and the check on open spend the budget.' },
+  { name: 'One read per business', on: [1,1,1], s: 'built', d: 'Identical reads in flight are shared within a business. 1,000 lead reads become 125 requests.' },
+  { name: 'Business id on every call', on: [1,1,1], s: 'built', d: 'Two businesses never share a read. Commit 2ed8dff.' },
+  { name: 'Replies wait in line', on: [1,1,1], s: 'partly', d: 'Built 6 Nov. A reply waits for the next free slot; a read still fails fast. Simulated: 0 refused at every size.' },
+  { name: 'One shared budget', on: [0,1,1], s: 'todo', d: 'One count in Postgres, so two servers never spend the same 600 twice.' },
+  { name: 'Turns per business', on: [0,0,1], s: 'todo', d: 'Round robin across businesses, so no business waits behind everyone else.' },
+  { name: 'Spread scheduled starts', on: [0,0,1], s: 'todo', d: 'The Schedules layer starts businesses over a few minutes, not all at 9:00:00.' },
+];
+const RES = [
+  { label: '12 to 30 businesses', a: '0 refused at 600 / min', b: 'free tier: 36 to 180 refused today' },
+  { label: 'around 75 businesses', a: '0 refused at 600 / min, the whole minute used', b: 'free tier: 540 refused today, all in 540 s with the line' },
+  { label: '125 businesses', a: '0 refused with the line, all 1,000 in 60 s', b: 'before the line: 400 refused' },
+];
+const getSize = seg('d-size', drawDesign);
+function drawDesign() {
+  D.innerHTML = '';
+  const s = +getSize();
+  PIECES.forEach((p, i) => {
+    const y = 20 + i * 47, on = p.on[s];
+    const g = el('g', { class: `node ${on ? p.s : 'todo'}`, tabindex: 0, role: 'button', opacity: on ? 1 : .35 }, D);
+    el('rect', { x: 20, y, width: 520, height: 38, rx: 8 }, g);
+    txt(p.name, { x: 40, y: y + 24, 'font-weight': 700, 'font-size': 14 }, g);
+    txt(on ? (p.s === 'built' ? 'built' : p.s === 'partly' ? 'part built' : 'to build') : 'not needed yet', { x: 520, y: y + 24, 'text-anchor': 'end', 'font-size': 12, class: 'mut' }, g);
+    const pick = () => { D.querySelectorAll('.node').forEach(x => x.classList.remove('on')); g.classList.add('on'); detail('d-detail', `<b>${p.name}</b>${on ? pill(p.s) : '<span class="pill p-todo">not needed at this size</span>'}<span>${p.d}</span>`); };
+    g.addEventListener('click', pick); g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  const r = RES[s];
+  el('rect', { x: 600, y: 120, width: 480, height: 180, rx: 12, fill: 'var(--jade-soft)', stroke: 'var(--jade)' }, D);
+  txt(r.label, { x: 840, y: 165, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': 20 }, D);
+  txt(r.a, { x: 840, y: 210, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 700 }, D);
+  txt(r.b, { x: 840, y: 245, 'text-anchor': 'middle', 'font-size': 14, class: 'mut' }, D);
+  const onCount = PIECES.filter(p => p.on[s]).length;
+  txt(`${onCount} of ${PIECES.length} pieces on`, { x: 840, y: 340, 'text-anchor': 'middle', 'font-size': 14, class: 'mut' }, D);
+  for (let i = 0; i < PIECES.length; i++) el('rect', { x: 720 + i * 30, y: 355, width: 24, height: 10, rx: 3, fill: PIECES[i].on[s] ? 'var(--jade)' : 'var(--rule)' }, D);
+}
+drawDesign();
+
+/* ---------- LAYERS ---------- */
+const Lsvg = $('layers-svg');
+const GROUPS = [
+  ['Who the business is', [['Identity','built','Reply drafts carry the profile and brand voice.'],['Memory and skills','built','Nothing direct for connectors.']]],
+  ['Who may do what', [['Access and seats','partly','Owner tokens live here, encrypted per business. Connectors get grants, never secrets.'],['The rules','built','Owner approval and lead permissions live here.'],['Payments','todo','Not used by connectors.'],['Billing','todo','Not used by connectors.']]],
+  ['How work happens', [['Front door','partly','Where the owner approves replies.'],['The run','built','Every connector call is a ledger row.'],['Checks','partly','A reply is checked before it leaves.'],['Schedules','partly','Anything timed lives here, including spreading starts.']]],
+  ['How things move', [['Connectors and channels','partly','This system: intake, the two lines, the gateway, one connector per platform.']]],
+  ['What keeps it whole', [['Business data','partly','The 30 day rule for customer text.'],['Own health','partly','Watches connector errors and stalls.']]],
+];
+let y = 14;
+GROUPS.forEach(([gname, layers]) => {
+  txt(gname, { x: 20, y: y + 30, 'font-weight': 800, 'font-size': 13, class: 'mut' }, Lsvg);
+  layers.forEach(([name, s, d], i) => {
+    const x = 220 + i * 215, hot = name === 'Connectors and channels';
+    const g = el('g', { class: `node ${s}`, tabindex: 0, role: 'button' }, Lsvg);
+    el('rect', { x, y: y + 6, width: hot ? 860 : 200, height: 70, rx: 10, 'stroke-width': hot ? 3 : 1.5, style: hot ? 'stroke:var(--jade)' : '' }, g);
+    txt(name, { x: x + (hot ? 430 : 100), y: y + 46, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': hot ? 17 : 14 }, g);
+    const pick = () => { Lsvg.querySelectorAll('.node').forEach(x => x.classList.remove('on')); g.classList.add('on'); detail('l-detail', `<b>${name}</b>${pill(s)}<span>${d}</span>`); };
+    g.addEventListener('click', pick); g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  y += 90;
+});
+})();
+</script>

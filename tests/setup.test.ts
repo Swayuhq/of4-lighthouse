@@ -16,13 +16,14 @@ vi.mock('../src/store/db', () => ({
 }));
 
 import { leadGateway, ownerGateway, ROUTES } from '../src/gateway/setup';
+import { TENANT } from '../src/tenant';
 
 beforeEach(() => { sent.calls = []; sent.ledger = []; sent.held = []; sent.known = true; });
 
 describe('One gateway, two doors', () => {
   it('a lead agent reply is kept as a draft for the owner and never reaches a provider', async () => {
-    const out = await leadGateway().call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Hi' } });
-    expect(out).toEqual({ ok: false, reason: "Held for the owner's approval." });
+    const out = await leadGateway().call({ tenant: TENANT, lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Hi' } });
+    expect(out).toEqual({ ok: false, reason: "Kept as a draft for the owner to check and send. This message is done: do not reply to it again." });
     expect(sent.calls).toEqual([]);
     expect(sent.held).toEqual([['facebook:1_2', 'Hi']]);
     expect(sent.ledger).toMatchObject([{ lead: 'replies', channel: 'facebook', action: 'reply', outcome: 'held' }]);
@@ -30,33 +31,33 @@ describe('One gateway, two doors', () => {
 
   it('a lead reply to a comment the inbox does not hold is refused, so it is never lost silently', async () => {
     sent.known = false;
-    const out = await leadGateway().call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: 'nope', text: 'Hi' } });
+    const out = await leadGateway().call({ tenant: TENANT, lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: 'nope', text: 'Hi' } });
     expect(out).toMatchObject({ ok: false, reason: expect.stringContaining('The reply was not kept') });
     expect(sent.calls).toEqual([]);
     expect(sent.ledger).toMatchObject([{ outcome: 'refused' }]);
   });
 
   it('a lead reply that invents a price is refused by the checker and never kept', async () => {
-    const out = await leadGateway().call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Yes, delivery is 50 rupees.' } });
+    const out = await leadGateway().call({ tenant: TENANT, lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Yes, delivery is 50 rupees.' } });
     expect(out).toMatchObject({ ok: false, reason: expect.stringContaining('50') });
     expect(sent.held).toEqual([]);
     expect(sent.ledger).toMatchObject([{ outcome: 'refused' }]);
   });
 
   it('the owner pressing Send goes out through the routed provider, with a ledger row for the approval and the send', async () => {
-    const out = await ownerGateway().call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Hi' } });
+    const out = await ownerGateway().call({ tenant: TENANT, lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Hi' } });
     expect(out).toMatchObject({ ok: true, provider: ROUTES['facebook:reply'] });
     expect(sent.calls).toEqual([{ provider: 'composio', channel: 'facebook', action: 'reply' }]);
     expect(sent.ledger.map(r => r.outcome)).toEqual(['approved', 'done']);
   });
 
   it('a read needs no approval and is routed by the table', async () => {
-    await leadGateway().call({ lead: 'replies', channel: 'instagram', action: 'read', args: {} });
+    await leadGateway().call({ tenant: TENANT, lead: 'replies', channel: 'instagram', action: 'read', args: {} });
     expect(sent.calls).toEqual([{ provider: 'zernio', channel: 'instagram', action: 'read' }]);
   });
 
   it('the owner door does not widen the rules: the ads lead still may not reply', async () => {
-    const out = await ownerGateway().call({ lead: 'ads', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Hi' } });
+    const out = await ownerGateway().call({ tenant: TENANT, lead: 'ads', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Hi' } });
     expect(out.ok).toBe(false);
     expect(sent.calls).toEqual([]);
     expect(sent.ledger).toMatchObject([{ outcome: 'refused' }]);

@@ -10,7 +10,7 @@ vi.mock('next/server', async real => ({ ...(await real<typeof import('next/serve
 
 const { pushSignatureOk, readPush } = await import('../src/zernio-push');
 const { receivePush } = await import('../src/pipeline');
-const { connect, load, markBroken, pushEvents, startOver } = await import('../src/store/db');
+const { connect, holdReply, load, markBroken, pushEvents, record, startOver, sweepHistory } = await import('../src/store/db');
 const { POST } = await import('../app/api/webhooks/zernio/route');
 
 const SECRET = 'zernio-secret';
@@ -159,6 +159,52 @@ describe('Storing a push', () => {
     await connect('google_reviews');
     await receivePush('zernio', readPush(review({ hasReply: true }))!);
     expect((await load()).state.status).toEqual({ 'google_reviews:accounts/1/locations/2/reviews/3': 'answered' });
+  });
+});
+
+describe('A customer edits a review', () => {
+  // Zernio, /webhooks/inbox, read 6 Nov 2026: review.updated has the same shape as review.new.
+  const ID = 'google_reviews:accounts/1/locations/2/reviews/3';
+  const edited = (over: Record<string, unknown> = {}, id = 'evt-r2') => ({ ...review(over, id), event: 'review.updated' });
+  beforeEach(async () => { await startOver(); await connect('google_reviews'); });
+  afterAll(() => startOver());
+
+  it('is read like a new review', () => {
+    expect(readPush(edited({ text: 'Cake arrived fine in the end', rating: 4 }))).toMatchObject({ channel: 'google_reviews', kind: 'review.updated', item: { text: 'Cake arrived fine in the end', stars: 4 } });
+  });
+
+  it('the owner sees the new words and stars, and the old draft goes so a new one is written', async () => {
+    await receivePush('zernio', readPush(review())!);
+    await holdReply(ID, 'So sorry the cake was crushed.');
+    expect(await receivePush('zernio', readPush(edited({ text: 'Crushed and late. Never again.', rating: 1 }))!)).toBe('stored');
+    const { state } = await load();
+    expect(state.messages.find(m => m.id === ID)).toMatchObject({ text: 'Crushed and late. Never again.', stars: 1 });
+    expect(state.drafts[ID]).toBeUndefined();
+    expect(state.status[ID]).toBe('waiting');
+  });
+
+  it('an edit after the owner replied updates the words and keeps the reply', async () => {
+    await receivePush('zernio', readPush(review())!);
+    await record(ID, 'sent', 'So sorry.');
+    expect(await receivePush('zernio', readPush(edited({ text: 'Thanks for the quick reply', rating: 4, hasReply: true }))!)).toBe('stored');
+    const { state } = await load();
+    expect(state.messages.find(m => m.id === ID)).toMatchObject({ text: 'Thanks for the quick reply', stars: 4 });
+    expect(state.status[ID]).toBe('answered');
+    expect(state.reply[ID]).toBe('So sorry.');
+  });
+
+  it('a reply made in the Google app, with the words unchanged, marks it answered and changes nothing else', async () => {
+    await receivePush('zernio', readPush(review())!);
+    expect(await receivePush('zernio', readPush(edited({ hasReply: true }))!)).toBe('already had');
+    expect((await load()).state.status[ID]).toBe('answered');
+  });
+
+  it('a review whose words were swept after 30 days does not get them back', async () => {
+    await receivePush('zernio', readPush(review())!);
+    await record(ID, 'answered');
+    await sweepHistory(new Date(Date.now() + 31 * 86_400_000));
+    await receivePush('zernio', readPush(edited({ text: 'Edited much later' }))!);
+    expect((await load()).state.messages.find(m => m.id === ID)?.text).toBe('');
   });
 });
 

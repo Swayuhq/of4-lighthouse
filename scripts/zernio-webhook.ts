@@ -8,7 +8,7 @@ export {};
 
 const BASE = 'https://zernio.com/api/v1';
 const NAME = 'Lighthouse inbox';
-const EVENTS = ['comment.received', 'review.new'];
+const EVENTS = ['comment.received', 'review.new', 'review.updated'];
 
 type Hook = { _id?: string; name?: string; url?: string; events?: string[]; isActive?: boolean; failureCount?: number; lastFiredAt?: string };
 

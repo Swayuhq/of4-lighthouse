@@ -4,6 +4,7 @@ import { zernioProvider, MAX_REVIEW_PAGES, type ReviewSet } from '../src/gateway
 import { allowedTools } from '../src/gateway/leads';
 import { decide, loadPolicies } from '../src/gateway/policy';
 import { sentence } from '../src/activity';
+import { TENANT } from '../src/tenant';
 
 const SCHEMA = readFileSync('policies/connectors.cedarschema', 'utf8');
 const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'), SCHEMA);
@@ -50,7 +51,7 @@ describe('Every review, page by page', () => {
       '': { reviews: [review('r1'), review('r2', { reviewReply: { comment: 'Thanks!' } })], averageRating: 4.3, totalReviewCount: 3, nextPageToken: 'p2' },
       p2: { reviews: [review('r3', { comment: undefined, rating: 5 })], averageRating: 4.3, totalReviewCount: 3, nextPageToken: null },
     });
-    const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
+    const set = (await zernioProvider('google_reviews', 'read_all', {}, TENANT)) as ReviewSet;
     expect(set.total).toBe(3);
     expect(set.average).toBe(4.3);
     expect(set.complete).toBe(true);
@@ -66,7 +67,7 @@ describe('Every review, page by page', () => {
 
   it('an anonymous reviewer is not given a made up name', async () => {
     pages({ '': { reviews: [review('r1', { reviewer: { isAnonymous: true } })], totalReviewCount: 1, nextPageToken: null } });
-    const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
+    const set = (await zernioProvider('google_reviews', 'read_all', {}, TENANT)) as ReviewSet;
     expect(set.reviews[0].author).toBe('A Google user');
   });
 
@@ -74,14 +75,14 @@ describe('Every review, page by page', () => {
     const many: Record<string, unknown> = {};
     for (let i = 0; i <= MAX_REVIEW_PAGES + 5; i++) many[i === 0 ? '' : `t${i}`] = { reviews: [review(`r${i}`)], totalReviewCount: 999, nextPageToken: `t${i + 1}` };
     pages(many);
-    const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
+    const set = (await zernioProvider('google_reviews', 'read_all', {}, TENANT)) as ReviewSet;
     expect(urls.filter(u => u.includes('/gmb-reviews'))).toHaveLength(MAX_REVIEW_PAGES);
     expect(set.complete).toBe(false);
   });
 
   it('a page token that repeats ends the read instead of looping', async () => {
     pages({ '': { reviews: [review('r1')], totalReviewCount: 2, nextPageToken: 'same' }, same: { reviews: [review('r2')], totalReviewCount: 2, nextPageToken: 'same' } });
-    const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
+    const set = (await zernioProvider('google_reviews', 'read_all', {}, TENANT)) as ReviewSet;
     expect(urls.filter(u => u.includes('/gmb-reviews'))).toHaveLength(2);
     expect(set.complete).toBe(false);
   });
@@ -91,13 +92,13 @@ describe('Every review, page by page', () => {
       '': { reviews: [review('r1'), review('r2')], totalReviewCount: 2, nextPageToken: 'p2' },
       p2: { reviews: [review('r2')], totalReviewCount: 2, nextPageToken: null },
     });
-    const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
+    const set = (await zernioProvider('google_reviews', 'read_all', {}, TENANT)) as ReviewSet;
     expect(set.reviews.map(r => r.id)).toEqual(['r1', 'r2']);
   });
 
   it('with no Google profile connected the read fails, so no reviews never reads as zero reviews', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ accounts: [] }))));
-    await expect(zernioProvider('google_reviews', 'read_all', {})).rejects.toThrow('no Google Business Profile is connected');
+    await expect(zernioProvider('google_reviews', 'read_all', {}, TENANT)).rejects.toThrow('no Google Business Profile is connected');
   });
 });
 
@@ -121,7 +122,7 @@ describe('The activity list', () => {
       providers: { composio: unused, zernio: async () => ({ complete: false, reviews: [] }), own: unused },
       askOwner: async () => 'approved', record: async row => { rows.push(row); },
     });
-    await gateway.call({ lead: 'analytics', channel: 'google_reviews', action: 'read_all', args: {} });
+    await gateway.call({ tenant: TENANT, lead: 'analytics', channel: 'google_reviews', action: 'read_all', args: {} });
     expect(rows).toMatchObject([{ outcome: 'done', note: 'stopped early' }]);
   });
 });
@@ -138,8 +139,8 @@ describe('Verifier findings, round 2', () => {
       policies: POLICIES, routes: { 'google_reviews:read': 'zernio', 'google_reviews:read_all': 'zernio' },
       providers: { composio: unused, zernio, own: unused }, askOwner: async () => 'approved', record: async () => {},
     });
-    const inbox = gateway.call({ lead: 'replies', channel: 'google_reviews', action: 'read', args: {} });
-    const all = gateway.call({ lead: 'analytics', channel: 'google_reviews', action: 'read_all', args: {} });
+    const inbox = gateway.call({ tenant: TENANT, lead: 'replies', channel: 'google_reviews', action: 'read', args: {} });
+    const all = gateway.call({ tenant: TENANT, lead: 'analytics', channel: 'google_reviews', action: 'read_all', args: {} });
     release();
     const [a, b] = await Promise.all([inbox, all]);
     expect(calls.sort()).toEqual(['read', 'read_all']);
@@ -149,14 +150,14 @@ describe('Verifier findings, round 2', () => {
 
   it('an empty page token means the last page', async () => {
     pages({ '': { reviews: [review('r1')], totalReviewCount: 1, nextPageToken: '' } });
-    const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
+    const set = (await zernioProvider('google_reviews', 'read_all', {}, TENANT)) as ReviewSet;
     expect(urls.filter(u => u.includes('/gmb-reviews'))).toHaveLength(1);
     expect(set.complete).toBe(true);
   });
 
   it('a rating of 0 means Google sent none, so it is left out, not counted as zero stars', async () => {
     pages({ '': { reviews: [review('r1', { rating: 0 })], totalReviewCount: 1, nextPageToken: null } });
-    const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
+    const set = (await zernioProvider('google_reviews', 'read_all', {}, TENANT)) as ReviewSet;
     expect(set.reviews[0].stars).toBeUndefined();
   });
 });

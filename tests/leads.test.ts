@@ -3,6 +3,7 @@ import { createGateway } from '../src/gateway/gateway';
 import { allowedTools, leadTools } from '../src/gateway/leads';
 import { readFileSync } from 'node:fs';
 import { loadPolicies } from '../src/gateway/policy';
+import { TENANT } from '../src/tenant';
 
 const SCHEMA = readFileSync('policies/connectors.cedarschema', 'utf8');
 const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'), SCHEMA);
@@ -32,11 +33,11 @@ describe('Each lead is handed only the tools its rules allow', () => {
       policies: POLICIES, routes: { 'facebook:reply': 'composio' }, providers: { composio: provider, zernio: provider, own: provider },
       askOwner, record: async () => {},
     });
-    const tools = leadTools(POLICIES, 'replies', gateway);
+    const tools = leadTools(POLICIES, { tenant: TENANT, lead: 'replies' }, gateway);
     const execute = tools.facebook_reply.execute as (input: unknown, context: unknown) => Promise<unknown>;
     const out = await execute({ ref: 'c1', text: 'Thanks!' }, {});
     expect(askOwner).toHaveBeenCalledOnce();
     expect(provider).not.toHaveBeenCalled();
-    expect(out).toEqual({ ok: false, reason: "Held for the owner's approval." });
+    expect(out).toEqual({ ok: false, reason: "Kept as a draft for the owner to check and send. This message is done: do not reply to it again." });
   });
 });

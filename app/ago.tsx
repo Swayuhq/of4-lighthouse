@@ -1,16 +1,16 @@
 'use client';
-// "Checked 20 seconds ago", kept true while the owner looks at it.
+// "Updated 20 seconds ago", kept true while the owner looks at it. A check and a push both count as an update.
 import { useEffect, useState } from 'react';
 
 /** `lead` is the word before the time; the activity page passes an empty one. */
-export function Ago({ at, lead = 'checked ' }: { at: string | null; lead?: string }) {
+export function Ago({ at, lead = 'updated ' }: { at: string | null; lead?: string }) {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 5000);
     return () => clearInterval(t);
   }, []);
-  if (!at) return <>not checked yet</>;
+  if (!at) return <>not updated yet</>;
   // The server and the browser clocks differ, so the words wait for the browser.
   if (now === null) return <>{lead}just now</>;
   const s = Math.max(0, Math.round((now - Date.parse(at)) / 1000));

@@ -2,14 +2,18 @@
 // It is handed only its reply tools, and every reply goes through the gateway's lead door: checked, then kept as a draft.
 // Nothing it writes is sent. Only the owner's Send posts a reply.
 import { isChannel } from './connectors';
+import { TENANT } from './tenant';
 import { view, type Item } from './inbox';
 
 const AT_ONCE = 10;
 
+/** A message is tried once for its words. A customer who edits it gets a new try for the new words. */
+export const triedKey = (i: Pick<Item, 'id' | 'text'>) => `${i.id}\n${i.text}`;
+
 /** Waiting messages from a connected channel that have no draft and were not tried before, most urgent first. */
 export function toDraft(items: Item[], tried: Set<string>): Item[] {
   return items
-    .filter(i => i.status === 'waiting' && !i.heldReply && !tried.has(i.id) && isChannel(i.id.split(':')[0]))
+    .filter(i => i.status === 'waiting' && !i.heldReply && !tried.has(triedKey(i)) && isChannel(i.id.split(':')[0]))
     .slice(0, AT_ONCE);
 }
 
@@ -48,12 +52,12 @@ export async function draftNow() {
   const { load } = await import('./store/db');
   const todo = toDraft(view((await load()).state).items, memory.tried);
   if (!todo.length) return;
-  for (const i of todo) memory.tried.add(i.id);
+  for (const i of todo) memory.tried.add(triedKey(i));
   try {
     await draftThese(todo);
   } catch (error) {
     // A busy or failing model is not the message's fault: release them so a later check tries again, after a pause.
-    for (const i of todo) memory.tried.delete(i.id);
+    for (const i of todo) memory.tried.delete(triedKey(i));
     memory.pauseUntil = Date.now() + PAUSE_MS;
     throw error;
   }
@@ -68,6 +72,6 @@ async function draftThese(todo: Item[]) {
   const { createLead } = await import('./gateway/leads');
   const { readPolicies } = await import('./gateway/policy');
   const { leadGateway } = await import('./gateway/setup');
-  const lead = createLead(readPolicies(), 'replies', leadGateway(), ['reply']);
+  const lead = createLead(readPolicies(), { tenant: TENANT, lead: 'replies' }, leadGateway(), ['reply']);
   await lead.generate(draftTask(asked), { maxSteps: asked.length * 2 + 2 });
 }

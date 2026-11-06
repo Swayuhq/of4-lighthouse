@@ -1,0 +1,202 @@
+<title>Connector Answers</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one column of question cards; each card is the question, a one line answer, and one figure. */
+:root{
+  --bg:#f4f7f6; --panel:#ffffff; --ink:#13221e; --muted:#5d6d68; --rule:#d8e1de;
+  --forest:#00584D; --jade:#009B74; --jade-soft:#dff2ec; --amber:#b86e00; --amber-soft:#fcefd8;
+  --red:#c0352b; --red-soft:#fbe5e3; --grey:#eef2f0;
+  --font:"Manrope",ui-sans-serif,system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1513; --panel:#141f1c; --ink:#e5eeeb; --muted:#9bb0a9; --rule:#283834;
+  --forest:#62d3b6; --jade:#3cc39e; --jade-soft:#163830; --amber:#f2b55c; --amber-soft:#3a2b13;
+  --red:#ff8a80; --red-soft:#3e1b19; --grey:#1c2926; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1513; --panel:#141f1c; --ink:#e5eeeb; --muted:#9bb0a9; --rule:#283834;
+  --forest:#62d3b6; --jade:#3cc39e; --jade-soft:#163830; --amber:#f2b55c; --amber-soft:#3a2b13;
+  --red:#ff8a80; --red-soft:#3e1b19; --grey:#1c2926; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);margin:0}
+.wrap{max-width:980px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
+h1{margin:0;font-size:clamp(24px,3.6vw,34px);font-weight:800;letter-spacing:-.02em;color:var(--forest);text-wrap:balance}
+.key{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:700 11px var(--mono);letter-spacing:.04em;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.c-live{background:var(--jade-soft);color:var(--forest)} .c-sim{background:var(--amber-soft);color:var(--amber)} .c-todo{background:var(--grey);color:var(--muted)} .c-gone{background:var(--red-soft);color:var(--red)}
+.q{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:18px 20px;display:grid;gap:12px}
+.q header{display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap}
+.q h2{margin:0;font-size:18px;font-weight:800;text-wrap:balance;min-width:0;flex:1 1 300px}
+.q h2 small{display:block;font:700 11px var(--mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.ans{margin:0;font-size:16px;font-weight:600;max-width:70ch}
+.fig{overflow-x:auto}
+.fig svg{display:block;width:100%;min-width:620px;height:auto}
+svg text{fill:var(--ink);font-family:var(--font)}
+svg .m{fill:var(--muted)}
+svg .box{fill:var(--panel);stroke:var(--rule);stroke-width:1.5}
+svg .ok{fill:var(--jade-soft);stroke:var(--jade);stroke-width:1.5}
+svg .warn{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.5}
+svg .bad{fill:var(--red-soft);stroke:var(--red);stroke-width:1.5}
+svg .wire{stroke:var(--rule);stroke-width:2;fill:none}
+svg .bar-ok{fill:var(--jade)} svg .bar-no{fill:var(--red)} svg .bar-wait{fill:var(--amber)} svg .bar-g{fill:var(--rule)}
+svg .num{font:800 15px var(--mono);font-variant-numeric:tabular-nums}
+.grow{transform-box:fill-box;transform-origin:left center;animation:grow 1.1s cubic-bezier(.3,0,.2,1) both}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.note{font-size:13px;color:var(--muted);margin:0}
+.more{font-size:14px}
+.more a{color:var(--forest);font-weight:700}
+a:focus-visible{outline:3px solid var(--jade);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.grow{animation:none}}
+</style>
+
+<div class="wrap">
+  <h1>Your questions from the 6 November call, answered</h1>
+  <div class="key"><span class="chip c-live">seen live</span><span class="chip c-sim">simulated with our real code</span><span class="chip c-todo">to build</span><span class="chip c-gone">dropped</span></div>
+
+  <!-- 1 -->
+  <section class="q">
+    <header><h2><small>Question 1</small>Why build a backup for failure mode?</h2><span class="chip c-gone">dropped</span></header>
+    <p class="ans">We don't. It had no data behind it, and it was dropped in the call.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="q">
+    <header><h2><small>Question 2</small>Why did it check every 30 seconds?</h2><span class="chip c-live">removed 6 Nov</span></header>
+    <p class="ans">A laptop has no public address, so Zernio could not push to it. Asking was the only way in, until push was built. Then the timer should have gone the same day.</p>
+    <div class="fig"><svg viewBox="0 0 720 120" aria-label="Timeline of the inbox check">
+      <path class="wire" d="M40 60H680"/>
+      <circle cx="80" cy="60" r="9" class="warn"/><text x="80" y="30" text-anchor="middle" font-weight="800">Before 5 Nov</text><text x="80" y="94" text-anchor="middle" class="m" font-size="12">no address, so ask</text><text x="80" y="110" text-anchor="middle" class="m" font-size="12">every 30 s</text>
+      <circle cx="360" cy="60" r="9" class="ok"/><text x="360" y="30" text-anchor="middle" font-weight="800">5 Nov</text><text x="360" y="94" text-anchor="middle" class="m" font-size="12">push built: Zernio sends</text><text x="360" y="110" text-anchor="middle" class="m" font-size="12">each comment to us</text>
+      <circle cx="640" cy="60" r="9" class="ok"/><text x="640" y="30" text-anchor="middle" font-weight="800">6 Nov</text><text x="640" y="94" text-anchor="middle" class="m" font-size="12">timer removed</text><text x="640" y="110" text-anchor="middle" class="m" font-size="12">one check on open</text>
+    </svg></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="q">
+    <header><h2><small>Question 3</small>Without the timer, how does a customer's message come in?</h2><span class="chip c-live">seen live</span></header>
+    <p class="ans">Zernio pushes it to us the moment it gets it. We check the signature, save it once, and write a draft.</p>
+    <div class="fig"><svg id="flow" viewBox="0 0 760 170" aria-label="A comment moving from the customer to a draft">
+      <g id="flow-boxes"></g>
+      <circle id="dot" r="8" fill="var(--jade)" cx="-20" cy="-20"/>
+      <text x="20" y="150" font-size="13"><tspan class="num" fill="var(--forest)">6.6 to 9.2 s</tspan><tspan class="m"> from Facebook comment to Swayu with push. </tspan><tspan class="num" fill="var(--red)">6 to 8 min</tspan><tspan class="m"> with push off. Both 6 Nov.</tspan></text>
+    </svg></div>
+    <div class="fig"><svg viewBox="0 0 720 200" aria-label="Where the seconds go for three Facebook comments">
+      <text x="0" y="16" class="m" font-size="12">Three Facebook comments, 6 Nov, 8:15 to 8:17 pm IST. Each block is seconds.</text>
+      <g id="secs"></g>
+      <rect x="150" y="176" width="12" height="12" rx="2" class="bar-g"/><text x="168" y="187" font-size="12">Facebook to Zernio</text>
+      <rect x="320" y="176" width="12" height="12" rx="2" class="bar-ok"/><text x="338" y="187" font-size="12">Zernio to Swayu</text>
+      <rect x="470" y="176" width="12" height="12" rx="2" class="bar-wait"/><text x="488" y="187" font-size="12">Draft written</text>
+    </svg></div>
+    <p class="note">Most of the wait is Facebook reaching Zernio, which we do not control. Our part is about 1 to 2 seconds. If a push fails, Zernio retries it 7 times over about 51 hours.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="q">
+    <header><h2><small>Question 4</small>Which limit, exactly?</h2><span class="chip c-live">built</span></header>
+    <p class="ans">Each provider's request budget per minute, for all of Swayu. One shared counter per provider. When a provider says "too many", every call waits.</p>
+    <div class="fig"><svg viewBox="0 0 720 150" aria-label="Request budgets per minute, to scale">
+      <text x="0" y="34" font-weight="700">Zernio, free</text><rect class="bar-g grow" x="190" y="18" width="16" height="22" rx="3"/><text x="214" y="35" class="num">60 / min</text>
+      <text x="0" y="78" font-weight="700">Zernio, 3+ accounts</text><rect class="bar-ok grow" x="190" y="62" width="156" height="22" rx="3"/><text x="354" y="79" class="num">600 / min</text>
+      <text x="0" y="122" font-weight="700">Composio</text><rect class="bar-ok grow" x="190" y="106" width="520" height="22" rx="3" opacity=".55"/><text x="560" y="123" class="num">2,000 / min</text>
+    </svg></div>
+    <p class="note">Owner: the connector layer.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="q">
+    <header><h2><small>Question 5</small>Can 1,000 lead agents use one connector at the same time?</h2><span class="chip c-sim">simulated</span></header>
+    <p class="ans">Yes. Reads become one request per business. Replies now wait in line for a free slot: all 1,000 go out within 60 seconds, none refused.</p>
+    <div class="fig"><svg viewBox="0 0 720 190" aria-label="What happens to 1,000 lead agents at 600 requests a minute">
+      <text x="0" y="30" font-weight="700">All read</text><text x="0" y="46" class="m" font-size="12">125 businesses</text>
+      <rect class="bar-ok grow" x="170" y="16" width="500" height="26" rx="3"/><text x="180" y="34" font-size="13" fill="var(--panel)" font-weight="800">1,000 served from 125 requests</text>
+      <text x="0" y="96" font-weight="700">All reply, before</text>
+      <rect class="bar-ok grow" x="170" y="80" width="300" height="26" rx="3"/><rect class="bar-no grow" x="470" y="80" width="200" height="26" rx="3" style="animation-delay:.5s"/><text x="180" y="98" font-size="13" fill="var(--panel)" font-weight="800">600 served</text><text x="480" y="98" font-size="13" fill="var(--panel)" font-weight="800">400 refused</text>
+      <text x="0" y="160" font-weight="700">All reply, in line</text><text x="0" y="176" class="m" font-size="12">built 6 Nov</text>
+      <rect class="bar-ok grow" x="170" y="144" width="300" height="26" rx="3"/><rect class="bar-wait grow" x="470" y="144" width="200" height="26" rx="3" style="animation-delay:.5s"/><text x="180" y="162" font-size="13" fill="var(--panel)" font-weight="800">600 now</text><text x="480" y="162" font-size="13" fill="var(--panel)" font-weight="800">400 at 60 s, 0 refused</text>
+    </svg></div>
+    <p class="note">8 lead agents per business, so 1,000 lead agents are 125 businesses. At 20 per business, refusals start above 30 businesses. The budget is 600 replies a minute for all of Swayu either way.</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="q">
+    <header><h2><small>Question 6</small>How many per second?</h2><span class="chip c-live">seen live</span></header>
+    <p class="ans">Replies: 10 a second for all of Swayu on Zernio's paid tier, 1 on the free tier. That is Zernio's ceiling, not our code. Reads are not the bottleneck.</p>
+    <div class="fig"><svg viewBox="0 0 720 96" aria-label="Measured read numbers">
+      <rect class="ok" x="0" y="6" width="340" height="84" rx="10"/><text x="20" y="44" class="num" font-size="26">92 reads, 0 failed</text><text x="20" y="72" class="m" font-size="13">two inboxes open for 5 minutes, 5 Nov</text>
+      <rect class="ok" x="370" y="6" width="340" height="84" rx="10"/><text x="390" y="44" class="num" font-size="26">20 reads, 12 requests</text><text x="390" y="72" class="m" font-size="13">20 lead agents reading at once, 4 Nov</text>
+    </svg></div>
+  </section>
+
+  <!-- 7 -->
+  <section class="q">
+    <header><h2><small>Question 7</small>How did you conclude concurrency was fine?</h2><span class="chip c-sim">simulated</span></header>
+    <p class="ans">Before the call, from watching 4 agents. That proved nothing. Now from our real gateway, rate limiter and reply line, run at four sizes on a simulated clock.</p>
+    <div class="fig"><svg viewBox="0 0 730 120" aria-label="Replies refused at each size, today">
+      <text x="0" y="18" class="m" font-size="12">Replies refused at 600 a minute, before and after the line</text>
+      <g id="sizes"></g>
+    </svg></div>
+    <p class="note">Not tested: 1,000 real requests against Zernio itself, because that spends the real budget.</p>
+  </section>
+
+  <p class="more">Interactive detail for every answer: <a href="https://claude.ai/artifact/Neuxgbye8ZUVEc7ENuMTaN">connector system</a></p>
+</div>
+
+<script>
+(() => {
+const NS = 'http://www.w3.org/2000/svg';
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); p && p.appendChild(e); return e; };
+const tx = (s, a, p) => { const e = el('text', a, p); e.textContent = s; return e; };
+
+// Question 3: the path of one comment, animated once it scrolls into view and again on click.
+const steps = [['Customer', 'comments'], ['Zernio', 'receives it'], ['Swayu address', 'signature checked'], ['Saved once', 'per business'], ['Draft', 'owner presses Send']];
+const B = document.getElementById('flow-boxes'), W = 128, G = 24;
+const centers = steps.map(([a, b], i) => {
+  const x = i * (W + G) + 6;
+  el('rect', { x, y: 30, width: W, height: 66, rx: 9, class: i === 2 ? 'ok' : 'box' }, B);
+  tx(a, { x: x + W / 2, y: 58, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': 14 }, B);
+  tx(b, { x: x + W / 2, y: 78, 'text-anchor': 'middle', 'font-size': 12, class: 'm' }, B);
+  if (i) el('path', { d: `M${x - G} 63H${x}`, class: 'wire' }, B);
+  return x + W / 2;
+});
+const dot = document.getElementById('dot');
+function play() {
+  if (reduce) { dot.setAttribute('cx', centers.at(-1)); dot.setAttribute('cy', 63); return; }
+  const t0 = performance.now(), dur = 2600;
+  const f = now => { const k = Math.min(1, (now - t0) / dur), x = centers[0] + (centers.at(-1) - centers[0]) * k; dot.setAttribute('cx', x); dot.setAttribute('cy', 63); if (k < 1) requestAnimationFrame(f); };
+  requestAnimationFrame(f);
+}
+const flow = document.getElementById('flow');
+flow.style.cursor = 'pointer'; flow.addEventListener('click', play);
+dot.setAttribute('cx', centers.at(-1)); dot.setAttribute('cy', 63);
+new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { play(); o.disconnect(); } }, { threshold: .5 }).observe(flow);
+
+// Question 3: measured seconds per comment, from Facebook's comment time and Lighthouse's push and draft rows.
+const RUNS = [['8:15:53 pm', 6.8, 1.1, 21.5], ['8:16:59 pm', 7.6, 1.6, 8.8], ['8:17:38 pm', 5.0, 1.6, 4.1]];
+const SEC = 15, X0 = 150, SG = document.getElementById('secs');
+RUNS.forEach(([t, fb, us, dr], i) => {
+  const y = 34 + i * 46;
+  tx(t, { x: 0, y: y + 17, 'font-size': 13, 'font-weight': 700 }, SG);
+  let x = X0;
+  [[fb, 'bar-g'], [us, 'bar-ok'], [dr, 'bar-wait']].forEach(([s, c], k) => {
+    const r = el('rect', { x, y, width: s * SEC, height: 24, rx: 3, class: `${c} grow` }, SG);
+    r.style.animationDelay = (k * 0.35) + 's';
+    if (s * SEC > 34) tx(`${s} s`, { x: x + 6, y: y + 17, 'font-size': 12, 'font-weight': 800, fill: k ? 'var(--panel)' : 'var(--ink)' }, SG);
+    x += s * SEC;
+  });
+  tx(`stored at ${(fb + us).toFixed(1)} s`, { x: x + 8, y: y + 17, 'font-size': 12, class: 'm' }, SG);
+});
+
+// Question 7: refused replies at each size, from scripts/simulate-leads.ts.
+const SZ = [[12, 96, 0, 0], [30, 240, 0, 0], [75, 600, 0, 0], [125, 1000, 400, 0]];
+const S = document.getElementById('sizes');
+SZ.forEach(([b, leads, before, no], i) => {
+  const x = i * 180;
+  el('rect', { x, y: 30, width: 168, height: 80, rx: 10, class: no ? 'bad' : 'ok' }, S);
+  if (before) el('rect', { x, y: 30, width: 168, height: 80, rx: 10, class: 'bad', opacity: .35 }, S);
+  tx(before ? `${before} → ${no} refused` : `${no} refused`, { x: x + 14, y: 64, class: 'num', 'font-size': 18 }, S);
+  tx(`${b} businesses, ${leads.toLocaleString()} leads`, { x: x + 14, y: 92, 'font-size': 11, class: 'm' }, S);
+});
+})();
+</script>

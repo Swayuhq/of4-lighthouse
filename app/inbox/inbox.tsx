@@ -7,6 +7,7 @@ import type { Counts, Item, Status } from '@/src/inbox';
 import type { Theme } from '@/src/agents/insights';
 import { checkChannels, chooseOwner, clearAll, draftFor, markAs, sendReply } from '../actions';
 import { Ago } from '../ago';
+import { when } from '@/src/when';
 import { ChannelBadge, Wordmark } from '../brand';
 import type { Channel } from '@/src/connectors';
 
@@ -30,10 +31,6 @@ export type InboxData = {
   pushOn: boolean;
 };
 
-/** How often the open inbox asks every connected channel for new messages. */
-const CHECK_EVERY_MS = 30_000;
-/** With push on, the same full check runs this often, as the safety net for a lost push. */
-const SAFETY_CHECK_MS = 10 * 60_000;
 /** With push on, how often the screen reloads what is already stored. It reads Postgres only and calls no provider. */
 const SHOW_EVERY_MS = 15_000;
 
@@ -41,15 +38,6 @@ type Toast = { text: string; undo?: { id: string; status: Status } };
 
 const STATUS_COLOR: Record<Status, string> = { answered: 'bg-kelp', waiting: 'bg-lamp', spam: 'bg-slate' };
 const DONE_WORD: Record<Status, string> = { answered: 'Marked answered', waiting: 'Back in waiting', spam: 'Moved to spam' };
-
-function when(receivedAt: string) {
-  const [date, time] = receivedAt.split('T');
-  const [, month, day] = date.split('-').map(Number);
-  const [hour, minute] = time.split(':').map(Number);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const h12 = hour % 12 || 12;
-  return `${day} ${months[month - 1]}, ${h12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'am' : 'pm'}`;
-}
 
 export function Inbox({ data }: { data: InboxData }) {
   const [pending, start] = useTransition();
@@ -80,21 +68,26 @@ export function Inbox({ data }: { data: InboxData }) {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Connecting was the switch. While this page is open it checks every connected channel; a server job replaces this when Lighthouse goes live.
+  // Opening the inbox checks every connected channel once. New messages after that arrive by push.
   // A broken channel counts too: the check is what tries it again.
+  // No timed check: push stored a comment 1.9 s after it was sent, and Zernio retries a failed push for about 51 hours.
   const live = data.channels.some(c => c.status === 'connected' || c.status === 'broken');
   const router = useRouter();
   const pushOn = data.pushOn;
   useEffect(() => {
     if (!live) return;
-    const timer = setInterval(async () => {
-      const { added } = await checkChannels();
-      if (added) setToast({ text: `${added} new message${added === 1 ? '' : 's'} caught` });
-    }, pushOn ? SAFETY_CHECK_MS : CHECK_EVERY_MS);
+    let open = true;
+    checkChannels().then(({ added }) => {
+      if (open && added) setToast({ text: `${added} new message${added === 1 ? '' : 's'} caught` });
+    });
+    return () => { open = false; };
+  }, [live]);
+  useEffect(() => {
+    if (!pushOn) return;
     // A pushed message is already stored; the screen only needs to show it.
-    const show = pushOn ? setInterval(() => router.refresh(), SHOW_EVERY_MS) : undefined;
-    return () => { clearInterval(timer); clearInterval(show); };
-  }, [live, pushOn, router]);
+    const show = setInterval(() => router.refresh(), SHOW_EVERY_MS);
+    return () => clearInterval(show);
+  }, [pushOn, router]);
 
   function act(item: InboxItem, status: Status) {
     start(async () => {
@@ -293,7 +286,7 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {channel && <ChannelBadge channel={channel} size="sm" />}
         <h3 className="font-bold">{item.author === 'Unknown' ? 'Someone' : item.author}</h3>
-        <span className="text-[15px] text-navy-soft">{item.platform}, {when(item.receivedAt)}</span>
+        <span className="text-[15px] text-navy-soft">{item.platform}, {when(item.receivedAt, item.replyRef !== undefined)}</span>
         {item.link && waiting && <a href={item.link} target="_blank" rel="noreferrer" className="text-[15px] text-navy-soft underline decoration-shore underline-offset-4 hover:text-navy">Open on {item.platform}</a>}
         {item.stars !== undefined && <span className="text-[15px]" aria-label={`${item.stars} out of 5 stars`}>{'★'.repeat(item.stars)}<span className="text-shore">{'★'.repeat(5 - item.stars)}</span></span>}
       </div>

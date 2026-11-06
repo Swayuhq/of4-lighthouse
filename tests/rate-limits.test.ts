@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createLimiter, LIMITS, RateLimited } from '../src/gateway/limiter';
 import { zernioProvider } from '../src/gateway/providers';
 import { facebookReply } from '../src/composio';
+import { TENANT } from '../src/tenant';
 
 let calls: { url: string; init: RequestInit }[];
 let slept: number[];
@@ -37,30 +38,30 @@ afterEach(() => { vi.unstubAllGlobals(); delete process.env.SWAYU_ZERNIO_API_KEY
 describe('Zernio says wait', () => {
   it('a short wait is waited out and the request is sent once more', async () => {
     respond(tooMany(2), accounts, ok({ data: [] }));
-    await expect(zernioProvider('facebook', 'read', {})).resolves.toEqual([]);
+    await expect(zernioProvider('facebook', 'read', {}, TENANT)).resolves.toEqual([]);
     expect(slept).toEqual([2_000]);
     expect(calls).toHaveLength(3);
   });
 
   it('a long wait fails at once with the seconds, and the next read does not ask Zernio at all', async () => {
     respond(tooMany(58));
-    const error = (await zernioProvider('facebook', 'read', {}).catch(e => e)) as RateLimited;
+    const error = (await zernioProvider('facebook', 'read', {}, TENANT).catch(e => e)) as RateLimited;
     expect(error).toBeInstanceOf(RateLimited);
     expect(error.seconds).toBe(58);
     expect(calls).toHaveLength(1);
-    await expect(zernioProvider('instagram', 'read', {})).rejects.toBeInstanceOf(RateLimited);
+    await expect(zernioProvider('instagram', 'read', {}, TENANT)).rejects.toBeInstanceOf(RateLimited);
     expect(calls).toHaveLength(1);
   });
 
   it('a second 429 after the wait gives up rather than asking a third time', async () => {
     respond(tooMany(1), tooMany(1));
-    await expect(zernioProvider('facebook', 'read', {})).rejects.toBeInstanceOf(RateLimited);
+    await expect(zernioProvider('facebook', 'read', {}, TENANT)).rejects.toBeInstanceOf(RateLimited);
     expect(calls).toHaveLength(2);
   });
 
   it('a reply sent again after a wait carries the same retry key, so it cannot post twice', async () => {
     respond(tooMany(1), ok({ data: { commentId: 'r1' } }));
-    await zernioProvider('facebook', 'reply', { ref: 'acc1|p1|c1', text: 'Thanks', idempotencyKey: 'k1' });
+    await zernioProvider('facebook', 'reply', { ref: 'acc1|p1|c1', text: 'Thanks', idempotencyKey: 'k1' }, TENANT);
     const keys = calls.map(c => (c.init.headers as Record<string, string>)['Idempotency-Key']);
     expect(keys).toEqual(['k1', 'k1']);
   });
@@ -68,7 +69,7 @@ describe('Zernio says wait', () => {
   it('learns the real budget from the limit header', async () => {
     LIMITS.zernio = createLimiter({ name: 'Zernio', perMinute: 1, maxWaitMs: 0 });
     respond(ok({ accounts: [{ _id: 'acc1', platform: 'facebook' }] }, { 'x-ratelimit-limit': '600' }), ok({ data: [] }));
-    await expect(zernioProvider('facebook', 'read', {})).resolves.toEqual([]);
+    await expect(zernioProvider('facebook', 'read', {}, TENANT)).resolves.toEqual([]);
   });
 });
 
@@ -83,10 +84,40 @@ describe('Composio says wait', () => {
     expect(slept).toEqual([3_000]);
   });
 
-  it('a long wait fails with the seconds', async () => {
-    respond(() => new Response('{}', { status: 429, headers: { 'retry-after': '40' } }));
+  it('a reply waits out a 40 second pause in line, then goes through', async () => {
+    const posted = { successful: true, data: { results: [{ response: { successful: true, data: { id: 'fb_r2' } }, error: null }] } };
+    respond(
+      () => new Response('{}', { status: 429, headers: { 'retry-after': '40' } }),
+      () => new Response(`data: ${JSON.stringify({ result: { content: [{ type: 'text', text: JSON.stringify(posted) }] } })}\n`),
+    );
+    await expect(facebookReply('1_2', 'Thanks')).resolves.toBe('fb_r2');
+    expect(slept).toEqual([40_000]);
+  });
+
+  it('a pause longer than a reply may wait in line fails with the seconds', async () => {
+    respond(() => new Response('{}', { status: 429, headers: { 'retry-after': '400' } }));
     const error = (await facebookReply('1_2', 'Thanks').catch(e => e)) as RateLimited;
     expect(error).toBeInstanceOf(RateLimited);
-    expect(error.message).toBe('Composio asked Lighthouse to wait 40 seconds');
+    expect(error.message).toBe('Composio asked Lighthouse to wait 400 seconds');
+  });
+});
+
+describe('Replies wait in line; reads do not', () => {
+  it('a Zernio reply on a full budget waits for the next free slot instead of failing', async () => {
+    LIMITS.zernio = createLimiter({ name: 'Zernio', perMinute: 1, maxWaitMs: 10_000, now: () => slept.reduce((a, b) => a + b, 0), sleep: async ms => { slept.push(ms); } });
+    const sent = ok({ data: { commentId: 'r' } });
+    respond(sent, sent);
+    await zernioProvider('instagram', 'reply', { ref: 'acc1|p1|c1', text: 'Thanks' }, TENANT);
+    await expect(zernioProvider('instagram', 'reply', { ref: 'acc1|p1|c2', text: 'Thanks' }, TENANT)).resolves.toEqual({ id: 'r' });
+    expect(slept).toEqual([60_000]);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('a read on the same full budget still fails at once, so a screen never hangs', async () => {
+    LIMITS.zernio = createLimiter({ name: 'Zernio', perMinute: 1, maxWaitMs: 10_000, now: () => slept.reduce((a, b) => a + b, 0), sleep: async ms => { slept.push(ms); } });
+    respond(ok({ data: { commentId: 'r' } }));
+    await zernioProvider('instagram', 'reply', { ref: 'acc1|p1|c1', text: 'Thanks' }, TENANT);
+    await expect(zernioProvider('facebook', 'read', {}, TENANT)).rejects.toBeInstanceOf(RateLimited);
+    expect(calls).toHaveLength(1);
   });
 });

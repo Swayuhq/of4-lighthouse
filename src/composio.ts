@@ -1,7 +1,7 @@
 // Facebook and Instagram through Composio: Composio holds the owner's logins and its own Meta app, which Meta has already reviewed.
 // Chosen for the prototype on 30 Oct 2026 (docs/artifacts/connectors-build-vs-buy.html). Our own Meta connector replaces this file later.
 // The key is read from the environment on each call and never logged.
-import { LIMITS, RateLimited, retryAfter } from './gateway/limiter';
+import { LIMITS, RateLimited, REPLY_WAIT_MS, retryAfter } from './gateway/limiter';
 
 const ENDPOINT = 'https://connect.composio.dev/mcp';
 /** The logins connected in Composio for the test business. One set per owner once Lighthouse has more than one business. */
@@ -12,11 +12,15 @@ const TIMEOUT_MS = 20_000;
 
 type Answer = { data?: unknown[]; id?: string };
 
+/** The Composio actions that post a reply. */
+const REPLIES = new Set(['FACEBOOK_CREATE_COMMENT']);
+
 /** Runs one Composio action and returns what Meta answered. Any refusal throws with Composio's own reason. */
 export async function run(slug: string, args: Record<string, unknown>, toolkit: Toolkit = 'facebook', again = false): Promise<Answer> {
   const key = process.env.SWAYU_COMPOSIO_API_KEY;
   if (!key) throw new Error('SWAYU_COMPOSIO_API_KEY is not set. Start Lighthouse with pnpm start:op.');
-  await LIMITS.composio.take();
+  // A reply waits in line for a slot; a read fails fast.
+  await LIMITS.composio.take(REPLIES.has(slug) ? REPLY_WAIT_MS : undefined);
   const res = await fetch(ENDPOINT, {
     method: 'POST',
     headers: { 'x-consumer-api-key': key, 'content-type': 'application/json', accept: 'application/json, text/event-stream' },

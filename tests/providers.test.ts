@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { composio, NotOffered, own, zernioProvider } from '../src/gateway/providers';
+import { TENANT } from '../src/tenant';
 
 type Call = { url: string; init: RequestInit };
 let calls: Call[];
@@ -31,7 +32,7 @@ describe('Zernio comments read the same shape as Composio', () => {
         { id: 'c2', message: 'Yes, 10 to 6', createdTime: '2026-11-04T08:05:00Z', from: { name: 'Our Page', isOwner: true } },
       ] },
     });
-    const items = await zernioProvider('facebook', 'read', {});
+    const items = await zernioProvider('facebook', 'read', {}, TENANT);
     expect(items).toEqual([{ id: 'c1', ref: 'acc1|p1|c1', author: 'Lee', text: 'Open on Sunday?', at: '2026-11-04T08:00:00Z' }]);
     expect(calls.some(c => c.url.includes('/inbox/comments/p2'))).toBe(false);
     expect(calls.every(c => (c.init.headers as Record<string, string>).authorization === 'Bearer test-key')).toBe(true);
@@ -46,14 +47,14 @@ describe('Zernio comments read the same shape as Composio', () => {
         { id: 'c2', message: 'Price?', createdTime: '2026-11-04T08:01:00Z', from: { username: 'mei' }, replies: [{ id: 'r2', from: { username: 'ann' } }] },
       ] },
     });
-    const items = await zernioProvider('instagram', 'read', {}) as { id: string; answered?: boolean; link?: string }[];
+    const items = await zernioProvider('instagram', 'read', {}, TENANT) as { id: string; answered?: boolean; link?: string }[];
     expect(items.map(i => [i.id, i.answered ?? false])).toEqual([['c1', true], ['c2', false]]);
     expect(items[0].link).toBe('https://www.instagram.com/p/X/c/c1/');
   });
 
   it('a reply carries the account, the comment and a retry key', async () => {
     answer({ '/inbox/comments/p1': { success: true, data: { commentId: 'r9' } } });
-    const out = await zernioProvider('facebook', 'reply', { ref: 'acc1|p1|c1', text: 'Thank you!', idempotencyKey: 'k1' });
+    const out = await zernioProvider('facebook', 'reply', { ref: 'acc1|p1|c1', text: 'Thank you!', idempotencyKey: 'k1' }, TENANT);
     expect(out).toEqual({ id: 'r9' });
     const sent = calls[0];
     expect(sent.init.method).toBe('POST');
@@ -63,23 +64,23 @@ describe('Zernio comments read the same shape as Composio', () => {
 
   it('a reply Zernio does not confirm is an error, never a success', async () => {
     answer({ '/inbox/comments/p1': { success: true } });
-    await expect(zernioProvider('facebook', 'reply', { ref: 'acc1|p1|c1', text: 'Hi' })).rejects.toThrow('did not confirm');
+    await expect(zernioProvider('facebook', 'reply', { ref: 'acc1|p1|c1', text: 'Hi' }, TENANT)).rejects.toThrow('did not confirm');
   });
 
   it('no connected account says so', async () => {
     answer({ '/accounts': { accounts: [] } });
-    await expect(zernioProvider('instagram', 'read', {})).rejects.toThrow('no Instagram account is connected in Zernio');
+    await expect(zernioProvider('instagram', 'read', {}, TENANT)).rejects.toThrow('no Instagram account is connected in Zernio');
   });
 
   it('a missing key fails before any request', async () => {
     delete process.env.SWAYU_ZERNIO_API_KEY;
     answer({});
-    await expect(zernioProvider('facebook', 'read', {})).rejects.toThrow('SWAYU_ZERNIO_API_KEY is not set');
+    await expect(zernioProvider('facebook', 'read', {}, TENANT)).rejects.toThrow('SWAYU_ZERNIO_API_KEY is not set');
     expect(calls).toHaveLength(0);
   });
 
   it('a channel Zernio does not cover is refused as not offered', async () => {
-    await expect(zernioProvider('whatsapp', 'read', {})).rejects.toBeInstanceOf(NotOffered);
+    await expect(zernioProvider('whatsapp', 'read', {}, TENANT)).rejects.toBeInstanceOf(NotOffered);
   });
 });
 
@@ -93,9 +94,9 @@ describe('Zernio Google reviews', () => {
       ] },
       '/inbox/reviews/accounts': { status: 'ok', reply: { id: 'rep1' } },
     });
-    const items = await zernioProvider('google_reviews', 'read', {});
+    const items = await zernioProvider('google_reviews', 'read', {}, TENANT);
     expect(items).toEqual([{ id: 'accounts/1/locations/2/reviews/3', ref: 'g1|accounts/1/locations/2/reviews/3', author: 'Sam', text: 'Cake arrived damaged', at: '2026-11-03T10:00:00Z', stars: 2 }]);
-    const out = await zernioProvider('google_reviews', 'reply', { ref: 'g1|accounts/1/locations/2/reviews/3', text: 'Sorry, Sam.' });
+    const out = await zernioProvider('google_reviews', 'reply', { ref: 'g1|accounts/1/locations/2/reviews/3', text: 'Sorry, Sam.' }, TENANT);
     expect(out).toEqual({ id: 'rep1' });
     expect(calls.at(-1)!.url).toContain('/inbox/reviews/accounts%2F1%2Flocations%2F2%2Freviews%2F3/reply');
   });
@@ -104,13 +105,13 @@ describe('Zernio Google reviews', () => {
 describe('Unknown is never zero, and a reply finds its comment through any provider', () => {
   it('Google reviews with no Google profile connected fail instead of reading as zero reviews', async () => {
     answer({ '/accounts': { accounts: [{ _id: 'acc1', platform: 'facebook' }] }, '/inbox/reviews?': { data: [] } });
-    await expect(zernioProvider('google_reviews', 'read', {})).rejects.toThrow('no Google Business Profile is connected');
+    await expect(zernioProvider('google_reviews', 'read', {}, TENANT)).rejects.toThrow('no Google Business Profile is connected');
     expect(calls.some(c => c.url.includes('/inbox/reviews'))).toBe(false);
   });
 
   it('Zernio refuses a comment another provider read, rather than posting somewhere wrong', async () => {
     answer({});
-    await expect(zernioProvider('facebook', 'reply', { ref: '140_11', text: 'Hi' })).rejects.toThrow('read through another provider');
+    await expect(zernioProvider('facebook', 'reply', { ref: '140_11', text: 'Hi' }, TENANT)).rejects.toThrow('read through another provider');
     expect(calls).toHaveLength(0);
   });
 
@@ -122,12 +123,12 @@ describe('Unknown is never zero, and a reply finds its comment through any provi
       const inner = { successful: true, data: { results: [{ response: { successful: true, data: { id: '11_99' } }, error: null }] } };
       return new Response(`data: ${JSON.stringify({ result: { content: [{ type: 'text', text: JSON.stringify(inner) }] } })}\n`);
     }));
-    expect(await composio('facebook', 'reply', { ref: 'acc1|140_1|1_11', text: 'Thanks!' })).toEqual({ id: '11_99' });
+    expect(await composio('facebook', 'reply', { ref: 'acc1|140_1|1_11', text: 'Thanks!' }, TENANT)).toEqual({ id: '11_99' });
     expect(sent).toEqual([{ object_id: '11', message: 'Thanks!' }]);
   });
 
   it('WhatsApp is read by webhook only, so the own provider offers replies alone', async () => {
-    await expect(own('whatsapp', 'read', {})).rejects.toBeInstanceOf(NotOffered);
-    await expect(own('facebook', 'reply', { ref: 'x', text: 'y' })).rejects.toBeInstanceOf(NotOffered);
+    await expect(own('whatsapp', 'read', {}, TENANT)).rejects.toBeInstanceOf(NotOffered);
+    await expect(own('facebook', 'reply', { ref: 'x', text: 'y' }, TENANT)).rejects.toBeInstanceOf(NotOffered);
   });
 });

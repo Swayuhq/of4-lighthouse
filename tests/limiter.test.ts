@@ -87,3 +87,14 @@ describe('The provider tells us its real budget', () => {
     await expect(limit.take()).resolves.toBeUndefined();
   });
 });
+
+describe('One call may wait longer than the default', () => {
+  it('waits for the next free slot when the caller allows it, and takes it', async () => {
+    const c = clock();
+    const limit = createLimiter({ name: 'Zernio', perMinute: 1, maxWaitMs: 10_000, now: c.now, sleep: c.sleep });
+    await limit.take();
+    await expect(limit.take()).rejects.toBeInstanceOf(RateLimited);
+    await limit.take(5 * 60_000);
+    expect(c.slept).toEqual([60_000]);
+  });
+});
