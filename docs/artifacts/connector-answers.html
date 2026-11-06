@@ -106,14 +106,14 @@ a:focus-visible{outline:3px solid var(--jade);outline-offset:2px}
   <!-- 5 -->
   <section class="q">
     <header><h2><small>Question 5</small>Can 1,000 lead agents use one connector at the same time?</h2><span class="chip c-sim">simulated</span></header>
-    <p class="ans">Reading, yes. Replying, not yet: 400 of 1,000 are refused today. Replies waiting in line fixes that.</p>
+    <p class="ans">Yes. Reads become one request per business. Replies now wait in line for a free slot: all 1,000 go out within 60 seconds, none refused.</p>
     <div class="fig"><svg viewBox="0 0 720 190" aria-label="What happens to 1,000 lead agents at 600 requests a minute">
       <text x="0" y="30" font-weight="700">All read</text><text x="0" y="46" class="m" font-size="12">125 businesses</text>
       <rect class="bar-ok grow" x="170" y="16" width="500" height="26" rx="3"/><text x="180" y="34" font-size="13" fill="var(--panel)" font-weight="800">1,000 served from 125 requests</text>
-      <text x="0" y="96" font-weight="700">All reply, today</text>
+      <text x="0" y="96" font-weight="700">All reply, before</text>
       <rect class="bar-ok grow" x="170" y="80" width="300" height="26" rx="3"/><rect class="bar-no grow" x="470" y="80" width="200" height="26" rx="3" style="animation-delay:.5s"/><text x="180" y="98" font-size="13" fill="var(--panel)" font-weight="800">600 served</text><text x="480" y="98" font-size="13" fill="var(--panel)" font-weight="800">400 refused</text>
-      <text x="0" y="160" font-weight="700">All reply, in line</text><text x="0" y="176" class="m" font-size="12">to build</text>
-      <rect class="bar-ok grow" x="170" y="144" width="300" height="26" rx="3"/><rect class="bar-wait grow" x="470" y="144" width="200" height="26" rx="3" style="animation-delay:.5s"/><text x="180" y="162" font-size="13" fill="var(--panel)" font-weight="800">600 now</text><text x="480" y="162" font-size="13" fill="var(--panel)" font-weight="800">400 a minute later</text>
+      <text x="0" y="160" font-weight="700">All reply, in line</text><text x="0" y="176" class="m" font-size="12">built 6 Nov</text>
+      <rect class="bar-ok grow" x="170" y="144" width="300" height="26" rx="3"/><rect class="bar-wait grow" x="470" y="144" width="200" height="26" rx="3" style="animation-delay:.5s"/><text x="180" y="162" font-size="13" fill="var(--panel)" font-weight="800">600 now</text><text x="480" y="162" font-size="13" fill="var(--panel)" font-weight="800">400 at 60 s, 0 refused</text>
     </svg></div>
     <p class="note">8 lead agents per business, so 1,000 lead agents are 125 businesses. At 20 per business, refusals start above 30 businesses. The budget is 600 replies a minute for all of Swayu either way.</p>
   </section>
@@ -131,9 +131,9 @@ a:focus-visible{outline:3px solid var(--jade);outline-offset:2px}
   <!-- 7 -->
   <section class="q">
     <header><h2><small>Question 7</small>How did you conclude concurrency was fine?</h2><span class="chip c-sim">simulated</span></header>
-    <p class="ans">Before the call, from watching 4 agents. That proved nothing. Now from our real gateway and rate limiter, run at four sizes on a simulated clock.</p>
+    <p class="ans">Before the call, from watching 4 agents. That proved nothing. Now from our real gateway, rate limiter and reply line, run at four sizes on a simulated clock.</p>
     <div class="fig"><svg viewBox="0 0 730 120" aria-label="Replies refused at each size, today">
-      <text x="0" y="18" class="m" font-size="12">Replies refused today, at 600 a minute</text>
+      <text x="0" y="18" class="m" font-size="12">Replies refused at 600 a minute, before and after the line</text>
       <g id="sizes"></g>
     </svg></div>
     <p class="note">Not tested: 1,000 real requests against Zernio itself, because that spends the real budget.</p>
@@ -189,12 +189,13 @@ RUNS.forEach(([t, fb, us, dr], i) => {
 });
 
 // Question 7: refused replies at each size, from scripts/simulate-leads.ts.
-const SZ = [[12, 96, 0], [30, 240, 0], [75, 600, 0], [125, 1000, 400]];
+const SZ = [[12, 96, 0, 0], [30, 240, 0, 0], [75, 600, 0, 0], [125, 1000, 400, 0]];
 const S = document.getElementById('sizes');
-SZ.forEach(([b, leads, no], i) => {
+SZ.forEach(([b, leads, before, no], i) => {
   const x = i * 180;
   el('rect', { x, y: 30, width: 168, height: 80, rx: 10, class: no ? 'bad' : 'ok' }, S);
-  tx(`${no} refused`, { x: x + 16, y: 64, class: 'num', 'font-size': 20 }, S);
+  if (before) el('rect', { x, y: 30, width: 168, height: 80, rx: 10, class: 'bad', opacity: .35 }, S);
+  tx(before ? `${before} → ${no} refused` : `${no} refused`, { x: x + 14, y: 64, class: 'num', 'font-size': 18 }, S);
   tx(`${b} businesses, ${leads.toLocaleString()} leads`, { x: x + 14, y: 92, 'font-size': 11, class: 'm' }, S);
 });
 })();

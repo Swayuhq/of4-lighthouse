@@ -93,7 +93,7 @@ svg .pkt{fill:var(--jade)}
       <div class="seg" id="s-biz"></div>
       <div class="seg" id="s-work"><button aria-pressed="false" data-v="read">Every lead reads</button><button aria-pressed="true" data-v="reply">Every lead replies</button></div>
       <div class="seg" id="s-tier"><button aria-pressed="false" data-v="60">60 / min</button><button aria-pressed="true" data-v="600">600 / min</button></div>
-      <div class="seg" id="s-mode"><button aria-pressed="true" data-v="today">Today</button><button aria-pressed="false" data-v="line">With the line</button></div>
+      <div class="seg" id="s-mode"><button aria-pressed="true" data-v="today">Before the line</button><button aria-pressed="false" data-v="line">With the line</button></div>
       <button class="play" id="s-play">▶ Run</button>
     </div>
     <div class="stage"><svg id="scale-svg" viewBox="0 0 1100 430" aria-label="Lead agents sending calls through the gateway to Zernio"></svg></div>
@@ -116,12 +116,12 @@ svg .pkt{fill:var(--jade)}
 
   <!-- TODAY'S 3 -->
   <section class="view" id="v-rank" hidden>
-    <div class="controls"><div class="seg" id="r-rule"><button aria-pressed="true" data-v="now">Rule today</button><button aria-pressed="false" data-v="new">Proposed rule</button></div><span class="pill p-built" id="r-state">running on the laptop</span></div>
+    <div class="controls"><div class="seg" id="r-rule"><button aria-pressed="true" data-v="now">Old rule</button><button aria-pressed="false" data-v="new">New rule</button></div><span class="pill p-built" id="r-state">old rule</span></div>
     <div class="rankwrap">
       <div class="rank" id="r-list"></div>
       <div class="rules" id="r-rules"></div>
     </div>
-    <p class="src">The 8 messages waiting in Lighthouse on 6 Nov, read from its database. Points for "Rule today" come from <code>src/inbox.ts</code>. The proposed rule is not built and not agreed.</p>
+    <p class="src">The 8 messages waiting in Lighthouse on 6 Nov, read from its database. The new rule is built in <code>src/inbox.ts</code>, 6 Nov.</p>
   </section>
 
   <!-- PERMISSIONS -->
@@ -216,7 +216,7 @@ function drawScale() {
   // Line box
   const lineBox = el('g', {}, S);
   el('rect', { x: 560, y: 290, width: 250, height: 52, rx: 8, fill: mode === 'line' ? 'var(--amber-soft)' : 'var(--grey)', stroke: mode === 'line' ? 'var(--amber)' : 'var(--rule)', 'stroke-dasharray': mode === 'line' ? '' : '5 4' }, lineBox);
-  txt(mode === 'line' ? 'The line: waits for the next minute' : 'Today: a wait over 10 s is refused', { x: 685, y: 321, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700 }, lineBox);
+  txt(mode === 'line' ? 'The line: a reply waits for the next slot' : 'Before: a wait over 10 s is refused', { x: 685, y: 321, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700 }, lineBox);
   // Outcome bins
   el('rect', { x: 920, y: 90, width: 160, height: 70, rx: 10, fill: 'var(--jade-soft)' }, S);
   txt('Served', { x: 1000, y: 120, 'text-anchor': 'middle', 'font-weight': 800 }, S);
@@ -294,7 +294,7 @@ function drawFlow() {
     { id: 'in', x: 540, y: 140, w: 150, label: 'Incoming line', sub: 'Postgres, per business', s: 'built', d: 'One table, one shape, business id on every row, never saved twice, text gone 30 days after the last reply.' },
     { id: 'draft', x: 725, y: 70, w: 140, label: 'Draft', sub: 'under 1 min', s: 'built', d: 'One draft per message, checked before it is kept. 6 Nov: all five Facebook comments drafted in the minute they arrived.' },
     { id: 'owner', x: 725, y: 210, w: 140, label: 'Owner', sub: 'approves, Send', s: 'built', d: 'Nothing leaves without the owner pressing Send. 6 Nov: 7 Instagram replies and 1 Facebook reply sent this way.' },
-    { id: 'out', x: 900, y: 140, w: 140, label: 'Outgoing line', sub: 'waits its turn', s: 'todo', d: 'Replies wait for a slot under the 600 a minute budget instead of being refused. Next to build.' },
+    { id: 'out', x: 900, y: 140, w: 140, label: 'Outgoing line', sub: 'waits its turn', s: 'partly', d: 'Replies wait for a slot under the 600 a minute budget instead of being refused. Built 6 Nov; 1,000 replies at once all go out within 60 s in the simulation.' },
     { id: 'plat', x: 1075, y: 140, w: 145, label: 'Platform', sub: 'reply posted', s: 'built', d: 'Instagram replies through Zernio and Facebook replies through Composio, seen live 4, 5 and 6 Nov.' },
   ];
   FW = [['cust','addr'],['addr','push'],['cust','open'],['push','in'],['open','in'],['in','draft'],['draft','owner'],['owner','out'],['out','plat']];
@@ -367,8 +367,8 @@ function drawRank(rule) {
   });
   div.style.top = (10 + 3 * ROW + 7) + 'px';
   const rules = rule === 'now' ? RULES_NOW : RULES_NEW;
-  $('r-rules').innerHTML = `<h3>${rule === 'now' ? 'Rule today' : 'Proposed rule'}</h3>` + rules.map((r, k) => `<div class="rule${rule === 'new' && r[1] !== RULES_NOW[k][1] ? ' chg' : ''}"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('') + `<span class="src">${rule === 'now' ? 'Week old compliments from one person fill Today\'s 3. Two orders placed tonight sit below them.' : 'An order and a buying question from two people now lead. Changed rows are shaded.'}</span>`;
-  const st = $('r-state'); st.textContent = rule === 'now' ? 'running on the laptop' : 'proposed, not built'; st.className = 'pill ' + (rule === 'now' ? 'p-built' : 'p-todo');
+  $('r-rules').innerHTML = `<h3>${rule === 'now' ? 'Old rule' : 'New rule'}</h3>` + rules.map((r, k) => `<div class="rule${rule === 'new' && r[1] !== RULES_NOW[k][1] ? ' chg' : ''}"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('') + `<span class="src">${rule === 'now' ? 'Week old compliments from one person fill Today\'s 3. Two orders placed tonight sit below them.' : 'An order and a buying question from two people now lead. Changed rows are shaded.'}</span>`;
+  const st = $('r-state'); st.textContent = rule === 'now' ? 'replaced 6 Nov' : 'built 6 Nov'; st.className = 'pill ' + (rule === 'now' ? 'p-todo' : 'p-built');
 }
 const getRule = seg('r-rule', drawRank);
 drawRank('now');
@@ -427,7 +427,7 @@ const PIECES = [
   { name: 'Leads read our database', on: [1,1,1], s: 'partly', d: 'Lead reads hit Postgres, not Zernio. Only replies and the check on open spend the budget.' },
   { name: 'One read per business', on: [1,1,1], s: 'built', d: 'Identical reads in flight are shared within a business. 1,000 lead reads become 125 requests.' },
   { name: 'Business id on every call', on: [1,1,1], s: 'built', d: 'Two businesses never share a read. Commit 2ed8dff.' },
-  { name: 'Replies wait in line', on: [1,1,1], s: 'todo', d: 'No refusal after 10 s for replies. Removes all refusals on the free tier and in a bad minute.' },
+  { name: 'Replies wait in line', on: [1,1,1], s: 'partly', d: 'Built 6 Nov. A reply waits for the next free slot; a read still fails fast. Simulated: 0 refused at every size.' },
   { name: 'One shared budget', on: [0,1,1], s: 'todo', d: 'One count in Postgres, so two servers never spend the same 600 twice.' },
   { name: 'Turns per business', on: [0,0,1], s: 'todo', d: 'Round robin across businesses, so no business waits behind everyone else.' },
   { name: 'Spread scheduled starts', on: [0,0,1], s: 'todo', d: 'The Schedules layer starts businesses over a few minutes, not all at 9:00:00.' },
@@ -435,7 +435,7 @@ const PIECES = [
 const RES = [
   { label: '12 to 30 businesses', a: '0 refused at 600 / min', b: 'free tier: 36 to 180 refused today' },
   { label: 'around 75 businesses', a: '0 refused at 600 / min, the whole minute used', b: 'free tier: 540 refused today, all in 540 s with the line' },
-  { label: '125 businesses', a: '400 refused today', b: 'with the line: all 1,000 in 60 s' },
+  { label: '125 businesses', a: '0 refused with the line, all 1,000 in 60 s', b: 'before the line: 400 refused' },
 ];
 const getSize = seg('d-size', drawDesign);
 function drawDesign() {
