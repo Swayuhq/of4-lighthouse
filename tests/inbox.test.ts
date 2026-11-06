@@ -153,9 +153,9 @@ describe("Today's 3 puts buyers and questions above compliments", () => {
   const facts = (kind: Facts['kind']): Facts => ({ kind, problem: 'none', asks: null, deadline: null });
   function inbox() {
     const messages = [
-      fb('s0', 'Soni Saga', '2026-10-30T10:43', 'niceeeee'),
-      fb('s1', 'Soni Saga', '2026-10-30T10:43', 'wowwwwwww'),
-      fb('s2', 'Soni Saga', '2026-10-30T10:43', 'wherre to buyyy'),
+      fb('s0', 'Customer A', '2026-10-30T10:43', 'niceeeee'),
+      fb('s1', 'Customer A', '2026-10-30T10:43', 'wowwwwwww'),
+      fb('s2', 'Customer A', '2026-10-30T10:43', 'wherre to buyyy'),
       fb('u0', 'Sujit Nirmal', '2026-10-30T12:46', 'I would like to buy the matcha'),
       fb('u1', 'Sujit Nirmal', '2026-11-06T13:01', 'Want to buy this matcha'),
       fb('u2', 'Sujit Nirmal', '2026-11-06T13:01', 'What are the more flavours in this'),
