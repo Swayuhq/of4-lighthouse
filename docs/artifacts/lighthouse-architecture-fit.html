@@ -295,19 +295,51 @@ svg .grid{stroke:var(--rule)}
       </tbody>
     </table></div>
     <div class="card">
-      <h3>Time to clear 1,000 replies</h3>
-      <svg viewBox="0 0 520 170" role="img" aria-label="Time to clear 1,000 replies at each Zernio tier">
-        <line x1="150" y1="20" x2="150" y2="140" class="grid"/>
-        <line x1="150" y1="140" x2="500" y2="140" class="grid"/>
-        <rect x="150" y="28" width="330" height="26" class="bar2"/><text x="140" y="46" text-anchor="end" font-size="13">60 a minute</text><text x="476" y="46" text-anchor="end" font-size="13" font-weight="700" style="fill:#fff">1,000 s, about 17 min</text>
-        <rect x="150" y="68" width="33" height="26" class="bar"/><text x="140" y="86" text-anchor="end" font-size="13">600 a minute</text><text x="190" y="86" font-size="13" font-weight="700">100 s</text>
-        <rect x="150" y="108" width="17" height="26" class="bar"/><text x="140" y="126" text-anchor="end" font-size="13">1,200 a minute</text><text x="174" y="126" font-size="13" font-weight="700">50 s</text>
-        <text x="150" y="160" class="m" font-size="11">0 s</text><text x="480" y="160" text-anchor="end" class="m" font-size="11">1,000 s</text>
+      <h3>Time to send 1,000 replies when they wait in line</h3>
+      <svg viewBox="0 0 520 130" role="img" aria-label="Time to send 1,000 replies: 960 seconds at 60 a minute, 60 seconds at 600 a minute">
+        <line x1="150" y1="20" x2="150" y2="100" class="grid"/>
+        <line x1="150" y1="100" x2="500" y2="100" class="grid"/>
+        <rect x="150" y="28" width="330" height="26" class="bar2"/><text x="140" y="46" text-anchor="end" font-size="13">60 a minute</text><text x="476" y="46" text-anchor="end" font-size="13" font-weight="700" style="fill:#fff">960 s, 16 min</text>
+        <rect x="150" y="66" width="21" height="26" class="bar"/><text x="140" y="84" text-anchor="end" font-size="13">600 a minute</text><text x="178" y="84" font-size="13" font-weight="700">60 s</text>
+        <text x="150" y="120" class="m" font-size="11">0 s</text><text x="480" y="120" text-anchor="end" class="m" font-size="11">960 s</text>
       </svg>
-      <p class="src">Worked out from the published limits, with no other traffic. Not yet measured.</p>
+      <p class="src">Measured on a simulated clock with the real gateway and limiter (<code>scripts/simulate-leads.ts</code>). The limiter lets a full minute's budget go at once, then the rest each minute after.</p>
     </div>
   </div>
-  <p class="note">With today's code, 1,000 different calls at once on a 60 a minute budget: about 10 pass inside the 10 second wait ceiling and about 990 are refused. Worked out from <code>src/gateway/limiter.ts</code>, not from a run.</p>
+  <h3>Measured: 125 businesses × 8 lead agents, all in the same instant</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>Work</th><th>Zernio budget</th><th>A call waits</th><th>Provider requests</th><th>Served</th><th>Refused</th><th>Businesses left with nothing</th><th>Last one served</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="4">Every lead reads its Instagram</td><td class="num">60 a minute</td><td>up to 10 s (today)</td><td class="num">60</td><td class="num">480</td><td class="num"><span class="pill gap">520</span></td><td class="num">65</td><td class="num">0 s</td></tr>
+      <tr><td class="num">60 a minute</td><td>in line</td><td class="num">125</td><td class="num">1,000</td><td class="num">0</td><td class="num">0</td><td class="num">120 s</td></tr>
+      <tr><td class="num">600 a minute</td><td>up to 10 s (today)</td><td class="num">125</td><td class="num">1,000</td><td class="num">0</td><td class="num">0</td><td class="num">0 s</td></tr>
+      <tr><td class="num">600 a minute</td><td>in line</td><td class="num">125</td><td class="num">1,000</td><td class="num">0</td><td class="num">0</td><td class="num">0 s</td></tr>
+      <tr><td rowspan="4">Every lead sends a different reply</td><td class="num">60 a minute</td><td>up to 10 s (today)</td><td class="num">60</td><td class="num">60</td><td class="num"><span class="pill gap">940</span></td><td class="num">117</td><td class="num">0 s</td></tr>
+      <tr><td class="num">60 a minute</td><td>in line</td><td class="num">1,000</td><td class="num">1,000</td><td class="num">0</td><td class="num">0</td><td class="num">960 s</td></tr>
+      <tr><td class="num">600 a minute</td><td>up to 10 s (today)</td><td class="num">600</td><td class="num">600</td><td class="num"><span class="pill gap">400</span></td><td class="num">50</td><td class="num">0 s</td></tr>
+      <tr><td class="num">600 a minute</td><td>in line</td><td class="num">1,000</td><td class="num">1,000</td><td class="num">0</td><td class="num">0</td><td class="num">60 s</td></tr>
+    </tbody>
+  </table></div>
+  <div class="two">
+    <div class="card">
+      <h3>What the numbers say</h3>
+      <ul>
+        <li><b>Reads hold.</b> Sharing within each business turns 1,000 lead reads into 125 provider requests, one per business. At 600 a minute every lead is served at once.</li>
+        <li><b>Replies do not.</b> Each reply is different, so nothing is shared. With today's 10 second ceiling, 400 of 1,000 replies are refused and 50 businesses get no reply out.</li>
+        <li><b>A queue fixes the refusals.</b> When replies wait in line, all 1,000 go out; the last one leaves 60 seconds later at 600 a minute.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>What this run does not cover</h3>
+      <ul>
+        <li>Provider answer time is zero; real calls take time</li>
+        <li>One server; with two, each would count its own budget</li>
+        <li>Zernio answering 429 itself; only our own budget is modelled</li>
+        <li>Order inside the line is arrival order, so the last businesses to ask wait longest</li>
+        <li>600 a minute needs 3 or more connected accounts in the Zernio team</li>
+      </ul>
+    </div>
+  </div>
   <div class="scroll"><table>
     <thead><tr><th>Design lever, biggest first</th><th>What it does</th><th>State</th></tr></thead>
     <tbody>
@@ -326,7 +358,7 @@ svg .grid{stroke:var(--rule)}
     </div>
     <div class="card">
       <h3>The test that answers it</h3>
-      <p>A stand in provider that enforces 600 a minute; 1,000 lead agents across 125 businesses; reads and replies mixed. Measure provider requests a second, 429s, the longest wait, time to clear, and whether any business is starved. No real accounts needed. It needs gap 1 fixed first.</p>
+      <p><code>scripts/simulate-leads.ts</code> runs the real gateway and the real limiter on a simulated clock, with 1,000 lead agents across 125 businesses and a stand in provider. No network, no accounts, no keys. It runs in under 4 seconds. The table above is its output.</p>
     </div>
   </div>
   <p class="src">Two positions to hold together: "Beta builds only what is required, sized for beta scale load" (decision, 5 November; about 12 businesses at beta) and "can a thousand lead agents work with a singular connector at the same time" (6 November). The answer is a design and a simulated test, not a build for 125 businesses.</p>
@@ -360,7 +392,7 @@ svg .grid{stroke:var(--rule)}
       <tr><td class="num">5 Nov</td><td>Loop him in if anyone claims to depend on connectors</td><td>ongoing</td></tr>
       <tr><td class="num">6 Nov</td><td>Scrap the failure map</td><td><span class="pill built">done</span></td></tr>
       <tr><td class="num">6 Nov</td><td>Justify the timed check or drop it</td><td><span class="pill built">dropped</span>, change ready</td></tr>
-      <tr><td class="num">6 Nov</td><td>Concurrency numbers: requests a second, 1,000 lead agents</td><td><span class="pill partly">open</span></td></tr>
+      <tr><td class="num">6 Nov</td><td>Concurrency numbers: requests a second, 1,000 lead agents</td><td><span class="pill built">measured</span> on a simulated clock (section 6); live check open</td></tr>
       <tr><td class="num">6 Nov</td><td>Ping when prepared</td><td>after the above</td></tr>
     </tbody>
   </table></div>
