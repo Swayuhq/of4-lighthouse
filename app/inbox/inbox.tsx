@@ -7,6 +7,7 @@ import type { Counts, Item, Status } from '@/src/inbox';
 import type { Theme } from '@/src/agents/insights';
 import { checkChannels, chooseOwner, clearAll, draftFor, markAs, sendReply } from '../actions';
 import { Ago } from '../ago';
+import { when } from '@/src/when';
 import { ChannelBadge, Wordmark } from '../brand';
 import type { Channel } from '@/src/connectors';
 
@@ -37,15 +38,6 @@ type Toast = { text: string; undo?: { id: string; status: Status } };
 
 const STATUS_COLOR: Record<Status, string> = { answered: 'bg-kelp', waiting: 'bg-lamp', spam: 'bg-slate' };
 const DONE_WORD: Record<Status, string> = { answered: 'Marked answered', waiting: 'Back in waiting', spam: 'Moved to spam' };
-
-function when(receivedAt: string) {
-  const [date, time] = receivedAt.split('T');
-  const [, month, day] = date.split('-').map(Number);
-  const [hour, minute] = time.split(':').map(Number);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const h12 = hour % 12 || 12;
-  return `${day} ${months[month - 1]}, ${h12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'am' : 'pm'}`;
-}
 
 export function Inbox({ data }: { data: InboxData }) {
   const [pending, start] = useTransition();
@@ -294,7 +286,7 @@ function Message({ item, lead, fresh, onAct, onSend, busy }: {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {channel && <ChannelBadge channel={channel} size="sm" />}
         <h3 className="font-bold">{item.author === 'Unknown' ? 'Someone' : item.author}</h3>
-        <span className="text-[15px] text-navy-soft">{item.platform}, {when(item.receivedAt)}</span>
+        <span className="text-[15px] text-navy-soft">{item.platform}, {when(item.receivedAt, item.replyRef !== undefined)}</span>
         {item.link && waiting && <a href={item.link} target="_blank" rel="noreferrer" className="text-[15px] text-navy-soft underline decoration-shore underline-offset-4 hover:text-navy">Open on {item.platform}</a>}
         {item.stars !== undefined && <span className="text-[15px]" aria-label={`${item.stars} out of 5 stars`}>{'★'.repeat(item.stars)}<span className="text-shore">{'★'.repeat(5 - item.stars)}</span></span>}
       </div>

@@ -12,6 +12,8 @@ export type MessageRow = {
   body: string;
   stars: number | null;
   link?: string | null;
+  /** Set only for messages read from a live channel, whose times are stored in UTC. */
+  replyRef?: string | null;
   vanishedAt?: Date | null;
 };
 
@@ -30,6 +32,7 @@ export function toState(ownerNames: string[], messages: MessageRow[], events: Ev
       text: m.body,
       ...(m.stars === null ? {} : { stars: m.stars }),
       ...(m.link ? { link: m.link } : {}),
+      ...(m.replyRef ? { replyRef: m.replyRef } : {}),
       ...(m.vanishedAt ? { vanished: true } : {}),
     });
     state.thread[m.contentId] = m.thread;
