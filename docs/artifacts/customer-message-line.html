@@ -1,0 +1,220 @@
+<title>Customer Message Line</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one wide landscape column (about 1180px); a flow diagram first, then tables of what is built, proven and asked. */
+:root{
+  --bg:#f6f8f7; --panel:#ffffff; --ink:#14231f; --muted:#5b6b66; --rule:#d9e2df;
+  --forest:#00584D; --jade:#009B74; --jade-soft:#e3f3ee; --amber:#a86400; --amber-soft:#fbf0dc;
+  --violet:#5b3fa6; --violet-soft:#efeafb; --grey-soft:#eef1f0; --red:#b3261e; --red-soft:#fbe7e5;
+  --font:"Manrope",ui-sans-serif,system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1614; --panel:#15201d; --ink:#e6eeeb; --muted:#9db0aa; --rule:#2a3a36;
+  --forest:#5fd0b3; --jade:#3cc39e; --jade-soft:#173a31; --amber:#f0b45a; --amber-soft:#3a2c14;
+  --violet:#b9a3f5; --violet-soft:#2a2240; --grey-soft:#1d2a27; --red:#ff8a80; --red-soft:#3d1c1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1614; --panel:#15201d; --ink:#e6eeeb; --muted:#9db0aa; --rule:#2a3a36;
+  --forest:#5fd0b3; --jade:#3cc39e; --jade-soft:#173a31; --amber:#f0b45a; --amber-soft:#3a2c14;
+  --violet:#b9a3f5; --violet-soft:#2a2240; --grey-soft:#1d2a27; --red:#ff8a80; --red-soft:#3d1c1a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--font);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:40px}
+h1,h2,h3{margin:0;text-wrap:balance;color:var(--forest)}
+h1{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:23px;font-weight:800}
+h3{font-size:16px;font-weight:700;color:var(--ink)}
+p{margin:0;max-width:78ch}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--jade)}
+section{display:grid;gap:14px;min-width:0}
+.lede{font-size:17px;color:var(--muted)}
+.scroll{overflow-x:auto;min-width:0;background:var(--panel);border:1px solid var(--rule);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--rule)}
+th{font:600 12px/1.3 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--grey-soft)}
+tr:last-child td{border-bottom:0}
+code{font:13px var(--mono);background:var(--grey-soft);padding:1px 5px;border-radius:4px}
+.pill{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:999px;white-space:nowrap}
+.built{background:var(--jade-soft);color:var(--forest)}
+.partly{background:var(--amber-soft);color:var(--amber)}
+.todo{background:var(--grey-soft);color:var(--muted);border:1px dashed var(--muted)}
+.of3{background:var(--violet-soft);color:var(--violet)}
+.diagram{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:16px;overflow-x:auto}
+.diagram svg{display:block;width:100%;min-width:900px;height:auto}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:16px;display:grid;gap:8px;align-content:start}
+ul,ol{margin:0;padding-left:20px;display:grid;gap:4px}
+.src{font-size:13px;color:var(--muted)}
+.key{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+svg text{fill:var(--ink);font-family:var(--font)}
+svg .m{fill:var(--muted)}
+svg .b{fill:var(--jade-soft);stroke:var(--jade);stroke-width:1.5}
+svg .p{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.5}
+svg .t{fill:var(--panel);stroke:var(--muted);stroke-dasharray:5 4}
+svg .v{fill:var(--violet-soft);stroke:var(--violet);stroke-width:1.5;stroke-dasharray:5 4}
+svg .lane{fill:var(--grey-soft);stroke:none}
+svg .a{stroke:var(--muted);stroke-width:1.6;fill:none}
+@media (max-width:760px){.two{grid-template-columns:minmax(0,1fr)}}
+</style>
+
+<div class="wrap">
+
+<header style="display:grid;gap:12px">
+  <div class="eyebrow">OF4 · Connectors and channels · 6 November 2026</div>
+  <h1>One line for every customer message</h1>
+  <p class="lede">Where the customer message line stands in the Lighthouse prototype, what is proven, and where the OF3 sources (website contact forms and Google profile questions) join it. Written so OF3 and OF4 can build on one line, not two.</p>
+</header>
+
+<section>
+  <div class="eyebrow">1 · Two lines, not one</div>
+  <h2>The incoming line and the outgoing line</h2>
+  <div class="two">
+    <div class="card">
+      <h3>Incoming line <span class="pill partly">mostly built</span></h3>
+      <p>Every customer message is saved first, in one place, before anything else happens. Nothing is lost if Swayu is slow or a platform is down. This is the queue discussed on 22 October, and the one OF3 sources join.</p>
+    </div>
+    <div class="card">
+      <h3>Outgoing line <span class="pill todo">not built</span></h3>
+      <p>Replies leaving Swayu wait their turn under the provider's limit instead of being refused. It belongs to the connector layer. OF3 needs nothing from it beyond knowing it exists.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">2 · How a message moves today</div>
+  <h2>From the customer to the owner's reply</h2>
+  <div class="key"><span class="pill built">built and proven live</span><span class="pill partly">built, not yet proven live</span><span class="pill todo">not built</span><span class="pill of3">OF3 source to plug in</span></div>
+  <div class="diagram">
+    <svg viewBox="0 0 1140 470" role="img" aria-label="Customer message flow from sources through the incoming line to the owner and back out">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="m"/></marker></defs>
+      <rect x="0" y="0" width="230" height="470" rx="10" class="lane"/>
+      <text x="16" y="24" class="m" font-size="12" font-weight="700">WHERE CUSTOMERS WRITE</text>
+      <rect x="16" y="40" width="198" height="42" rx="7" class="b"/><text x="115" y="66" text-anchor="middle" font-size="13">Instagram comments</text>
+      <rect x="16" y="92" width="198" height="42" rx="7" class="p"/><text x="115" y="118" text-anchor="middle" font-size="13">Facebook comments</text>
+      <rect x="16" y="144" width="198" height="42" rx="7" class="p"/><text x="115" y="170" text-anchor="middle" font-size="13">Google reviews</text>
+      <rect x="16" y="196" width="198" height="42" rx="7" class="p"/><text x="115" y="216" text-anchor="middle" font-size="13">WhatsApp</text><text x="115" y="231" text-anchor="middle" class="m" font-size="11">test number</text>
+      <rect x="16" y="262" width="198" height="42" rx="7" class="v"/><text x="115" y="282" text-anchor="middle" font-size="13">Website contact form</text><text x="115" y="297" text-anchor="middle" class="m" font-size="11">O68, OF3</text>
+      <rect x="16" y="314" width="198" height="42" rx="7" class="v"/><text x="115" y="334" text-anchor="middle" font-size="13">Google profile questions</text><text x="115" y="349" text-anchor="middle" class="m" font-size="11">from OF3's profile work</text>
+
+      <rect x="270" y="60" width="200" height="74" rx="8" class="b"/><text x="370" y="88" text-anchor="middle" font-weight="700" font-size="14">Push intake</text><text x="370" y="106" text-anchor="middle" class="m" font-size="12">signed by Zernio, checked</text><text x="370" y="122" text-anchor="middle" class="m" font-size="12">stored 1.9 s after sending</text>
+      <rect x="270" y="150" width="200" height="60" rx="8" class="b"/><text x="370" y="176" text-anchor="middle" font-weight="700" font-size="14">One check on open</text><text x="370" y="194" text-anchor="middle" class="m" font-size="12">catches anything missed</text>
+      <rect x="270" y="270" width="200" height="74" rx="8" class="t"/><text x="370" y="298" text-anchor="middle" font-weight="700" font-size="14">Form and question intake</text><text x="370" y="316" text-anchor="middle" class="m" font-size="12">same shape, same checks</text><text x="370" y="332" text-anchor="middle" class="m" font-size="12">to be agreed with OF3</text>
+
+      <rect x="510" y="110" width="210" height="160" rx="10" class="b"/>
+      <text x="615" y="136" text-anchor="middle" font-weight="800" font-size="15">The incoming line</text>
+      <text x="615" y="156" text-anchor="middle" class="m" font-size="12">one Postgres table, one shape</text>
+      <text x="530" y="182" font-size="12">• business id on every row</text>
+      <text x="530" y="200" font-size="12">• same message never saved twice</text>
+      <text x="530" y="218" font-size="12">• every change is a new event</text>
+      <text x="530" y="236" font-size="12">• text gone 30 days after reply</text>
+      <text x="530" y="254" font-size="12">• customer text treated as untrusted</text>
+
+      <rect x="760" y="110" width="170" height="70" rx="8" class="b"/><text x="845" y="138" text-anchor="middle" font-weight="700" font-size="14">Draft a reply</text><text x="845" y="156" text-anchor="middle" class="m" font-size="12">replies lead, checked</text><text x="845" y="172" text-anchor="middle" class="m" font-size="12">for invented facts</text>
+      <rect x="760" y="200" width="170" height="70" rx="8" class="b"/><text x="845" y="228" text-anchor="middle" font-weight="700" font-size="14">Owner's inbox</text><text x="845" y="246" text-anchor="middle" class="m" font-size="12">Today's 3, then all;</text><text x="845" y="262" text-anchor="middle" class="m" font-size="12">owner sends or edits</text>
+      <rect x="760" y="300" width="170" height="70" rx="8" class="t"/><text x="845" y="328" text-anchor="middle" font-weight="700" font-size="14">Outgoing line</text><text x="845" y="346" text-anchor="middle" class="m" font-size="12">replies wait their turn</text><text x="845" y="362" text-anchor="middle" class="m" font-size="12">under 600 a minute</text>
+      <rect x="970" y="300" width="160" height="70" rx="8" class="b"/><text x="1050" y="328" text-anchor="middle" font-weight="700" font-size="14">Reply posted</text><text x="1050" y="346" text-anchor="middle" class="m" font-size="12">Instagram, Facebook</text><text x="1050" y="362" text-anchor="middle" class="m" font-size="12">proven 4 and 5 Nov</text>
+
+      <g class="a">
+        <path d="M214 61C240 61 245 90 268 92" marker-end="url(#ah)"/><path d="M214 113C240 113 245 100 268 100" marker-end="url(#ah)"/><path d="M214 165C240 165 245 110 268 110" marker-end="url(#ah)"/>
+        <path d="M214 217C245 217 245 185 268 182" marker-end="url(#ah)"/>
+        <path d="M214 283H268" marker-end="url(#ah)"/><path d="M214 335C240 335 245 320 268 318" marker-end="url(#ah)"/>
+        <path d="M470 97C490 97 490 150 508 160" marker-end="url(#ah)"/><path d="M470 180H508" marker-end="url(#ah)"/><path d="M470 307C490 307 490 250 508 240" marker-end="url(#ah)"/>
+        <path d="M720 160H758" marker-end="url(#ah)"/><path d="M845 180V198" marker-end="url(#ah)"/><path d="M845 270V298" marker-end="url(#ah)"/><path d="M930 335H968" marker-end="url(#ah)"/>
+      </g>
+      <text x="570" y="420" class="m" font-size="12">WhatsApp comes in by Meta's own push, not through Zernio. Facebook and Google reviews come in by the same Zernio push as Instagram, not yet seen live.</text>
+    </svg>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">3 · What is done</div>
+  <h2>Built in Lighthouse, with proof</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Piece</th><th>What it does</th><th>Proof</th><th>State</th></tr></thead>
+    <tbody>
+      <tr><td>Push intake</td><td>Zernio sends each new comment or review; the signature is checked; a retried push is saved once</td><td>A real Instagram comment stored 1.9 s after Zernio sent it, 5 Nov</td><td><span class="pill built">proven</span></td></tr>
+      <tr><td>Check on open</td><td>Opening the inbox reads every connected channel once; no timed check</td><td>Commit <code>1f9be72</code>; replaced a 30 s check that made 92 reads in 5 min</td><td><span class="pill built">built</span></td></tr>
+      <tr><td>One message shape</td><td>Every source becomes the same strict shape; anything else is refused</td><td>Tests in <code>tests/</code>; 250 of 250 pass</td><td><span class="pill built">built</span></td></tr>
+      <tr><td>The incoming line</td><td>Postgres <code>message</code> and <code>event</code> tables, business id on every row, same message never stored twice</td><td><code>src/store/schema.sql</code></td><td><span class="pill built">built</span></td></tr>
+      <tr><td>Edited reviews and comments</td><td>An edited review updates the stored words and gets a fresh draft</td><td>Commit <code>bdcbd08</code></td><td><span class="pill partly">not seen live</span></td></tr>
+      <tr><td>30 day vanishing</td><td>Customer text goes 30 days after the owner's last reply; who, when and where stay</td><td><code>sweepHistory</code> in <code>src/store/db.ts</code></td><td><span class="pill built">built</span></td></tr>
+      <tr><td>Draft and check</td><td>The replies lead drafts one reply per message; a checker refuses invented prices, dates or promises</td><td>One draft per message, commit <code>8187d8e</code></td><td><span class="pill built">built</span></td></tr>
+      <tr><td>Owner sends</td><td>Nothing goes out without the owner's Send; the reply is posted through the connector</td><td>Instagram reply posted through Zernio 4 Nov; Facebook through Composio</td><td><span class="pill built">proven</span></td></tr>
+      <tr><td>Many businesses</td><td>Every connector call carries its business; two businesses never share a read</td><td>Commit <code>2ed8dff</code>, tests fail when the business is removed</td><td><span class="pill built">built</span></td></tr>
+      <tr><td>Load</td><td>1,000 lead agents across 125 businesses at once: 1,000 reads cost 125 provider requests; 400 of 1,000 replies refused today</td><td><code>scripts/simulate-leads.ts</code>, simulated clock</td><td><span class="pill partly">simulated</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="eyebrow">4 · Already decided</div>
+  <h2>Points from 22 October that the prototype follows</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Point raised by Maanas, 22 Oct</th><th>What Lighthouse does</th></tr></thead>
+    <tbody>
+      <tr><td>Redis would be a new service needing Harish's go; could a Postgres table be the waiting line?</td><td>The line is a Postgres table. No Redis, no new service</td></tr>
+      <tr><td>Saved customer messages need a retention rule (rule 9)</td><td>Text vanishes 30 days after the owner's last reply</td></tr>
+      <tr><td>They need a business id (rule 10)</td><td>On every row and every connector call</td></tr>
+      <tr><td>Message text is from strangers; treat it as untrusted (like rule 8)</td><td>The replies lead is told never to follow customer text, and a checker refuses facts it was not given</td></tr>
+      <tr><td>O68 contact form messages can join the same queue</td><td>Not plugged in yet; section 5</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="eyebrow">5 · Building it together</div>
+  <h2>Where OF3 plugs in</h2>
+  <div class="two">
+    <div class="card">
+      <h3>What a source needs to provide</h3>
+      <p>Every message in the line has the same few fields (<code>InboxMessage</code> in <code>src/parse.ts</code>). A new source only has to fill them; the line adds the business when it saves.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>The source's own id, so a resend is saved once</td></tr>
+          <tr><td><code>platform</code></td><td>Where it came from: website form, Google question</td></tr>
+          <tr><td><code>author</code></td><td>The customer's name as given</td></tr>
+          <tr><td><code>receivedAt</code></td><td>When they wrote it</td></tr>
+          <tr><td><code>text</code></td><td>What they wrote</td></tr>
+          <tr><td><code>replyRef</code></td><td>How to answer: an email, a question id, or none</td></tr>
+          <tr><td><code>link</code></td><td>The message's own page, when there is one</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3>Questions for OF3</h3>
+      <ol>
+        <li>How does an O68 contact form message arrive: a post to a Swayu address, an email, or something else?</li>
+        <li>Can the owner reply to a form message from Swayu, or is it read only?</li>
+        <li>Google profile questions: will they come through Zernio's Google connection, the one that already carries reviews?</li>
+        <li>Is 9 November still the date for the Google Business Profile connection?</li>
+        <li>Any other incoming customer message in the OF3 plan?</li>
+      </ol>
+      <h3 style="margin-top:6px">What OF4 brings</h3>
+      <ul>
+        <li>The line, the intake checks and the 30 day rule, ready to receive a new channel</li>
+        <li>The inbox the owner already uses</li>
+        <li>One Google connection for reviews and questions, not two</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">6 · Next</div>
+  <h2>What happens next, and who</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Step</th><th>Who</th><th>Done when</th></tr></thead>
+    <tbody>
+      <tr><td>Agree the contact form and Google question shapes</td><td>Maanas and Sujit</td><td>Both sources fill the fields in section 5</td></tr>
+      <tr><td>Add the two channels to Lighthouse behind the same intake checks</td><td>Sujit</td><td>A sample form message and a sample question appear in the owner's inbox, saved once</td></tr>
+      <tr><td>See a real Facebook comment and a real Google review arrive by push</td><td>Sujit</td><td>Both stored within seconds, as Instagram was</td></tr>
+      <tr><td>Build the outgoing line</td><td>Sujit, after Dhruv's view</td><td>The 1,000 reply simulation shows no refusals</td></tr>
+      <tr><td>Move the line into swayu-app after the refactor</td><td>Sujit, with the engineering lead</td><td>Same tests pass in swayu-app</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">Sources: Slack DM, 22 Oct and 5 Nov; Lighthouse repository (Swayuhq/of4-lighthouse, branch sujit/t12-single-draft); calls of 31 Oct and 6 Nov.</p>
+</section>
+
+</div>
