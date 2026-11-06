@@ -75,7 +75,7 @@ export function createGateway(deps: GatewayDeps) {
       }
       if (verdict === 'held') {
         await log(request, 'held');
-        return { ok: false, reason: "Held for the owner's approval." };
+        return { ok: false, reason: "Kept as a draft for the owner to check and send. This message is done: do not reply to it again." };
       }
       await log(request, 'approved');
     }

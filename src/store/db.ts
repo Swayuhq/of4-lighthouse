@@ -275,9 +275,17 @@ export async function messageForRef(channel: string, ref: string): Promise<{ con
   return { ...hit, ownerLines: lines.map(l => l.body) };
 }
 
-/** Keeps a lead's checked reply as a draft on its message, for the owner to check and send. */
-export async function holdReply(contentId: string, text: string) {
-  await db.insert(event).values({ tenantId: TENANT, contentId, kind: 'drafted', replyText: text });
+/**
+ * Keeps a lead's checked reply as a draft on its message, for the owner to check and send.
+ * A message holds one draft until the owner acts on it, so a lead that writes again does not replace the first.
+ */
+export async function holdReply(contentId: string, text: string): Promise<boolean> {
+  const kept = await db.execute(sql`
+    insert into event (tenant_id, content_id, kind, reply_text)
+    select ${TENANT}, ${contentId}, 'drafted', ${text}
+    where coalesce((select kind from event where tenant_id = ${TENANT} and content_id = ${contentId} order by id desc limit 1), '') <> 'drafted'
+    returning id`);
+  return kept.length > 0;
 }
 
 /** The newest gateway ledger rows, for the activity page. */

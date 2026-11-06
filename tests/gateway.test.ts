@@ -90,7 +90,7 @@ describe('A call that needs the owner waits for the owner', () => {
   it('a lead acting alone has its reply held for the owner, so nothing is sent', async () => {
     const { gateway, composio, ledger } = setup({ askOwner: async () => 'held' });
     const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
-    expect(out).toEqual({ ok: false, reason: "Held for the owner's approval." });
+    expect(out).toEqual({ ok: false, reason: "Kept as a draft for the owner to check and send. This message is done: do not reply to it again." });
     expect(composio).not.toHaveBeenCalled();
     expect(ledger.map(r => r.outcome)).toEqual(['held']);
   });

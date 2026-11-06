@@ -22,7 +22,7 @@ beforeEach(() => { sent.calls = []; sent.ledger = []; sent.held = []; sent.known
 describe('One gateway, two doors', () => {
   it('a lead agent reply is kept as a draft for the owner and never reaches a provider', async () => {
     const out = await leadGateway().call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: '1_2', text: 'Hi' } });
-    expect(out).toEqual({ ok: false, reason: "Held for the owner's approval." });
+    expect(out).toEqual({ ok: false, reason: "Kept as a draft for the owner to check and send. This message is done: do not reply to it again." });
     expect(sent.calls).toEqual([]);
     expect(sent.held).toEqual([['facebook:1_2', 'Hi']]);
     expect(sent.ledger).toMatchObject([{ lead: 'replies', channel: 'facebook', action: 'reply', outcome: 'held' }]);

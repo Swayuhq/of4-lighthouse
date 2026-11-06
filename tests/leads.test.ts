@@ -37,6 +37,6 @@ describe('Each lead is handed only the tools its rules allow', () => {
     const out = await execute({ ref: 'c1', text: 'Thanks!' }, {});
     expect(askOwner).toHaveBeenCalledOnce();
     expect(provider).not.toHaveBeenCalled();
-    expect(out).toEqual({ ok: false, reason: "Held for the owner's approval." });
+    expect(out).toEqual({ ok: false, reason: "Kept as a draft for the owner to check and send. This message is done: do not reply to it again." });
   });
 });
