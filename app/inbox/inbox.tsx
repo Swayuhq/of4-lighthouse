@@ -30,10 +30,6 @@ export type InboxData = {
   pushOn: boolean;
 };
 
-/** How often the open inbox asks every connected channel for new messages. */
-const CHECK_EVERY_MS = 30_000;
-/** With push on, the same full check runs this often, as the safety net for a lost push. */
-const SAFETY_CHECK_MS = 10 * 60_000;
 /** With push on, how often the screen reloads what is already stored. It reads Postgres only and calls no provider. */
 const SHOW_EVERY_MS = 15_000;
 
@@ -80,21 +76,26 @@ export function Inbox({ data }: { data: InboxData }) {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Connecting was the switch. While this page is open it checks every connected channel; a server job replaces this when Lighthouse goes live.
+  // Opening the inbox checks every connected channel once. New messages after that arrive by push.
   // A broken channel counts too: the check is what tries it again.
+  // No timed check: push stored a comment 1.9 s after it was sent, and Zernio retries a failed push for about 51 hours.
   const live = data.channels.some(c => c.status === 'connected' || c.status === 'broken');
   const router = useRouter();
   const pushOn = data.pushOn;
   useEffect(() => {
     if (!live) return;
-    const timer = setInterval(async () => {
-      const { added } = await checkChannels();
-      if (added) setToast({ text: `${added} new message${added === 1 ? '' : 's'} caught` });
-    }, pushOn ? SAFETY_CHECK_MS : CHECK_EVERY_MS);
+    let open = true;
+    checkChannels().then(({ added }) => {
+      if (open && added) setToast({ text: `${added} new message${added === 1 ? '' : 's'} caught` });
+    });
+    return () => { open = false; };
+  }, [live]);
+  useEffect(() => {
+    if (!pushOn) return;
     // A pushed message is already stored; the screen only needs to show it.
-    const show = pushOn ? setInterval(() => router.refresh(), SHOW_EVERY_MS) : undefined;
-    return () => { clearInterval(timer); clearInterval(show); };
-  }, [live, pushOn, router]);
+    const show = setInterval(() => router.refresh(), SHOW_EVERY_MS);
+    return () => clearInterval(show);
+  }, [pushOn, router]);
 
   function act(item: InboxItem, status: Status) {
     start(async () => {
