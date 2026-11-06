@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { draftTask, toDraft } from '../src/drafting';
+import { draftTask, toDraft, triedKey } from '../src/drafting';
 import type { Item } from '../src/inbox';
 
 const item = (id: string, over: Partial<Item> = {}): Item => ({ id, platform: 'Facebook', author: 'Priya', receivedAt: '2026-11-04T08:00', text: 'Do you deliver?', status: 'waiting', points: 0, reasons: [], ...over });
@@ -16,7 +16,13 @@ describe('Which messages the replies lead drafts for', () => {
       item('instagram:7'),
       item('facebook:8'),
     ];
-    expect(toDraft(items, new Set(['facebook:8'])).map(i => i.id)).toEqual(['facebook:1', 'whatsapp:5', 'instagram:7']);
+    expect(toDraft(items, new Set([triedKey(item('facebook:8'))])).map(i => i.id)).toEqual(['facebook:1', 'whatsapp:5', 'instagram:7']);
+  });
+
+  it('a message the customer edited after it was tried is drafted again, for its new words', () => {
+    const tried = new Set([triedKey(item('facebook:1'))]);
+    expect(toDraft([item('facebook:1', { text: 'Do you deliver on Sunday?' })], tried).map(i => i.id)).toEqual(['facebook:1']);
+    expect(toDraft([item('facebook:1')], tried)).toEqual([]);
   });
 
   it('at most ten at a time, most urgent first as the inbox already sorts them', () => {

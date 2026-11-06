@@ -61,6 +61,26 @@ async function insertMessages(tx: Tx, messages: InboxMessage[], thread: string):
   return added.length;
 }
 
+/**
+ * A customer who edits a comment or review: the stored words and stars follow the edit, so the owner reads what the
+ * customer says now. A draft written for the old words is dropped, so a new one is written. Words already swept stay gone.
+ */
+async function applyEdits(tx: Tx, messages: InboxMessage[]): Promise<number> {
+  let edited = 0;
+  for (const m of messages) {
+    const changed = await tx.update(message).set({ body: m.text, stars: m.stars ?? null })
+      .where(and(eq(message.tenantId, TENANT), eq(message.contentId, m.id), isNull(message.vanishedAt),
+        sql`(${message.body} <> ${m.text} or ${message.stars} is distinct from ${m.stars ?? null})`))
+      .returning({ contentId: message.contentId });
+    if (!changed.length) continue;
+    edited++;
+    await tx.execute(sql`insert into event (tenant_id, content_id, kind)
+      select ${TENANT}, ${m.id}, 'waiting'
+      where (select kind from event where tenant_id = ${TENANT} and content_id = ${m.id} order by id desc limit 1) = 'drafted'`);
+  }
+  return edited;
+}
+
 /** Stores new messages and their arrived events together. A message already stored is skipped. */
 export async function store(messages: InboxMessage[], thread: string): Promise<number> {
   if (!messages.length) return 0;
@@ -100,7 +120,9 @@ export async function storeFromChannel(channel: Channel, messages: InboxMessage[
       .where(and(eq(connection.tenantId, TENANT), eq(connection.channel, channel), eq(connection.status, 'connected')))
       .returning({ channel: connection.channel });
     if (!moved.length) throw new Error(`${ADAPTERS[channel].label} is not connected`);
-    return insertMessages(tx, messages, ADAPTERS[channel].label);
+    const added = await insertMessages(tx, messages, ADAPTERS[channel].label);
+    await applyEdits(tx, messages);
+    return added;
   });
 }
 
@@ -130,7 +152,9 @@ export async function takePush(
       .where(and(eq(connection.tenantId, TENANT), eq(connection.channel, row.channel), eq(connection.status, 'connected')))
       .returning({ channel: connection.channel });
     if (!live.length) return 'not connected';
-    const final: PushOutcome = (await insertMessages(tx, messages, ADAPTERS[row.channel].label)) ? 'stored' : 'already had';
+    // An edit counts as stored: a new version of the message was kept, and it needs a new draft.
+    const added = await insertMessages(tx, messages, ADAPTERS[row.channel].label);
+    const final: PushOutcome = added || (await applyEdits(tx, messages)) ? 'stored' : 'already had';
     await tx.update(pushEvent).set({ outcome: final }).where(eq(pushEvent.id, taken.id));
     return final;
   });

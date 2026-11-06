@@ -91,7 +91,8 @@ export function readPush(payload: unknown): Push | null {
     };
   }
 
-  if (env.data.event === 'review.new') {
+  // A changed review has the same shape as a new one (docs.zernio.com/webhooks/inbox, read 6 Nov 2026).
+  if (env.data.event === 'review.new' || env.data.event === 'review.updated') {
     const p = Review.safeParse(payload);
     if (!p.success) return none('shape');
     const { review: r, account } = p.data;
