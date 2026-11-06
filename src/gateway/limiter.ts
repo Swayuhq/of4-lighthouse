@@ -25,8 +25,9 @@ export function createLimiter({ name, perMinute, maxWaitMs, now = Date.now, slee
   let pausedUntil = 0;
   let taken: number[] = [];
 
-  /** Waits for a free slot and takes it. The check and the take run with no await between them, so callers cannot race. */
-  async function take(): Promise<void> {
+  /** Waits for a free slot and takes it. The check and the take run with no await between them, so callers cannot race.
+   *  A caller may wait longer than the default: a reply waits in line, a read fails fast so a screen never hangs. */
+  async function take(waitUpToMs = maxWaitMs): Promise<void> {
     for (;;) {
       const t = now();
       taken = taken.filter(at => at > t - WINDOW_MS);
@@ -34,7 +35,7 @@ export function createLimiter({ name, perMinute, maxWaitMs, now = Date.now, slee
       if (pausedUntil > t) wait = pausedUntil - t;
       else if (taken.length < limit) { taken.push(t); return; }
       else wait = taken[0] + WINDOW_MS - t;
-      if (wait > maxWaitMs) throw new RateLimited(name, Math.ceil(wait / 1000));
+      if (wait > waitUpToMs) throw new RateLimited(name, Math.ceil(wait / 1000));
       await sleep(wait);
     }
   }
@@ -56,6 +57,10 @@ export function createLimiter({ name, perMinute, maxWaitMs, now = Date.now, slee
 }
 
 export type Limiter = ReturnType<typeof createLimiter>;
+
+/** The longest single pause a reply sits through for a slot. A full budget frees a slot within a minute, so a reply keeps waiting;
+ *  only a provider asking for more than five minutes refuses it. 1,000 replies clear in 60 s at 600 a minute, 16 min at 60. */
+export const REPLY_WAIT_MS = 5 * 60_000;
 
 /** Starts at each provider's lowest published budget; the limit header on each answer raises it. */
 export const LIMITS: Record<'zernio' | 'composio', Limiter> = {

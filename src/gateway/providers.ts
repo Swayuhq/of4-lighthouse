@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { facebookComments, facebookReply, instagramComments } from '../composio';
 import { whatsappReply } from '../whatsapp';
 import type { Provider } from './gateway';
-import { LIMITS, RateLimited, retryAfter } from './limiter';
+import { LIMITS, RateLimited, REPLY_WAIT_MS, retryAfter } from './limiter';
 import { placesStub } from './places';
 
 /**
@@ -47,7 +47,8 @@ export const composio: Provider = async (channel, action, args) => {
 export async function zernio<T>(path: string, init: RequestInit = {}, again = false): Promise<T> {
   const key = process.env.SWAYU_ZERNIO_API_KEY;
   if (!key) throw new Error('SWAYU_ZERNIO_API_KEY is not set. Start Lighthouse with pnpm start:op.');
-  await LIMITS.zernio.take();
+  // Every Zernio POST Lighthouse sends is a reply, so it waits in line; a read fails fast.
+  await LIMITS.zernio.take(init.method === 'POST' ? REPLY_WAIT_MS : undefined);
   const res = await fetch(`${ZERNIO}${path}`, {
     ...init,
     headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json', ...init.headers },
