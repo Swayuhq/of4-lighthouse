@@ -3,10 +3,11 @@
 import { createLead } from '../src/gateway/leads';
 import { readPolicies } from '../src/gateway/policy';
 import { leadGateway } from '../src/gateway/setup';
+import { TENANT } from '../src/tenant';
 
 const lead = process.argv[2] ?? 'replies';
 const task = process.argv[3] ?? 'Read the new Instagram comments, then reply to each one a customer wrote.';
-const agent = createLead(readPolicies(), lead, leadGateway());
+const agent = createLead(readPolicies(), { tenant: TENANT, lead }, leadGateway());
 const out = await agent.generate(task, { maxSteps: 10 });
 const calls = out.steps.flatMap(s => s.toolCalls ?? []).map(c => (c as { payload?: { toolName?: string }; toolName?: string }).payload?.toolName ?? (c as { toolName?: string }).toolName);
 console.log(JSON.stringify({ lead, task, toolCalls: calls, answer: out.text }, null, 1));

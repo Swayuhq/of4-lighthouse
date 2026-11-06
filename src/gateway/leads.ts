@@ -43,12 +43,13 @@ export function allowedTools(policies: Policies, lead: string, actions?: string[
     .map(({ channel, action }) => ({ channel, action, name: `${channel}_${action}` }));
 }
 
-export function leadTools(policies: Policies, lead: string, gateway: Gateway, actions?: string[]) {
+/** `tenant` is the business the lead works for; every tool call it makes carries it. */
+export function leadTools(policies: Policies, { tenant, lead }: { tenant: string; lead: string }, gateway: Gateway, actions?: string[]) {
   return Object.fromEntries(allowedTools(policies, lead, actions).map(({ channel, action, name }) => [name, createTool({
     id: name,
     description: DESCRIBE_TOOL[name] ?? `${DESCRIBE[action] ?? action} ${channel.replace('_', ' ')}.`,
     inputSchema: INPUT[name] ?? (action === 'reply' ? REPLY_INPUT : READ_INPUT),
-    execute: async input => gateway.call({ lead, channel, action, args: input as Record<string, unknown> }),
+    execute: async input => gateway.call({ tenant, lead, channel, action, args: input as Record<string, unknown> }),
   })]));
 }
 
@@ -69,13 +70,13 @@ export const LEAD_INSTRUCTIONS: Record<string, string> = {
   ].join(' '),
 };
 
-export function createLead(policies: Policies, lead: string, gateway: Gateway, actions?: string[]): Agent {
+export function createLead(policies: Policies, { tenant, lead }: { tenant: string; lead: string }, gateway: Gateway, actions?: string[]): Agent {
   const provider = createOpenAI({ baseURL: GEMINI, apiKey: 'set-by-capped-fetch', fetch: cappedFetch(`${lead} lead`, MODEL, MAX_OUTPUT) });
   return new Agent({
     id: `${lead}-lead`,
     name: `${lead} lead`,
     instructions: LEAD_INSTRUCTIONS[lead] ?? 'Use your tools to help the business owner.',
     model: provider.chat(MODEL),
-    tools: leadTools(policies, lead, gateway, actions),
+    tools: leadTools(policies, { tenant, lead }, gateway, actions),
   });
 }

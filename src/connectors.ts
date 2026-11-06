@@ -8,6 +8,7 @@ import { z } from 'zod';
 import type { InboxMessage } from './parse';
 import { checkMessages } from './message';
 import { leadGateway } from './gateway/setup';
+import { TENANT } from './tenant';
 import { RateLimited } from './gateway/limiter';
 
 export type Channel = 'whatsapp' | 'instagram' | 'facebook' | 'google_reviews';
@@ -47,7 +48,7 @@ const GatewayItem = z.object({ id: z.string().min(1), ref: z.string().min(1), au
  */
 function throughGateway(channel: Channel) {
   return async (): Promise<unknown[]> => {
-    const out = await leadGateway().call({ lead: 'replies', channel, action: 'read', args: {} });
+    const out = await leadGateway().call({ tenant: TENANT, lead: 'replies', channel, action: 'read', args: {} });
     if (!out.ok && out.waitSeconds !== undefined) throw new RateLimited(ADAPTERS[channel].label, out.waitSeconds, out.reason);
     if (!out.ok) throw new Error(out.reason);
     return out.result as unknown[];

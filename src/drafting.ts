@@ -2,6 +2,7 @@
 // It is handed only its reply tools, and every reply goes through the gateway's lead door: checked, then kept as a draft.
 // Nothing it writes is sent. Only the owner's Send posts a reply.
 import { isChannel } from './connectors';
+import { TENANT } from './tenant';
 import { view, type Item } from './inbox';
 
 const AT_ONCE = 10;
@@ -71,6 +72,6 @@ async function draftThese(todo: Item[]) {
   const { createLead } = await import('./gateway/leads');
   const { readPolicies } = await import('./gateway/policy');
   const { leadGateway } = await import('./gateway/setup');
-  const lead = createLead(readPolicies(), 'replies', leadGateway(), ['reply']);
+  const lead = createLead(readPolicies(), { tenant: TENANT, lead: 'replies' }, leadGateway(), ['reply']);
   await lead.generate(draftTask(asked), { maxSteps: asked.length * 2 + 2 });
 }

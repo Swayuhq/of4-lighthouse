@@ -4,6 +4,10 @@ import { readFileSync } from 'node:fs';
 import { decide, loadPolicies } from '../src/gateway/policy';
 import { RateLimited } from '../src/gateway/limiter';
 
+/** Two businesses, so a test can show one never sees the other's work. */
+const A = '00000000-0000-4000-8000-00000000000a';
+const B = '00000000-0000-4000-8000-00000000000b';
+
 const SCHEMA = readFileSync('policies/connectors.cedarschema', 'utf8');
 const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'), SCHEMA);
 
@@ -53,25 +57,25 @@ describe('The permission check decides before any provider is called', () => {
 
   it('a blocked call never reaches a provider and is recorded as refused', async () => {
     const { gateway, composio, zernio, ledger } = setup();
-    const out = await gateway.call({ lead: 'ads', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Hi' } });
+    const out = await gateway.call({ tenant: A, lead: 'ads', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Hi' } });
     expect(out).toEqual({ ok: false, reason: 'The ads lead may not reply on Facebook.' });
     expect(composio).not.toHaveBeenCalled();
     expect(zernio).not.toHaveBeenCalled();
-    expect(ledger).toEqual([expect.objectContaining({ lead: 'ads', channel: 'facebook', action: 'reply', outcome: 'refused' })]);
+    expect(ledger).toEqual([expect.objectContaining({ tenant: A, lead: 'ads', channel: 'facebook', action: 'reply', outcome: 'refused' })]);
   });
 
   it('an allowed call goes to the provider the route table names', async () => {
     const { gateway, composio, zernio, ledger } = setup();
-    const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    const out = await gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'read', args: {} });
     expect(out).toEqual({ ok: true, provider: 'composio', result: { id: 'fb_reply_1' } });
-    expect(composio).toHaveBeenCalledWith('facebook', 'read', {});
+    expect(composio).toHaveBeenCalledWith('facebook', 'read', {}, A);
     expect(zernio).not.toHaveBeenCalled();
     expect(ledger[0]).toMatchObject({ outcome: 'done', provider: 'composio' });
   });
 
   it('changing one route line moves the channel to the other provider', async () => {
     const { gateway, composio, zernio } = setup({ routes: { 'facebook:read': 'zernio' } });
-    await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    await gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'read', args: {} });
     expect(zernio).toHaveBeenCalledOnce();
     expect(composio).not.toHaveBeenCalled();
   });
@@ -80,8 +84,8 @@ describe('The permission check decides before any provider is called', () => {
 describe('A call that needs the owner waits for the owner', () => {
   it('the owner says yes, so the reply goes out', async () => {
     const { gateway, deps, composio, ledger } = setup();
-    const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
-    expect(deps.askOwner).toHaveBeenCalledWith({ lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
+    const out = await gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
+    expect(deps.askOwner).toHaveBeenCalledWith({ tenant: A, lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
     expect(composio).toHaveBeenCalledOnce();
     expect(out.ok).toBe(true);
     expect(ledger.map(r => r.outcome)).toEqual(['approved', 'done']);
@@ -89,7 +93,7 @@ describe('A call that needs the owner waits for the owner', () => {
 
   it('a lead acting alone has its reply held for the owner, so nothing is sent', async () => {
     const { gateway, composio, ledger } = setup({ askOwner: async () => 'held' });
-    const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
+    const out = await gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
     expect(out).toEqual({ ok: false, reason: "Kept as a draft for the owner to check and send. This message is done: do not reply to it again." });
     expect(composio).not.toHaveBeenCalled();
     expect(ledger.map(r => r.outcome)).toEqual(['held']);
@@ -97,7 +101,7 @@ describe('A call that needs the owner waits for the owner', () => {
 
   it('a reply that cannot be kept for the owner is refused in plain words and never sent', async () => {
     const { gateway, composio, ledger } = setup({ askOwner: async () => { throw new Error('no inbox message matches this comment'); } });
-    const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
+    const out = await gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'reply', args: { id: 'c1', text: 'Thank you!' } });
     expect(out).toEqual({ ok: false, reason: 'The reply was not kept: no inbox message matches this comment.' });
     expect(composio).not.toHaveBeenCalled();
     expect(ledger).toMatchObject([{ outcome: 'refused' }]);
@@ -107,7 +111,7 @@ describe('A call that needs the owner waits for the owner', () => {
 describe('Failures are recorded in plain words, never hidden', () => {
   it('an allowed call with no route is refused, not guessed', async () => {
     const { gateway, composio, zernio, ledger } = setup({ routes: {} });
-    const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    const out = await gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'read', args: {} });
     expect(out).toEqual({ ok: false, reason: 'No provider is set for reading Facebook.' });
     expect(composio).not.toHaveBeenCalled();
     expect(zernio).not.toHaveBeenCalled();
@@ -116,7 +120,7 @@ describe('Failures are recorded in plain words, never hidden', () => {
 
   it('a provider error is recorded as failed with the provider named', async () => {
     const { gateway, ledger } = setup({ providers: { composio: async () => { throw new Error('rate limited'); }, zernio: async () => ({}), own: vi.fn() } });
-    const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    const out = await gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'read', args: {} });
     expect(out).toEqual({ ok: false, reason: 'Composio could not read Facebook: rate limited' });
     expect(ledger[0]).toMatchObject({ outcome: 'failed', provider: 'composio' });
   });
@@ -127,7 +131,7 @@ describe('Many leads at once', () => {
     let finish!: (v: unknown) => void;
     const composio = vi.fn(() => new Promise(r => { finish = r; }));
     const { gateway, ledger } = setup({ providers: { composio, zernio: vi.fn(), own: vi.fn() } });
-    const calls = Array.from({ length: 10 }, () => gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} }));
+    const calls = Array.from({ length: 10 }, () => gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'read', args: {} }));
     await Promise.resolve();
     finish([{ id: 'c1' }]);
     const out = await Promise.all(calls);
@@ -136,16 +140,43 @@ describe('Many leads at once', () => {
     expect(ledger.filter(r => r.outcome === 'done')).toHaveLength(10);
   });
 
+  it('two businesses reading the same channel at once never share a read: each gets its own', async () => {
+    const composio = vi.fn(async (_channel: string, _action: string, _args: Record<string, unknown>, tenant: string) => [{ id: `comment_of_${tenant}` }]);
+    const { gateway } = setup({ providers: { composio, zernio: vi.fn(), own: vi.fn() } });
+    const [a, b] = await Promise.all([
+      gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'read', args: {} }),
+      gateway.call({ tenant: B, lead: 'replies', channel: 'facebook', action: 'read', args: {} }),
+    ]);
+    expect(composio).toHaveBeenCalledTimes(2);
+    expect(a.ok && a.result).toEqual([{ id: `comment_of_${A}` }]);
+    expect(b.ok && b.result).toEqual([{ id: `comment_of_${B}` }]);
+  });
+
+  it('every ledger row names the business it belongs to', async () => {
+    const { gateway, ledger } = setup();
+    await gateway.call({ tenant: B, lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    await gateway.call({ tenant: B, lead: 'ads', channel: 'facebook', action: 'reply', args: { ref: 'c1', text: 'Hi' } });
+    expect(ledger.map(r => r.tenant)).toEqual([B, B]);
+  });
+
+  it('a call that names no business is refused, never reaches a provider, and files no row under any business', async () => {
+    const { gateway, ledger, composio } = setup();
+    const out = await gateway.call({ tenant: ' ', lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    expect(out).toEqual({ ok: false, reason: 'The call did not say which business it is for.' });
+    expect(composio).not.toHaveBeenCalled();
+    expect(ledger).toEqual([]);
+  });
+
   it('a read that has finished is not reused: the next read asks the provider again', async () => {
     const { gateway, composio } = setup();
-    await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
-    await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    await gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    await gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'read', args: {} });
     expect(composio).toHaveBeenCalledTimes(2);
   });
 
   it('replies are never shared, even with the same words', async () => {
     const { gateway, composio } = setup();
-    const reply = { lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: 'c1', text: 'Thanks' } };
+    const reply = { tenant: A, lead: 'replies', channel: 'facebook', action: 'reply', args: { ref: 'c1', text: 'Thanks' } };
     await Promise.all([gateway.call(reply), gateway.call(reply)]);
     expect(composio).toHaveBeenCalledTimes(2);
   });
@@ -153,7 +184,7 @@ describe('Many leads at once', () => {
   it('a provider that says wait passes the seconds back, so the caller can try later instead of calling the channel broken', async () => {
     const composio = vi.fn(async () => { throw new RateLimited('Composio', 58); });
     const { gateway, ledger } = setup({ providers: { composio, zernio: vi.fn(), own: vi.fn() } });
-    const out = await gateway.call({ lead: 'replies', channel: 'facebook', action: 'read', args: {} });
+    const out = await gateway.call({ tenant: A, lead: 'replies', channel: 'facebook', action: 'read', args: {} });
     expect(out).toEqual({ ok: false, reason: 'Composio could not read Facebook: Composio asked Lighthouse to wait 58 seconds', waitSeconds: 58 });
     expect(ledger[0]).toMatchObject({ outcome: 'failed', provider: 'composio' });
   });

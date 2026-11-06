@@ -17,7 +17,8 @@ const client = postgres({
 });
 export const db = drizzle(client);
 
-export const TENANT = '00000000-0000-4000-8000-000000000001';
+import { TENANT } from '../tenant';
+export { TENANT };
 
 async function ensureBusiness() {
   await db.insert(business).values({ tenantId: TENANT, name: 'Your business' }).onConflictDoNothing();
@@ -275,9 +276,9 @@ export async function loadThemes(): Promise<Theme[]> {
 }
 
 /** Writes one gateway ledger row. The reply text is not copied here; the sent event already holds it. */
-export async function saveCall(row: { lead: string; channel: string; action: string; outcome: string; provider?: string; note?: string; at: string }) {
+export async function saveCall(row: { tenant: string; lead: string; channel: string; action: string; outcome: string; provider?: string; note?: string; at: string }) {
   await db.insert(connectorCall).values({
-    tenantId: TENANT, lead: row.lead, channel: row.channel, action: row.action, outcome: row.outcome,
+    tenantId: row.tenant, lead: row.lead, channel: row.channel, action: row.action, outcome: row.outcome,
     provider: row.provider ?? null, note: row.note ?? null, at: new Date(row.at),
   });
 }

@@ -1,9 +1,10 @@
 // One live read of every owner review through Zernio, for the build verify loop.
 // Prints counts only: no review text and no reviewer names leave this script.
 import { zernioProvider, type ReviewSet } from '../src/gateway/providers';
+import { TENANT } from '../src/tenant';
 
 const started = Date.now();
-const set = (await zernioProvider('google_reviews', 'read_all', {})) as ReviewSet;
+const set = (await zernioProvider('google_reviews', 'read_all', {}, TENANT)) as ReviewSet;
 const withText = set.reviews.filter(r => r.text.trim()).length;
 const answered = set.reviews.filter(r => r.answered).length;
 const anonymous = set.reviews.filter(r => r.author === 'A Google user').length;

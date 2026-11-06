@@ -6,6 +6,7 @@ import { parseCsv, parseWhatsAppExport, type ParseResult } from '@/src/parse';
 import { checkMessages } from '@/src/message';
 import { connect, connections, load, markBroken, nameBusiness, record, replyRefFor, setOwnerNames, startOver, store } from '@/src/store/db';
 import { ownerGateway } from '@/src/gateway/setup';
+import { TENANT } from '@/src/tenant';
 import { agentsOn } from '@/src/agents/model';
 import { pull, readNew } from '@/src/pipeline';
 import { ADAPTERS, isChannel } from '@/src/connectors';
@@ -103,7 +104,7 @@ export async function sendReply(id: string, text: string): Promise<{ posted: boo
   const [channel, ...rest] = id.split(':');
   if (isChannel(channel)) {
     const ref = (await replyRefFor(id)) ?? rest.join(':');
-    const out = await ownerGateway().call({ lead: 'replies', channel, action: 'reply', args: { ref, text: reply } });
+    const out = await ownerGateway().call({ tenant: TENANT, lead: 'replies', channel, action: 'reply', args: { ref, text: reply } });
     if (!out.ok) return { posted: false, problem: `${ADAPTERS[channel].label} did not take the reply. Try again.` };
   }
   await record(id, 'sent', reply);

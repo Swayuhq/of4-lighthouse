@@ -4,8 +4,10 @@ import { decide, type Policies } from './policy';
 import { RateLimited } from './limiter';
 
 export type ProviderName = 'composio' | 'zernio' | 'own';
-export type Provider = (channel: string, action: string, args: Record<string, unknown>) => Promise<unknown>;
-export type CallRequest = { lead: string; channel: string; action: string; args: Record<string, unknown> };
+/** `tenant` is the business the call is for, so a provider can use that business's own connected account. */
+export type Provider = (channel: string, action: string, args: Record<string, unknown>, tenant: string) => Promise<unknown>;
+/** `tenant` is the business the call is for. Every call names one, and nothing is shared across businesses. */
+export type CallRequest = { tenant: string; lead: string; channel: string; action: string; args: Record<string, unknown> };
 /** `waitSeconds` means the provider asked us to slow down: the channel works, try again after that many seconds. */
 export type CallResult = { ok: true; provider: ProviderName; result: unknown } | { ok: false; reason: string; waitSeconds?: number };
 export type LedgerRow = CallRequest & { outcome: 'refused' | 'approved' | 'held' | 'done' | 'failed'; provider?: ProviderName; note?: string; at: string };
@@ -31,13 +33,14 @@ export function createGateway(deps: GatewayDeps) {
   // Only while it is in flight: a finished read is never served again. Replies are never shared.
   const reading = new Map<string, Promise<unknown>>();
 
-  function send(provider: ProviderName, { channel, action, args }: CallRequest): Promise<unknown> {
-    if (action !== 'read' && action !== 'read_all') return deps.providers[provider](channel, action, args);
-    // The action is part of the key: the inbox read and the every review read must never answer each other.
-    const key = `${provider}:${channel}:${action}:${JSON.stringify(args)}`;
+  function send(provider: ProviderName, { tenant, channel, action, args }: CallRequest): Promise<unknown> {
+    if (action !== 'read' && action !== 'read_all') return deps.providers[provider](channel, action, args, tenant);
+    // The business is part of the key, so one business never sees another's comments.
+    // The action is part of the key too: the inbox read and the every review read must never answer each other.
+    const key = `${tenant}:${provider}:${channel}:${action}:${JSON.stringify(args)}`;
     let read = reading.get(key);
     if (!read) {
-      read = deps.providers[provider](channel, action, args).finally(() => reading.delete(key));
+      read = deps.providers[provider](channel, action, args, tenant).finally(() => reading.delete(key));
       reading.set(key, read);
     }
     return read;
@@ -49,6 +52,8 @@ export function createGateway(deps: GatewayDeps) {
 
   async function call(request: CallRequest): Promise<CallResult> {
     const { lead, channel, action } = request;
+    // The ledger is kept per business, so a call that names none is refused before any row: there is no business to file it under.
+    if (!request.tenant?.trim()) return { ok: false, reason: 'The call did not say which business it is for.' };
     const decision = decide(deps.policies, lead, channel, action);
 
     if (decision === 'block') {

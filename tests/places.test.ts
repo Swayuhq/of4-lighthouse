@@ -6,6 +6,7 @@ import { decide, loadPolicies } from '../src/gateway/policy';
 import { own } from '../src/gateway/providers';
 import { MAX_PLACES, MAX_REVIEWS, type Place } from '../src/gateway/places';
 import { sentence } from '../src/activity';
+import { TENANT } from '../src/tenant';
 
 const SCHEMA = readFileSync('policies/connectors.cedarschema', 'utf8');
 const POLICIES = loadPolicies(readFileSync('policies/connectors.cedar', 'utf8'), SCHEMA);
@@ -46,7 +47,7 @@ describe('The analytics lead reads Google Maps places and nothing else', () => {
 });
 
 describe('The places read takes one search phrase', () => {
-  const tool = leadTools(POLICIES, 'analytics', setup().gateway).google_places_read;
+  const tool = leadTools(POLICIES, { tenant: TENANT, lead: 'analytics' }, setup().gateway).google_places_read;
   const schema = tool.inputSchema as unknown as { safeParse: (v: unknown) => { success: boolean } };
 
   it('accepts a phrase and an optional area', () => {
@@ -65,7 +66,7 @@ describe('The places read takes one search phrase', () => {
 describe('The stub returns the agreed place shape', () => {
   it('ranks places for the phrase, in map order, with at most 5 reviews each', async () => {
     const { gateway, ledger } = setup();
-    const out = await gateway.call({ lead: 'analytics', channel: 'google_places', action: 'read', args: { query: 'millet restaurant', near: 'Coimbatore' } });
+    const out = await gateway.call({ tenant: TENANT, lead: 'analytics', channel: 'google_places', action: 'read', args: { query: 'millet restaurant', near: 'Coimbatore' } });
     if (!out.ok) throw new Error(out.reason);
     const places = out.result as Place[];
     expect(places.length).toBeGreaterThan(0);
@@ -85,7 +86,7 @@ describe('The stub returns the agreed place shape', () => {
   it('a different phrase gives the same places in a different order, so ranking code sees real movement', async () => {
     const { gateway } = setup();
     const read = async (query: string) => {
-      const out = await gateway.call({ lead: 'analytics', channel: 'google_places', action: 'read', args: { query } });
+      const out = await gateway.call({ tenant: TENANT, lead: 'analytics', channel: 'google_places', action: 'read', args: { query } });
       if (!out.ok) throw new Error(out.reason);
       return (out.result as Place[]).map(p => p.placeId);
     };
@@ -98,7 +99,7 @@ describe('The stub returns the agreed place shape', () => {
 
   it('a read with no phrase fails in plain words', async () => {
     const { gateway } = setup();
-    const out = await gateway.call({ lead: 'analytics', channel: 'google_places', action: 'read', args: {} });
+    const out = await gateway.call({ tenant: TENANT, lead: 'analytics', channel: 'google_places', action: 'read', args: {} });
     expect(out.ok).toBe(false);
   });
 });

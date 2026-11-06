@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createLimiter, LIMITS, RateLimited } from '../src/gateway/limiter';
 import { zernioProvider } from '../src/gateway/providers';
 import { facebookReply } from '../src/composio';
+import { TENANT } from '../src/tenant';
 
 let calls: { url: string; init: RequestInit }[];
 let slept: number[];
@@ -37,30 +38,30 @@ afterEach(() => { vi.unstubAllGlobals(); delete process.env.SWAYU_ZERNIO_API_KEY
 describe('Zernio says wait', () => {
   it('a short wait is waited out and the request is sent once more', async () => {
     respond(tooMany(2), accounts, ok({ data: [] }));
-    await expect(zernioProvider('facebook', 'read', {})).resolves.toEqual([]);
+    await expect(zernioProvider('facebook', 'read', {}, TENANT)).resolves.toEqual([]);
     expect(slept).toEqual([2_000]);
     expect(calls).toHaveLength(3);
   });
 
   it('a long wait fails at once with the seconds, and the next read does not ask Zernio at all', async () => {
     respond(tooMany(58));
-    const error = (await zernioProvider('facebook', 'read', {}).catch(e => e)) as RateLimited;
+    const error = (await zernioProvider('facebook', 'read', {}, TENANT).catch(e => e)) as RateLimited;
     expect(error).toBeInstanceOf(RateLimited);
     expect(error.seconds).toBe(58);
     expect(calls).toHaveLength(1);
-    await expect(zernioProvider('instagram', 'read', {})).rejects.toBeInstanceOf(RateLimited);
+    await expect(zernioProvider('instagram', 'read', {}, TENANT)).rejects.toBeInstanceOf(RateLimited);
     expect(calls).toHaveLength(1);
   });
 
   it('a second 429 after the wait gives up rather than asking a third time', async () => {
     respond(tooMany(1), tooMany(1));
-    await expect(zernioProvider('facebook', 'read', {})).rejects.toBeInstanceOf(RateLimited);
+    await expect(zernioProvider('facebook', 'read', {}, TENANT)).rejects.toBeInstanceOf(RateLimited);
     expect(calls).toHaveLength(2);
   });
 
   it('a reply sent again after a wait carries the same retry key, so it cannot post twice', async () => {
     respond(tooMany(1), ok({ data: { commentId: 'r1' } }));
-    await zernioProvider('facebook', 'reply', { ref: 'acc1|p1|c1', text: 'Thanks', idempotencyKey: 'k1' });
+    await zernioProvider('facebook', 'reply', { ref: 'acc1|p1|c1', text: 'Thanks', idempotencyKey: 'k1' }, TENANT);
     const keys = calls.map(c => (c.init.headers as Record<string, string>)['Idempotency-Key']);
     expect(keys).toEqual(['k1', 'k1']);
   });
@@ -68,7 +69,7 @@ describe('Zernio says wait', () => {
   it('learns the real budget from the limit header', async () => {
     LIMITS.zernio = createLimiter({ name: 'Zernio', perMinute: 1, maxWaitMs: 0 });
     respond(ok({ accounts: [{ _id: 'acc1', platform: 'facebook' }] }, { 'x-ratelimit-limit': '600' }), ok({ data: [] }));
-    await expect(zernioProvider('facebook', 'read', {})).resolves.toEqual([]);
+    await expect(zernioProvider('facebook', 'read', {}, TENANT)).resolves.toEqual([]);
   });
 });
 
